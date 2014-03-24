@@ -7,6 +7,9 @@ require 'rake'
 require 'rake/testtask'
 require 'rake/rdoctask'
 
+require 'active_support/all'
+ActiveSupport::Deprecation.silenced = true
+
 # rails tasks
 require 'tasks/rails'
 
