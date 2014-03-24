@@ -24,7 +24,7 @@ gem 'eventmachine', '0.12.10'
 gem 'log4r', '1.0.6'
 gem 'mmap', '0.2.6'
 gem 'mocha', '0.9.8'
-gem 'nokogiri', '1.4.0'
+gem 'nokogiri', '1.4.7'
 gem 'rest-client', '1.6.0'
 gem 'ruby-breakpoint', '0.5.1'
 gem 'mime-types', '< 2.0'
@@ -44,7 +44,7 @@ end
 
 group :databases do
   gem 'sqlite3-ruby', '1.2.4'
-  gem 'pg', '0.8.0'
+  gem 'pg'
 end
 
 group :test do
