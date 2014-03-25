@@ -320,7 +320,7 @@ class SearchControllerTest < ActionController::TestCase
     ev2 = create_event(person, :name => 'event 2', :category_ids => [@category.id],	:start_date => Date.today - 2.month)
 
     get :events, :day => ten_days_ago.day, :month => ten_days_ago.month, :year => ten_days_ago.year
-    assert_equal [ev1], assigns(:events_of_the_day)
+    assert_equal [ev1], assigns(:events)
   end
 
   should 'return events of the day with category' do
@@ -332,7 +332,7 @@ class SearchControllerTest < ActionController::TestCase
 
     get :events, :day => ten_days_ago.day, :month => ten_days_ago.month, :year => ten_days_ago.year, :category_path => @category.path.split('/')
 
-    assert_equal [ev1], assigns(:events_of_the_day)
+    assert_equal [ev1], assigns(:events)
   end
 
   should 'return events of today when no date specified' do
@@ -342,7 +342,7 @@ class SearchControllerTest < ActionController::TestCase
 
     get :events
 
-    assert_equal [ev1], assigns(:events_of_the_day)
+    assert_equal [ev1], assigns(:events)
   end
 
   should 'show events for current month by default' do
@@ -549,9 +549,9 @@ class SearchControllerTest < ActionController::TestCase
     c2 = create(Community, :name => 'Testing community 2')
     c3 = create(Community, :name => 'Testing community 3')
     ActionTracker::Record.delete_all
-    fast_create(ActionTracker::Record, :target_id => c1, :user_type => 'Profile', :user_id => person, :created_at => Time.now)
-    fast_create(ActionTracker::Record, :target_id => c2, :user_type => 'Profile', :user_id => person, :created_at => Time.now)
-    fast_create(ActionTracker::Record, :target_id => c2, :user_type => 'Profile', :user_id => person, :created_at => Time.now)
+    ActionTracker::Record.create!(:target => c1, :user => person, :created_at => Time.now, :verb => 'leave_scrap')
+    ActionTracker::Record.create!(:target => c2, :user => person, :created_at => Time.now, :verb => 'leave_scrap')
+    ActionTracker::Record.create!(:target => c2, :user => person, :created_at => Time.now, :verb => 'leave_scrap')
     get :communities, :filter => 'more_active'
     assert_equal [c2,c1,c3] , assigns(:searches)[:communities][:results]
   end

@@ -128,7 +128,8 @@ class Environment < ActiveRecord::Base
       'skip_new_user_email_confirmation' => _('Skip e-mail confirmation for new users'),
       'send_welcome_email_to_new_users' => _('Send welcome e-mail to new users'),
       'allow_change_of_redirection_after_login' => _('Allow users to set the page to redirect after login'),
-      'display_my_communities_on_user_menu' => _('Display on menu the list of communities the user can manage')
+      'display_my_communities_on_user_menu' => _('Display on menu the list of communities the user can manage'),
+      'display_my_enterprises_on_user_menu' => _('Display on menu the list of enterprises the user can manage')
     }
   end
 
@@ -184,7 +185,7 @@ class Environment < ActiveRecord::Base
   has_many :product_categories, :conditions => { :type => 'ProductCategory'}
   has_many :regions
 
-  has_many :roles
+  has_many :roles, :dependent => :destroy
 
   has_many :qualifiers
   has_many :certifiers
@@ -590,7 +591,7 @@ class Environment < ActiveRecord::Base
   # only one environment can be the default one
   validates_uniqueness_of :is_default, :if => (lambda do |environment| environment.is_default? end), :message => N_('Only one Virtual Community can be the default one')
 
-  validates_format_of :contact_email, :with => Noosfero::Constants::EMAIL_FORMAT, :if => (lambda { |record| ! record.contact_email.blank? })
+  validates_format_of :contact_email, :noreply_email, :with => Noosfero::Constants::EMAIL_FORMAT, :allow_blank => true
 
   xss_terminate :only => [ :message_for_disabled_enterprise ], :with => 'white_list', :on => 'validation'
 
@@ -763,7 +764,7 @@ class Environment < ActiveRecord::Base
   end
 
   def notification_emails
-    [contact_email.blank? ? nil : contact_email].compact + admins.map(&:email)
+    [noreply_email.blank? ? nil : noreply_email].compact + admins.map(&:email)
   end
 
   after_create :create_templates

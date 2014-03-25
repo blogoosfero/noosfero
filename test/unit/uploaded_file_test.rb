@@ -31,6 +31,13 @@ class UploadedFileTest < ActiveSupport::TestCase
     assert_equal 'test.txt', file.name
   end
 
+  should 'not set filename on name if name is already set' do
+    file = UploadedFile.new
+    file.name = "Some name"
+    file.filename = 'test.txt'
+    assert_equal 'Some name', file.name
+  end
+
   should 'provide file content as data' do
     file = UploadedFile.new
     file.expects(:full_filename).returns('myfilename')
@@ -119,24 +126,13 @@ class UploadedFileTest < ActiveSupport::TestCase
     assert_equal 'my title', UploadedFile.new(:title => 'my title').title
   end
 
-  should 'limit title to 140 characters' do
-    upload = UploadedFile.new
-
-    upload.title = '+' * 61; upload.valid?
-    assert upload.errors[:title]
-
-    upload.title = '+' * 60; upload.valid?
-    assert !upload.errors[:title]
-
-  end
-
   should 'always provide a display title' do
     upload = UploadedFile.new(:uploaded_data => fixture_file_upload('/files/test.txt', 'text/plain'))
-    assert_equal 'test.txt',  upload.display_title
+    assert_equal 'test.txt',  upload.title
     upload.title = 'My text file'
-    assert_equal 'My text file', upload.display_title
+    assert_equal 'My text file', upload.title
     upload.title = ''
-    assert_equal 'test.txt', upload.display_title
+    assert_equal 'test.txt', upload.title
   end
 
   should 'use name as title by default' do
@@ -326,13 +322,37 @@ class UploadedFileTest < ActiveSupport::TestCase
   end
 
   should 'group trackers activity of image\'s upload' do
+    ActionTracker::Record.delete_all
     gallery = fast_create(Gallery, :profile_id => profile.id)
-
+    count = ActionTracker::Record.find_all_by_verb('upload_image').count
     image1 = UploadedFile.create!(:uploaded_data => fixture_file_upload('/files/rails.png', 'image/png'), :parent => gallery, :profile => profile)
-    assert_equal 1, ActionTracker::Record.find_all_by_verb('upload_image').count
+    count += 1
+    assert_equal count, ActionTracker::Record.find_all_by_verb('upload_image').count
 
     image2 = UploadedFile.create!(:uploaded_data => fixture_file_upload('/files/other-pic.jpg', 'image/jpg'), :parent => gallery, :profile => profile)
-    assert_equal 1, ActionTracker::Record.find_all_by_verb('upload_image').count
+    assert_equal count, ActionTracker::Record.find_all_by_verb('upload_image').count
+  end
+
+  {
+    nil       => 5.megabytes,   # default
+    '1KB'     => 1.kilobytes,
+    '2MB'     => 2.megabyte,
+    '3GB'     => 3.gigabytes,
+    '4TB'     => 4.terabytes,
+    '6 MB'    => 6.megabytes,   # allow whitespace between number and unit
+    '0.5 GB'  => 512.megabytes, # allow floating point numbers
+    '2'       => 2.megabytes,   # assume MB as unit by default
+    'INVALID' => 5.megabytes,   # use default for invalid input
+    '1ZYX'    => 5.megabytes,   # use default for invalid input
+  }.each do |input,output|
+    test 'maximum upload size: convert %s into %s' % [input, output] do
+      NOOSFERO_CONF.expects(:[]).with('max_upload_size').returns(input)
+      assert_equal output, UploadedFile.max_size
+    end
+  end
+  test 'max_size should always return an integer' do
+    NOOSFERO_CONF.expects(:[]).with('max_upload_size').returns("0.5 GB")
+    assert_instance_of Fixnum, UploadedFile.max_size
   end
 
 end

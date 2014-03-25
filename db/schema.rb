@@ -1,4 +1,4 @@
-# This file is auto-generated from the current state of the database. Instead of editing this file, 
+# This file is auto-generated from the current state of the database. Instead of editing this file,
 # please use the migrations feature of Active Record to incrementally modify your database, and
 # then regenerate this schema definition.
 #
@@ -9,7 +9,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20131121162641) do
+ActiveRecord::Schema.define(:version => 20140314200103) do
 
   create_table "abuse_reports", :force => true do |t|
     t.integer  "reporter_id"
@@ -45,6 +45,11 @@ ActiveRecord::Schema.define(:version => 20131121162641) do
   add_index "action_tracker_notifications", ["action_tracker_id"], :name => "index_action_tracker_notifications_on_action_tracker_id"
   add_index "action_tracker_notifications", ["profile_id", "action_tracker_id"], :name => "index_action_tracker_notif_on_prof_id_act_tracker_id", :unique => true
   add_index "action_tracker_notifications", ["profile_id"], :name => "index_action_tracker_notifications_on_profile_id"
+
+  create_table "article_privacy_exceptions", :id => false, :force => true do |t|
+    t.integer "article_id"
+    t.integer "person_id"
+  end
 
   create_table "article_versions", :force => true do |t|
     t.integer  "article_id"
@@ -86,6 +91,8 @@ ActiveRecord::Schema.define(:version => 20131121162641) do
     t.string   "language"
     t.string   "source_name"
     t.integer  "license_id"
+    t.integer  "image_id"
+    t.integer  "position"
   end
 
   add_index "article_versions", ["article_id"], :name => "index_article_versions_on_article_id"
@@ -129,8 +136,13 @@ ActiveRecord::Schema.define(:version => 20131121162641) do
     t.string   "language"
     t.string   "source_name"
     t.integer  "license_id"
+    t.integer  "image_id"
+    t.integer  "position"
   end
 
+  add_index "articles", ["comments_count"], :name => "index_articles_on_comments_count"
+  add_index "articles", ["created_at"], :name => "index_articles_on_created_at"
+  add_index "articles", ["hits"], :name => "index_articles_on_hits"
   add_index "articles", ["name"], :name => "index_articles_on_name"
   add_index "articles", ["parent_id"], :name => "index_articles_on_parent_id"
   add_index "articles", ["profile_id"], :name => "index_articles_on_profile_id"
@@ -273,6 +285,7 @@ ActiveRecord::Schema.define(:version => 20131121162641) do
     t.text     "signup_welcome_text"
     t.string   "languages"
     t.string   "default_language"
+    t.string   "noreply_email"
   end
 
   create_table "external_feeds", :force => true do |t|
@@ -420,6 +433,7 @@ ActiveRecord::Schema.define(:version => 20131121162641) do
     t.integer  "image_id"
   end
 
+  add_index "products", ["created_at"], :name => "index_products_on_created_at"
   add_index "products", ["enterprise_id"], :name => "index_products_on_enterprise_id"
   add_index "products", ["product_category_id"], :name => "index_products_on_product_category_id"
 
@@ -456,10 +470,17 @@ ActiveRecord::Schema.define(:version => 20131121162641) do
     t.boolean  "is_template",                           :default => false
     t.integer  "template_id"
     t.string   "redirection_after_login"
+    t.integer  "friends_count",                         :default => 0,     :null => false
+    t.integer  "members_count",                         :default => 0,     :null => false
+    t.integer  "activities_count",                      :default => 0,     :null => false
   end
 
+  add_index "profiles", ["activities_count"], :name => "index_profiles_on_activities_count"
+  add_index "profiles", ["created_at"], :name => "index_profiles_on_created_at"
   add_index "profiles", ["environment_id"], :name => "index_profiles_on_environment_id"
+  add_index "profiles", ["friends_count"], :name => "index_profiles_on_friends_count"
   add_index "profiles", ["identifier"], :name => "index_profiles_on_identifier"
+  add_index "profiles", ["members_count"], :name => "index_profiles_on_members_count"
   add_index "profiles", ["region_id"], :name => "index_profiles_on_region_id"
 
   create_table "qualifier_certifiers", :force => true do |t|
@@ -561,6 +582,13 @@ ActiveRecord::Schema.define(:version => 20131121162641) do
   end
 
   add_index "tasks", ["spam"], :name => "index_tasks_on_spam"
+
+  create_table "terms_forum_people", :id => false, :force => true do |t|
+    t.integer "forum_id"
+    t.integer "person_id"
+  end
+
+  add_index "terms_forum_people", ["forum_id", "person_id"], :name => "index_terms_forum_people_on_forum_id_and_person_id"
 
   create_table "thumbnails", :force => true do |t|
     t.integer "size"

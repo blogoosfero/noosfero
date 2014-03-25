@@ -12,15 +12,12 @@ class UploadedFile < Article
 
   include ShortFilename
 
-  settings_items :title, :type => 'string'
-  xss_terminate :only => [ :title ]
-
-  def title_with_default
-    title_without_default || short_filename(name, 60)
+  def title
+    if self.name.present? then self.name else self.filename end
   end
-  alias_method_chain :title, :default
-
-  validates_size_of :title, :maximum => 60, :if => (lambda { |file| !file.title.blank? })
+  def title= value
+    self.name = value
+  end
 
   sanitize_filename
 
@@ -32,16 +29,30 @@ class UploadedFile < Article
     self.image? ? self.full_filename(:display).gsub(File.join(RAILS_ROOT, 'public'), '') : nil
   end
 
-  def display_title
-    title.blank? ? name : title
-  end
-
   def first_paragraph
     ''
   end
 
   def self.max_size
-    UploadedFile.attachment_options[:max_size]
+    default = 5.megabytes
+
+    multipliers = {
+      :KB => :kilobytes,
+      :MB => :megabytes,
+      :GB => :gigabytes,
+      :TB => :terabytes,
+    }
+    max_upload_size = NOOSFERO_CONF['max_upload_size']
+
+    if max_upload_size =~ /^(\d+(\.\d+)?)\s*(KB|MB|GB|TB)?$/
+      number = $1.to_f
+      unit = $3 || :MB
+      multiplier = multipliers[unit.to_sym]
+
+      number.send(multiplier).to_i
+    else
+      default
+    end
   end
 
   # FIXME need to define min/max file size
@@ -52,9 +63,9 @@ class UploadedFile < Article
   has_attachment :storage => :file_system,
     :thumbnails => { :icon => [24,24], :thumb => '130x130>', :slideshow => '320x240>', :display => '640X480>' },
     :thumbnail_class => Thumbnail,
-    :max_size => 5.megabytes # remember to update validate message below
+    :max_size => self.max_size
 
-  validates_attachment :size => N_("{fn} of uploaded file was larger than the maximum size of 5.0 MB").fix_i18n
+  validates_attachment :size => N_("{fn} of uploaded file was larger than the maximum size of %{size}").sub('%{size}', self.max_size.to_humanreadable).fix_i18n
 
   delay_attachment_fu_thumbnails
 
@@ -91,7 +102,7 @@ class UploadedFile < Article
   alias :orig_set_filename :filename=
   def filename=(value)
     orig_set_filename(value)
-    self.name = self.filename
+    self.name ||= self.filename
   end
 
   def download_headers

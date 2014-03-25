@@ -46,6 +46,10 @@ class Person < Profile
     Profile.memberships_of(self)
   end
 
+   def memberships_by_role(role)
+     memberships.where('role_assignments.role_id = ?', role.id)
+   end
+
   has_many :friendships, :dependent => :destroy
   has_many :friends, :class_name => 'Person', :through => :friendships
 
@@ -59,21 +63,17 @@ class Person < Profile
 
   has_many :scraps_sent, :class_name => 'Scrap', :foreign_key => :sender_id, :dependent => :destroy
 
-  named_scope :more_popular,
-      :select => "#{Profile.qualified_column_names}, count(friend_id) as total",
-      :group => Profile.qualified_column_names,
-      :joins => "LEFT OUTER JOIN friendships on profiles.id = friendships.person_id",
-      :order => "total DESC"
+  has_and_belongs_to_many :acepted_forums, :class_name => 'Forum', :join_table => 'terms_forum_people'
+  has_and_belongs_to_many :articles_with_access, :class_name => 'Article', :join_table => 'article_privacy_exceptions'
 
-  named_scope :more_active,
-    :select => "#{Profile.qualified_column_names}, count(action_tracker.id) as total",
-    :joins => "LEFT OUTER JOIN action_tracker ON profiles.id = action_tracker.user_id",
-    :group => Profile.qualified_column_names,
-    :order => 'total DESC',
-    :conditions => ['action_tracker.created_at >= ? OR action_tracker.id IS NULL', ActionTracker::Record::RECENT_DELAY.days.ago]
+  named_scope :more_popular, :order => 'friends_count DESC'
 
   named_scope :abusers, :joins => :abuse_complaints, :conditions => ['tasks.status = 3'], :select => 'DISTINCT profiles.*'
   named_scope :non_abusers, :joins => "LEFT JOIN tasks ON profiles.id = tasks.requestor_id AND tasks.type='AbuseComplaint'", :conditions => ["tasks.status != 3 OR tasks.id is NULL"], :select => "DISTINCT profiles.*"
+
+  named_scope :admins, :joins => [:role_assignments => :role], :conditions => ['roles.key = ?', 'environment_administrator' ]
+  named_scope :activated, :joins => :user, :conditions => ['users.activation_code IS NULL AND users.activated_at IS NOT NULL']
+  named_scope :deactivated, :joins => :user, :conditions => ['NOT (users.activation_code IS NULL AND users.activated_at IS NOT NULL)']
 
   after_destroy do |person|
     Friendship.find(:all, :conditions => { :friend_id => person.id}).each { |friendship| friendship.destroy }

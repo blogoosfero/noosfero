@@ -156,4 +156,20 @@ class BlockTest < ActiveSupport::TestCase
     assert_equal box.environment, block.environment
   end
 
+  should 'inform conditions for expiration on profile context' do
+    conditions = Block.expire_on
+    assert conditions[:profile].kind_of?(Array)
+  end
+
+  should 'inform conditions for expiration on environment context' do
+    conditions = Block.expire_on
+    assert conditions[:environment].kind_of?(Array)
+  end
+
+  should 'accept user as parameter on cache_key without change its value' do
+    person = fast_create(Person)
+    block = Block.new
+    assert_equal block.cache_key('en'), block.cache_key('en', person)
+  end
+
 end
