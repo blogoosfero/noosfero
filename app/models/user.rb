@@ -93,7 +93,7 @@ class User < ActiveRecord::Base
       self.person.save!
     end
   end
-  
+
   has_one :person, :dependent => :destroy
   belongs_to :environment
 
@@ -168,7 +168,7 @@ class User < ActiveRecord::Base
     encryption_methods[sym] = block
   end
 
-  # the encryption method used for this instance 
+  # the encryption method used for this instance
   def encryption_method
     (password_type || User.system_encryption_method).to_sym
   end
@@ -211,7 +211,7 @@ class User < ActiveRecord::Base
   end
 
   def remember_token?
-    remember_token_expires_at && Time.now.utc < remember_token_expires_at 
+    remember_token_expires_at && Time.now.utc < remember_token_expires_at
   end
 
   # These create and unset the fields required for remembering users between browser closes
@@ -240,7 +240,7 @@ class User < ActiveRecord::Base
     raise IncorrectPassword unless self.authenticated?(current)
     self.force_change_password!(new, confirmation)
   end
-  
+
   # Changes the password of a user without asking for the old password. This
   # method is intended to be used by the "I forgot my password", and must be
   # used with care.
@@ -289,6 +289,8 @@ class User < ActiveRecord::Base
 
     {
       'login' => self.login,
+      'name' => self.person.name,
+      'email' => self.email,
       'avatar' => self.person.profile_custom_icon(gravatar_default),
       'is_admin' => self.person.is_admin?,
       'since_month' => self.person.created_at.month,
@@ -311,7 +313,7 @@ class User < ActiveRecord::Base
   end
 
   protected
-    # before filter 
+    # before filter
     def encrypt_password
       return if password.blank?
       self.salt ||= Digest::SHA1.hexdigest("--#{Time.now.to_s}--#{login}--") if new_record?
