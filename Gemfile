@@ -1,6 +1,7 @@
 source "https://rubygems.org"
 
 gem 'sass'
+gem 'progressbar'
 
 gem 'rake', '0.8.7'
 gem 'rails', '2.3.15'
@@ -8,6 +9,7 @@ gem 'gettext', '2.1.0'
 gem 'gettext_rails', '2.1.0'
 gem 'rmagick', '2.13.1'
 gem 'RedCloth', '4.2.2'
+gem 'system_timer'
 gem 'will_paginate', '2.3.12'
 gem 'ruby-feedparser', '0.7'
 gem 'hpricot', '0.8.2'
@@ -33,7 +35,6 @@ gem 'locale', '2.0.9'
 group :production do
   gem 'thin', '1.2.4'
   gem 'exception_notification', '1.0.20090728'
-  gem 'system_timer'
 end
 
 group :development do
@@ -50,7 +51,6 @@ end
 group :test do
   gem 'tidy'
   gem 'rcov'
-  gem 'system_timer'
   gem 'rspec', '1.2.9'
   gem 'rspec-rails', '1.2.9'
 end
