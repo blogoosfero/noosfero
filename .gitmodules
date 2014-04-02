@@ -1,0 +1,3 @@
+[submodule "public/designs/themes/blogoosfero-themes"]
+	path = public/designs/themes/blogoosfero-themes
+	url = https://github.com/blogoosfero/themes.git
