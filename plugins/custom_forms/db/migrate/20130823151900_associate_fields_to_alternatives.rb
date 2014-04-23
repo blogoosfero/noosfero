@@ -17,7 +17,7 @@ class AssociateFieldsToAlternatives < ActiveRecord::Migration
     CustomFormsPlugin::Answer.find_each do |answer|
       labels = []
       answer.value.split(',').each do |value|
-        labels << answer.field.choices.invert[value]
+        labels << answer.field.choices.invert[value] rescue nil
       end
       labels.compact!
       if labels.present?
