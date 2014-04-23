@@ -56,6 +56,10 @@ class ContentViewerController < ApplicationController
 
     @page = FilePresenter.for @page
 
+    if @page.image?
+      headers['Content-Type'] = @page.mime_type
+      return render :text => @page.data, :layout => false
+    end
     if @page.download? params[:view]
       headers['Content-Type'] = @page.mime_type
       headers.merge! @page.download_headers
