@@ -60,15 +60,13 @@ class ContentViewerController < ApplicationController
       headers['Content-Type'] = @page.mime_type
       return render :text => @page.data, :layout => false
     end
-    if @page.download? params[:view]
-      headers['Content-Type'] = @page.mime_type
-      headers.merge! @page.download_headers
-      data = @page.data
+    if @page.is_a? FilePresenter::Generic and @page.file.download? params[:view]
+      headers['Content-Type'] = @page.file.mime_type
+      headers.merge! @page.file.download_headers
+      data = @page.file.data
 
       # TODO test the condition
-      if data.nil?
-        raise "No data for file"
-      end
+      raise "No data for file" if data.nil?
 
       render :text => data, :layout => false
       return
