@@ -14,7 +14,7 @@ WorkerWarmUpTime = 4
 WorkerWarmUpUrl = '/'
 
 WorkerKillByRequests = 500..600
-WorkerKillByMemory = 144..192
+WorkerKillByMemory = 160..208
 
 # FIXME: this makes the worker too big and activate Unicorn::WorkerKiller::Oom
 WorkerOutOfBandGcFrequency = nil
