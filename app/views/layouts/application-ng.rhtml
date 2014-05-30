@@ -41,6 +41,7 @@
 
     <script type='text/javascript'>
       DEFAULT_LOADING_MESSAGE = <%="'#{ _('loading...') }'" %>;
+      noosfero.profile = <%= (@profile.identifier rescue nil).to_json %>
     </script>
   </head>
   <body class="<%= h body_classes %>">
