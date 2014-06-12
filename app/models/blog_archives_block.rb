@@ -42,7 +42,7 @@ class BlogArchivesBlock < Block
     end
     block_title(title) +
     content_tag('ul', results, :class => 'blog-archives') +
-    content_tag('div', link_to(_('Subscribe RSS Feed'), owner_blog.feed.url), :class => 'subscribe-feed')
+    (content_tag('div', link_to(_('Subscribe RSS Feed'), owner_blog.feed.url), :class => 'subscribe-feed') rescue '')
   end
 
   def self.expire_on
