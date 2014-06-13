@@ -313,15 +313,9 @@ module ApplicationHelper
     raise ArgumentError, 'No partial for object. Is there a partial for any class in the inheritance hierarchy?'
   end
 
-  def view_for_profile_actions(klass)
-    raise ArgumentError, 'No profile actions view for this class.' if klass.nil?
-
-    name = klass.name.underscore
-    VIEW_EXTENSIONS.each do |ext|
-      return "blocks/profile_info_actions/"+name+ext if File.exists?(File.join(RAILS_ROOT, 'app', 'views', 'blocks', 'profile_info_actions', name+ext))
-    end
-
-    view_for_profile_actions(klass.superclass)
+  def render_profile_actions klass
+    name = klass.to_s.underscore
+    render "blocks/profile_info_actions/#{name}" rescue render_profile_actions klass.superclass
   end
 
   def user
@@ -1100,12 +1094,12 @@ module ApplicationHelper
 
   def manage_enterprises
     return unless user && user.environment.enabled?(:display_my_enterprises_on_user_menu)
-    manage_link(user.enterprises, :enterprises)
+    manage_link(user.enterprises.visible, :enterprises)
   end
 
   def manage_communities
     return unless user && user.environment.enabled?(:display_my_communities_on_user_menu)
-    administered_communities = user.communities.more_popular.select {|c| c.admins.include? user}
+    administered_communities = user.communities.visible.more_popular.select {|c| c.admins.include? user}
     manage_link(administered_communities, :communities)
   end
 
@@ -1336,7 +1330,7 @@ module ApplicationHelper
       @message = _("The content here is available to %s's friends only.") % profile.short_name
     else
       @action = :join
-      @message = _('The contents in this community is available to members only.')
+      @message = _('The contents in this profile is available to members only.')
     end
     @no_design_blocks = true
   end

@@ -2,7 +2,7 @@ class AccountController < ApplicationController
 
   no_design_blocks
 
-  before_filter :login_required, :only => [:activation_question, :accept_terms, :activate_enterprise]
+  before_filter :login_required, :only => [:activation_question, :accept_terms, :activate_enterprise, :change_password]
   before_filter :redirect_if_logged_in, :only => [:login, :signup]
   before_filter :protect_from_bots, :only => :signup
 
@@ -135,12 +135,8 @@ class AccountController < ApplicationController
                                params[:new_password_confirmation])
         session[:notice] = _('Your password has been changed successfully!')
         redirect_to :action => 'index'
-      rescue User::IncorrectPassword => e
-        session[:notice] = _('The supplied current password is incorrect.')
-        render :action => 'change_password'
+      rescue Exception
       end
-    else
-      render :action => 'change_password'
     end
   end
 
