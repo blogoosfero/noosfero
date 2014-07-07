@@ -64,7 +64,7 @@ class Article < ActiveRecord::Base
 
   acts_as_having_settings :field => :setting
 
-  settings_items :display_hits, :type => :boolean, :default => false
+  settings_items :display_hits, :type => :boolean, :default => true
   settings_items :author_name, :type => :string, :default => ""
   settings_items :allow_members_to_edit, :type => :boolean, :default => false
   settings_items :moderate_comments, :type => :boolean, :default => false
@@ -323,7 +323,7 @@ class Article < ActiveRecord::Base
   def belongs_to_blog?
     self.parent and self.parent.blog?
   end
-
+  
   def belongs_to_forum?
     self.parent and self.parent.forum?
   end
