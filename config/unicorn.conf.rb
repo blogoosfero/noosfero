@@ -14,8 +14,7 @@ WorkerWarmUpTime = 4
 WorkerWarmUpUrl = '/'
 
 WorkerKillByRequests = 500..600
-#WorkerKillByMemory = 192..256
-WorkerKillByMemory = nil
+WorkerKillByMemory = 160..192
 
 # FIXME: this makes the worker too big and activate Unicorn::WorkerKiller::Oom
 WorkerOutOfBandGcFrequency = nil
@@ -74,15 +73,14 @@ after_fork do |server, worker|
   # reset memcache connection
   Rails.cache.instance_variable_get(:@data).reset if Rails.cache.class == ActiveSupport::Cache::MemCacheStore
 
-  middleware = ActionController::Dispatcher.middleware
-
   if (require 'unicorn/worker_killer' rescue nil)
-    middleware.use Unicorn::WorkerKiller::MaxRequests, WorkerKillByRequests.begin, WorkerKillByRequests.end if WorkerKillByRequests
-    middleware.use Unicorn::WorkerKiller::Oom, WorkerKillByMemory.begin * (1024**2), WorkerKillByMemory.end * (1024**2) if WorkerKillByMemory
+    Unicorn::WorkerKiller::MaxRequests.new nil, WorkerKillByRequests.begin, WorkerKillByRequests.end if WorkerKillByRequests
+    Unicorn::WorkerKiller::Oom.new nil, WorkerKillByMemory.begin * (1024**2), WorkerKillByMemory.end * (1024**2) if WorkerKillByMemory
   end
 
   if WorkerOutOfBandGcFrequency
     require_dependency 'unicorn/oob_gc'
+    middleware = ActionController::Dispatcher.middleware
     GC.disable
     middleware.use Unicorn::OobGC, WorkerOutOfBandGcFrequency
   end
