@@ -15,7 +15,7 @@ WorkerWarmUpUrl = '/'
 
 CurrentPrio = Process.getpriority Process::PRIO_PROCESS, 0
 # put "* - nice 0" on /etc/security/limits.conf to enable
-WorkerWarmUpRenice = `bash -c 'ulimit -e'`.to_i-20 <= CurrentPrio rescue false
+WorkerWarmUpRenice = `bash -c 'ulimit -e'`.to_i-20 >= CurrentPrio rescue false
 WorkerWarmUpRenicePrio = 19
 
 WorkerKillByRequests = 500..600
