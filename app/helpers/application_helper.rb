@@ -1075,7 +1075,7 @@ module ApplicationHelper
     result
   end
 
-  def manage_link(list, kind, title)
+  def manage_link(list, kind)
     if list.present?
       link_to_all = nil
       if list.count > 5
@@ -1088,19 +1088,19 @@ module ApplicationHelper
       if link_to_all
         link << link_to_all
       end
-      render :partial => "shared/manage_link", :locals => {:link => link, :kind => kind.to_s, :title => title}
+      render :partial => "shared/manage_link", :locals => {:link => link, :kind => kind.to_s}
     end
   end
 
   def manage_enterprises
     return unless user && user.environment.enabled?(:display_my_enterprises_on_user_menu)
-    manage_link(user.enterprises.visible, :enterprises, _('My enterprises'))
+    manage_link(user.enterprises.visible, :enterprises)
   end
 
   def manage_communities
     return unless user && user.environment.enabled?(:display_my_communities_on_user_menu)
     administered_communities = user.communities.visible.more_popular.select {|c| c.admins.include? user}
-    manage_link(administered_communities, :communities, _('My communities'))
+    manage_link(administered_communities, :communities)
   end
 
   def usermenu_logged_in
@@ -1201,7 +1201,20 @@ module ApplicationHelper
   def add_zoom_to_images
     stylesheet_link_tag('fancybox') +
     javascript_include_tag('jquery.fancybox-1.3.4.pack') +
-    javascript_tag("apply_zoom_to_images(#{_('Zoom in').to_json})")
+    javascript_tag("jQuery(function($) {
+      $(window).load( function() {
+        $('#article .article-body img').each( function(index) {
+          var original = original_image_dimensions($(this).attr('src'));
+          if ($(this).width() < original['width'] || $(this).height() < original['height']) {
+            $(this).wrap('<div class=\"zoomable-image\" />');
+            $(this).parent('.zoomable-image').attr('style', $(this).attr('style'));
+            $(this).attr('style', '');
+            $(this).after(\'<a href=\"' + $(this).attr('src') + '\" class=\"zoomify-image\"><span class=\"zoomify-text\">%s</span></a>');
+          }
+        });
+        $('.zoomify-image').fancybox();
+      });
+    });" % _('Zoom in'))
   end
 
   def render_dialog_error_messages(instance_name)
