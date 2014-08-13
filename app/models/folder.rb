@@ -12,7 +12,8 @@ class Folder < Article
 
   acts_as_having_settings :field => :setting
 
-  xss_terminate :only => [ :body ], :with => 'white_list', :on => 'validation'
+  # FIXME: comment as it is blocking all HTML
+  #xss_terminate :only => [ :body ], :with => 'white_list', :on => 'validation'
 
   include WhiteListFilter
   filter_iframes :body, :whitelist => lambda { profile && profile.environment && profile.environment.trusted_sites_for_iframe }
