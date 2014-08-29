@@ -30,6 +30,7 @@
     <link rel="shortcut icon" href="<%= image_path(theme_favicon) %>" type="image/x-icon" />
     <%= noosfero_javascript %>
     <%= noosfero_stylesheets %>
+    <%= stylesheet_link_tag '/tema/style.css?layout=false' %>
 
     <%# Add custom tags/styles/etc via content_for %>
     <%= yield :head %>

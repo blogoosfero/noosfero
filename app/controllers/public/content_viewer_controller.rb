@@ -51,7 +51,14 @@ class ContentViewerController < ApplicationController
       end
     end
 
-    return render :text => @page.data, :layout => false if params[:layout] == 'false'
+    if params[:layout] == 'false'
+      respond_to do |format|
+        format.send request.format.to_sym do
+          render :text => @page.data, :layout => false
+        end
+      end
+      return
+    end
 
     # At this point the page will be showed
     @page.hit unless user_is_a_bot?
