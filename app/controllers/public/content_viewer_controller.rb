@@ -51,6 +51,8 @@ class ContentViewerController < ApplicationController
       end
     end
 
+    return render :text => @page.data, :layout => false if params[:layout] = 'false'
+
     # At this point the page will be showed
     @page.hit unless user_is_a_bot?
 
