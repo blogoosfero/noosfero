@@ -13,7 +13,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: noosfero 0.47.1\n"
 "POT-Creation-Date: 2014-06-05 20:27-0000\n"
-"PO-Revision-Date: 2013-07-30 12:53-0300\n"
+"PO-Revision-Date: 2014-08-22 11:19-0300\n"
 "Last-Translator: Rodrigo Souto <rodrigo@colivre.coop.br>\n"
 "Language-Team: Noosfero Develeopers <noosfero-dev@listas.softwarelivre.org>\n"
 "Language: pt\n"
@@ -111,12 +111,16 @@ msgid "Agenda"
 msgstr "Agenda"
 
 #: app/helpers/application_helper.rb:550
+msgid "Join"
+msgstr "Entrar"
+
 #: app/views/blocks/profile_info_actions/_join_leave_community.rhtml:8
 #: app/views/blocks/profile_info_actions/_join_leave_community.rhtml:18
 #: app/views/blocks/profile_info_actions/_join_leave_community.rhtml:25
 #: app/views/profile/_private_profile.rhtml:10
-msgid "Join"
-msgstr "Entrar"
+msgid "Join this community"
+msgstr "Tornar-se parte desta comunidade"
+
 
 #: app/helpers/application_helper.rb:551
 #: app/views/blocks/profile_info_actions/_join_leave_community.rhtml:4
@@ -125,7 +129,7 @@ msgstr "Entrar"
 #: app/views/blocks/profile_info_actions/_join_leave_community.rhtml:16
 #: app/views/shared/_list_groups.html.erb:18
 msgid "Leave community"
-msgstr "Sair da comunidade"
+msgstr "Se desligar da comunidade"
 
 #: app/helpers/application_helper.rb:556 app/helpers/assets_helper.rb:9
 #: app/models/products_block.rb:8 app/models/products_block.rb:12
@@ -469,7 +473,7 @@ msgstr "Local: "
 #: app/helpers/boxes_helper.rb:37 app/helpers/boxes_helper.rb:63
 #: app/models/main_block.rb:4
 msgid "Main content"
-msgstr "Gerenciar conteúdo"
+msgstr "Conteúdo principal"
 
 #: app/helpers/boxes_helper.rb:100
 msgid "This block is invisible. Your visitors will not see it."
@@ -7201,11 +7205,11 @@ msgstr "%s tem %d tarefa(s) pendente(s)."
 #: app/views/blocks/profile_info_actions/_join_leave_community.rhtml:20
 #: app/views/profile/_private_profile.rhtml:10
 msgid "Join community"
-msgstr "Entrar na comunidade"
+msgstr "Tornar-se integrante da comunidade"
 
 #: app/views/blocks/profile_info_actions/_join_leave_community.rhtml:27
 msgid "Join this community"
-msgstr "Entrar nesta comunidade"
+msgstr "Tornar-se integrante da comunidade"
 
 #: app/views/blocks/disabled_enterprise_message.rhtml:5
 msgid "Unblock"
@@ -8193,15 +8197,15 @@ msgstr "Enviar e-mail para os membros"
 
 #: app/views/profile/join.rhtml:1
 msgid "Joining %s"
-msgstr "Entrar em %s"
+msgstr "Tornar-se integrante de %s"
 
 #: app/views/profile/join.rhtml:4
 msgid "Are you sure you want to join %s?"
-msgstr "Tem certeza que quer entrar em %s?"
+msgstr "Tem certeza que quer tornar-se integrante de %s?"
 
 #: app/views/profile/join.rhtml:10
 msgid "Yes, I want to join."
-msgstr "Sim, quero entrar."
+msgstr "Sim, quero fazer parte."
 
 #: app/views/profile/join.rhtml:12 app/views/profile/leave.rhtml:12
 #: app/views/favorite_enterprises/add.rhtml:11
@@ -8364,7 +8368,7 @@ msgstr "Integrantes de %s"
 #: app/views/invite/select_friends.rhtml:6
 #: app/views/profile_members/_index_buttons.rhtml:5
 msgid "Invite your friends to join %s"
-msgstr "Convide seus amigos para entrar em %s"
+msgstr "Convide seus amigos para fazerem parte de %s"
 
 #: app/views/profile/favorite_enterprises.rhtml:3
 #: app/views/favorite_enterprises/index.rhtml:3
@@ -8394,11 +8398,11 @@ msgstr "Saindo %s"
 
 #: app/views/profile/leave.rhtml:4
 msgid "Are you sure you want to leave %s?"
-msgstr "Tem certeza que quer sair de %s?"
+msgstr "Tem certeza que quer se desligar de %s?"
 
 #: app/views/profile/leave.rhtml:10
 msgid "Yes, I want to leave."
-msgstr "Sim, quero sair."
+msgstr "Sim, quero me desligar."
 
 #: app/views/scrap/notifier/mail.rhtml:3
 msgid "%{sender} (%{sender_link}) has left the following scrap for you:"
@@ -8925,7 +8929,7 @@ msgstr "Boas vindas ao ambiente %s"
 msgid ""
 "Thanks for signing up, we're thrilled to have you on our social network!"
 msgstr ""
-"Obrigado por se registrar! Agora verifique seu e-mail para ativar sua conta!"
+"Obrigado por se registrar, estamos empolgados de ter você na nossa rede social!"
 
 #: app/views/account/signup.rhtml:5
 msgid "Firstly, some tips for getting started:"
@@ -9560,7 +9564,7 @@ msgid ""
 "member in pending request before member can access the intranet and/or the "
 "website)."
 msgstr ""
-"<strong>Antes</strong> de entrar no grupo (um moderador precisa aceitar uma "
+"<strong>Antes</strong> de fazer parte do grupo (um moderador precisa aceitar uma "
 "solicitação pendente antes do membro poder acessar a intranet e/ou o "
 "website)."
 
@@ -10490,7 +10494,7 @@ msgstr "Criar novo grupo"
 
 #: lib/zen3_terminology.rb:61
 msgid "Do you want to join this group?"
-msgstr "Você quer entrar neste grupo?"
+msgstr "Você quer fazer parte deste grupo?"
 
 #: lib/zen3_terminology.rb:62
 msgid "Activate your organization"
@@ -10601,12 +10605,12 @@ msgstr[1] "fez %{num} novos amigos:<br />%{name}"
 #: config/initializers/action_tracker.rb:19
 msgid "has joined 1 community:<br />%{name}"
 msgid_plural "has joined %{num} communities:<br />%{name}"
-msgstr[0] "entrou em 1 comunidade:<br />%{name}"
-msgstr[1] "entrou em %{num} comunidades:<br />%{name}"
+msgstr[0] "tornou-se parte de 1 comunidade:<br />%{name}"
+msgstr[1] "tornou-se parte de %{num} comunidades:<br />%{name}"
 
 #: config/initializers/action_tracker.rb:24
 msgid "has joined the community."
-msgstr "entrou na comunidade."
+msgstr "tornou-se parte da comunidade."
 
 #: config/initializers/action_tracker.rb:30
 msgid "uploaded 1 image"
@@ -11115,7 +11119,7 @@ msgid ""
 "Before joining %{requestor}, the administrators of this organization\n"
 "      wants you to fill in some further information."
 msgstr ""
-"Antes de entrar em %{requestor}, os administradores dessa organização\n"
+"Antes de tornar-se parte de %{requestor}, os administradores dessa organização\n"
 " querem que você preencha algumas informações adicionais."
 
 #: plugins/custom_forms/lib/custom_forms_plugin/admission_survey.rb:22
@@ -11176,8 +11180,8 @@ msgid ""
 "After joining %{requestor}, the administrators of this organization\n"
 "      wants you to fill in some further information."
 msgstr ""
-"Após entrar em %{requestor}, os administradores dessa organização\n"
-" quer que você preencha algumas informações adicionais."
+"Após tornar-se parte de %{requestor}, os administradores dessa organização\n"
+" querem que você preencha algumas informações adicionais."
 
 #: plugins/custom_forms/lib/custom_forms_plugin/membership_survey.rb:63
 msgid "%{requestor} wants to fill in some further information."
@@ -11473,7 +11477,7 @@ msgstr "Define uma etapa."
 
 #: plugins/community_track/lib/community_track_plugin/step_helper.rb:4
 msgid "Join!"
-msgstr "Entrar!"
+msgstr "Tornar-se parte!"
 
 #: plugins/community_track/lib/community_track_plugin/step_helper.rb:4
 msgid "Soon"
@@ -13811,7 +13815,7 @@ msgstr "Gerenciar classificação de comentário"
 #~ "community, the next user to join this community will assume the "
 #~ "administrator role."
 #~ msgstr ""
-#~ "Como você é o último administrador e não há outro membro nesta "
+#~ "Como você é o último administrador e não há outro integrante desta "
 #~ "comunidade, o próximo usuário a se tornar integrante irá assumir o papel "
 #~ "de administrador."
 
@@ -13900,7 +13904,7 @@ msgstr "Gerenciar classificação de comentário"
 #~ msgstr "%s quer ser um integrante de \"%s\"."
 
 #~ msgid "%s invited you to join the community %s"
-#~ msgstr "%s te convidou para entrar na comunidade %s"
+#~ msgstr "%s te convidou para fazer parte da comunidade %s"
 
 #~ msgid "Source link"
 #~ msgstr "Link da fonte"
@@ -13967,7 +13971,7 @@ msgstr "Gerenciar classificação de comentário"
 #~ "Escolha as comunidades que você deseja participar e/ou crie a sua própria."
 
 #~ msgid "Join now"
-#~ msgstr "Entrar agora"
+#~ msgstr "Tornar-se parte agora"
 
 #~ msgid "My home page"
 #~ msgstr "Minha página inicial"
@@ -14050,7 +14054,7 @@ msgstr "Gerenciar classificação de comentário"
 #~ msgstr "Bate-papo conectado"
 
 #~ msgid "Ask users to join a group/community with a popup"
-#~ msgstr "Convidar usuários para entrar num grupo/comunidade com um popup"
+#~ msgstr "Convidar usuários para ingressar num grupo/comunidade com um popup"
 
 #~ msgid "Not now"
 #~ msgstr "Não agora"
