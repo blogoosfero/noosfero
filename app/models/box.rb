@@ -44,6 +44,7 @@ class Box < ActiveRecord::Base
       RawHTMLBlock,
       RecentDocumentsBlock,
       SellersSearchBlock,
+      ProfileSearchBlock,
       TagsBlock ]
   end
 
