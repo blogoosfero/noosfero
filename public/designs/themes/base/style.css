@@ -1451,3 +1451,22 @@ table#recaptcha_table tr:hover td {
   position: relative;
   top: 5px;
 }
+.join-leave-button {
+  background-color: #EEE;
+  border: 1px solid #CCC;
+}
+.join-leave-button:hover {
+  background-color: #555;
+  border: 1px solid #2E3436;
+}
+#content .join-leave-button:hover a.button {
+  color: #fff;
+}
+#content .join-leave-button a.button,
+.join-leave-button a.button.with-text, 
+.join-leave-button a.button.with-text:visited, 
+body.noosfero .join-leave-button a.button.with-text, 
+body.noosfero .join-leave-button a.button.with-text:visited {
+  border: none;
+  background-color: transparent;
+}
