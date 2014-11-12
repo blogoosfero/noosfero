@@ -1435,7 +1435,7 @@ table#recaptcha_table tr:hover td {
   background-color: #fff;
 }
 
-/* Votes (positive - negative)
+/* Votes (positive - negative) */
 .action .like:before {
   content: url('imgs/positive-hand.png');
 }
