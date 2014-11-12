@@ -3031,8 +3031,8 @@ msgid "Text article with visual editor"
 msgstr "Artigo de texto com editor visual"
 
 #: app/models/tiny_mce_article.rb:8
-msgid "Not accessible for visually impaired users."
-msgstr "Não acessível para usuários com deficiência visual."
+msgid "Add a new text article."
+msgstr "Adicione um novo artigo de texto."
 
 #: app/models/article.rb:33 app/models/abuse_report.rb:- app/models/scrap.rb:-
 #: app/views/profile/_common.rhtml:5 plugins/solr/lib/ext/article.rb:8
@@ -3244,12 +3244,12 @@ msgid "e-Mail"
 msgstr "e-Mail"
 
 #: app/models/textile_article.rb:4
-msgid "Text article with Textile markup language"
-msgstr "Artigo de texto com linguagem de marcação Textile"
+msgid "Text article for people with visual impairement"
+msgstr "Artigo para pessoas com deficiência visual"
 
 #: app/models/textile_article.rb:8
-msgid "Accessible alternative for visually impaired users."
-msgstr "Alternativa acessível para usuários com deficiência visual."
+msgid "With special editor for visually impaired users."
+msgstr "Com editor especial para pessoas com deficiência visual."
 
 #: app/models/login_block.rb:4
 msgid "Login/logout"
