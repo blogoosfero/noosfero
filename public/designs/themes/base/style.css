@@ -1436,6 +1436,11 @@ table#recaptcha_table tr:hover td {
 }
 
 /* Votes (positive - negative) */
+.vote-actions {
+    position: relative;
+    right: 0px;
+    top: 0px;
+}
 .action .like:before {
   content: url('imgs/positive-hand.png');
 }
