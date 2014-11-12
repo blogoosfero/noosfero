@@ -49,7 +49,10 @@ body {
 }
 
 body, th, td, input {
-  font-size: 12px;
+  font-size: 15px;
+}
+#content h1 {
+  font-size: 26px;
 }
 
 #link-go-content {
