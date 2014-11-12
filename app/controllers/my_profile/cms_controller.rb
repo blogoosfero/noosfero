@@ -117,6 +117,8 @@ class CmsController < MyProfileController
     @type = params[:type]
     if @type.blank?
       @article_types = []
+      # Avoid the Event type to be available for users when they add a new post to a blog or a topic to a forum.
+      types = types = (@parent.is_a? (Blog) || @parent.is_a? (Forum)) ? available_article_types - [Event] : available_article_types
       available_article_types.each do |type|
         @article_types.push({
           :class => type,
