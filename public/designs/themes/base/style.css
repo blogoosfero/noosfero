@@ -1,5 +1,4 @@
 /* ==> button.css <== */
-
 .button {
   -moz-border-radius: 3px;
   -webkit-border-radius: 3px;
@@ -1434,4 +1433,12 @@ table.profile th {
 
 table#recaptcha_table tr:hover td {
   background-color: #fff;
+}
+
+/* Votes (positive - negative)
+.action .like:before {
+  content: url('images/positive-hand.png');
+}
+.action .dislike:before {
+  content: url('images/negative-hand.png');
 }
