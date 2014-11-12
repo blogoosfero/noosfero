@@ -1437,8 +1437,8 @@ table#recaptcha_table tr:hover td {
 
 /* Votes (positive - negative)
 .action .like:before {
-  content: url('images/positive-hand.png');
+  content: url('imgs/positive-hand.png');
 }
 .action .dislike:before {
-  content: url('images/negative-hand.png');
+  content: url('imgs/negative-hand.png');
 }
