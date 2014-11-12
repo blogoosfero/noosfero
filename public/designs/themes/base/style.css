@@ -1443,7 +1443,11 @@ table#recaptcha_table tr:hover td {
 }
 .action .like:before {
   content: url('imgs/positive-hand.png');
+  position: relative;
+  top: 3px;
 }
 .action .dislike:before {
   content: url('imgs/negative-hand.png');
+  position: relative;
+  top: 5px;
 }
