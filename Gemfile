@@ -36,6 +36,7 @@ gem 'mime-types', '< 2.0'
 gem 'locale', '2.0.9'
 
 group :production do
+  gem 'newrelic_rpm'
   gem 'unicorn'
   gem 'unicorn-worker-killer'
   gem 'thin', '1.2.4'
