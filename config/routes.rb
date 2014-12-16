@@ -69,11 +69,6 @@ Noosfero::Application.routes.draw do
   match 'profile(/:profile)/events/:year/:month', controller: 'events', action: 'events', year: /\d*/, month: /\d*/, profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
   match 'profile(/:profile)/events', controller: 'events', action: 'events', profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
 
-  # catalog
-  match 'profile(/:profile)/catalog(/:action(/:id))', controller: :catalog, profile: /#{Noosfero.identifier_format_in_url}/i, as: :catalog, via: :all
-  # DEPRECATED
-  match 'catalog(/:profile)', controller: 'catalog', action: 'index', profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
-
   # invite
   match 'profile(/:profile)/invite/friends', controller: 'invite', action: 'invite_friends', profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
   match 'profile(/:profile)/invite/:action', controller: 'invite', profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
@@ -86,8 +81,7 @@ Noosfero::Application.routes.draw do
   match 'profile(/:profile)/tags(/:id)', controller: 'profile', action: 'tags', profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
 
   # profile search
-  match 'profile(/:profile)/search', controller: 'profile_search', action: 'index', profile: /#{Noosfero.identifier_format_in_url}/i,
-    via: :all, as: :profile_search
+  match 'profile(/:profile)/search', controller: 'profile_search', action: 'index', profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
 
   # comments
   match 'profile(/:profile)/comment/:action/:id', controller: 'comment', profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
@@ -111,6 +105,7 @@ Noosfero::Application.routes.draw do
   # profile customization - "My profile"
   match 'myprofile(/:profile)/:controller(/:action(/:id))', controller: Noosfero.pattern_for_controllers_in_directory('my_profile'), profile: /#{Noosfero.identifier_format_in_url}/i, as: :myprofile, via: :all
   match 'myprofile(/:profile)', controller: 'profile_editor', action: 'index', profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
+
 
   ######################################################
   ## Controllers that are used by environment admin

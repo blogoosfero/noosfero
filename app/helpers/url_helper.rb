@@ -3,63 +3,49 @@ module UrlHelper
   mattr_accessor :controller_path_class
   self.controller_path_class = {}
 
+  def back_url
+    'javascript:history.back()'
+  end
+
   def url_for options = {}
     return super unless options.is_a? Hash
     # for action mailer
     return super unless respond_to? :params and respond_to? :controller_path
 
-    # Keep profile parameter when not using a custom domain:
-    # this is necessary as :profile parameter is optional in config/routes.rb;
-    # delete it if using a custom domain
-    # This overides the default Rails' behaviour that always recall
-    # the request params (see #url_options below)
-    host = options[:host]
-    if host.blank? or host == environment.default_hostname
-      path = options[:controller].to_s.gsub %r{^/}, '' if options[:controller]
-      path ||= self.controller_path
-      controller = UrlHelper.controller_path_class[path] ||= "#{path}_controller".camelize.constantize
-      profile_needed = controller.profile_needed if controller.respond_to? :profile_needed, true
-      if profile_needed and options[:profile].blank? and params[:profile].present?
-        options[:profile] = params[:profile]
+    ##
+    # This has to implemented overiding #url_for due to 2 reasons:
+    # 1) #default_url_options cannot be used to delete params
+    # 2) #url_options is general and not specific to each options/url_for call
+    #
+    # This does:
+    # 1) Remove :profile when not needed by the target controller
+    # 2) Remove :profile when target profile has a custom domain
+    # 3) Add :profile if target controller needs a profile and target profile doesn't use a custom domain
+    #
+    path           = (options[:controller] || self.controller_path).to_sym
+    controller     = UrlHelper.controller_path_class[path] ||= "#{path}_controller".camelize.constantize
+    profile_needed = controller.profile_needed if controller.respond_to? :profile_needed, true
+    if options[:profile].present?
+      if not profile_needed
+        options.delete :profile
+      elsif @profile
+        use_custom_domain = @profile.identifier == options[:profile] && @profile.hostname
+        options.delete :profile if use_custom_domain
       end
-    else
-      options.delete :profile
+    elsif profile_needed and @profile
+      use_custom_domain = @profile.identifier == options[:profile] && @profile.hostname
+      options[:profile] = @profile.identifier unless use_custom_domain
     end
 
     super options
   end
 
-  def default_url_options options={}
-    options[:protocol] ||= '//'
+  def default_url_options
+    options = super
 
     options[:override_user] = params[:override_user] if params[:override_user].present?
 
-    # Only use profile's custom domains for the profiles and the account controllers.
-    # This avoids redirects and multiple URLs for one specific resource
-    if controller_path = options[:controller] || self.class.controller_path
-      controller = (UrlHelper.controller_path_class[controller_path] ||= "#{controller_path}_controller".camelize.constantize rescue nil)
-      profile_needed = controller.profile_needed rescue false
-      if controller and not profile_needed and not controller == AccountController
-        options.merge! :host => environment.default_hostname, :only_path => false
-      end
-    end
-
     options
-  end
-
-  # the url_for above put or delete the :profile parameter as needed
-  # :profile in _path_segments would always add it
-  def url_options
-    @_url_options_without_profile ||= begin
-      # fix rails exception
-      opts = super rescue {}
-      opts[:_recall].delete :profile if opts[:_recall]
-      opts
-    end
-  end
-
-  def back_url
-    'javascript:history.back()'
   end
 
 end
