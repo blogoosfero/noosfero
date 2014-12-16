@@ -3,6 +3,9 @@ module UrlSupport
   protected
 
   extend ActiveSupport::Concern
+  included do
+    helper_method :url_for
+  end
 
   mattr_accessor :controller_path_class
   self.controller_path_class = {}
@@ -30,8 +33,8 @@ module UrlSupport
       options.delete :profile
     elsif not profile_needed and options[:profile].present?
       options.delete :profile
-    elsif profile_needed and @profile and not use_custom_domain
-      options[:profile] = @profile.identifier
+    elsif profile_needed and @profile
+      options[:profile] ||= @profile.identifier
     end
 
     super options

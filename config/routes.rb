@@ -90,7 +90,8 @@ Noosfero::Application.routes.draw do
 
   # public profile information
   match 'profile/:profile(/:action(/:id))', controller: 'profile', action: 'index', id: /[^\/]*/, profile: /#{Noosfero.identifier_format_in_url}/i, as: :profile, via: :all
-  match 'profile(/:action(/:id))', controller: 'profile', action: 'index', id: /[^\/]*/, profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
+  # for customs domains
+  match 'profile/(/:action(/:id))', controller: 'profile', action: 'index', id: /[^\/]*/, profile: /#{Noosfero.identifier_format}/i, via: :all
 
   # contact
   match 'contact(/:profile)/:action(/:id)', controller: 'contact', action: 'index', id: /.*/, profile: /#{Noosfero.identifier_format_in_url}/i, via: :all

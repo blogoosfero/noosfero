@@ -1,10 +1,10 @@
 require 'test_helper'
 
-class UrlHelperTest < ActionDispatch::IntegrationTest
+class UrlSupportTest < ActionDispatch::IntegrationTest
 
   extend MiniTest::Expectations
   extend MiniTest::Spec::DSL
-  prepend UrlHelper
+  prepend UrlSupport
 
   let(:params){ {} }
 
