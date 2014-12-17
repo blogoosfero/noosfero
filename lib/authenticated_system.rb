@@ -104,8 +104,7 @@ module AuthenticatedSystem
       # break cache after login
       if uri.is_a? String
         uri = URI.parse uri
-        new_query_ar = URI.decode_www_form(uri.query || '') << ["_", Time.now.to_i.to_s]
-        uri.query = URI.encode_www_form new_query_ar
+        uri.query = [uri.query, "_=#{Time.now.to_i}"].compact.join('&')
         uri = uri.to_s
       elsif uri.is_a? Hash
         uri.merge! :_ => Time.now.to_i
