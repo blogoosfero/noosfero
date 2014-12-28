@@ -1,15 +1,17 @@
-# This file is auto-generated from the current state of the database. Instead of editing this file, 
-# please use the migrations feature of Active Record to incrementally modify your database, and
-# then regenerate this schema definition.
+# encoding: UTF-8
+# This file is auto-generated from the current state of the database. Instead
+# of editing this file, please use the migrations feature of Active Record to
+# incrementally modify your database, and then regenerate this schema definition.
 #
-# Note that this schema.rb definition is the authoritative source for your database schema. If you need
-# to create the application database on another system, you should be using db:schema:load, not running
-# all the migrations from scratch. The latter is a flawed and unsustainable approach (the more migrations
+# Note that this schema.rb definition is the authoritative source for your
+# database schema. If you need to create the application database on another
+# system, you should be using db:schema:load, not running all the migrations
+# from scratch. The latter is a flawed and unsustainable approach (the more migrations
 # you'll amass, the slower it'll run and the greater likelihood for issues).
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20141112181000) do
+ActiveRecord::Schema.define(:version => 20141122010504) do
 
   create_table "abuse_reports", :force => true do |t|
     t.integer  "reporter_id"
@@ -95,6 +97,7 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.integer  "position"
     t.integer  "spam_comments_count",  :default => 0
     t.integer  "author_id"
+    t.integer  "created_by_id"
   end
 
   add_index "article_versions", ["article_id"], :name => "index_article_versions_on_article_id"
@@ -146,6 +149,7 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.integer  "position"
     t.integer  "spam_comments_count",  :default => 0
     t.integer  "author_id"
+    t.integer  "created_by_id"
   end
 
   add_index "articles", ["comments_count"], :name => "index_articles_on_comments_count"
@@ -161,7 +165,6 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
   add_index "articles", ["type", "parent_id"], :name => "index_articles_on_type_and_parent_id"
   add_index "articles", ["type", "profile_id"], :name => "index_articles_on_type_and_profile_id"
   add_index "articles", ["type"], :name => "index_articles_on_type"
-  add_index "articles", [nil], :name => "pg_search_plugin_article"
 
   create_table "articles_categories", :id => false, :force => true do |t|
     t.integer "article_id"
@@ -230,22 +233,26 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
   create_table "categories", :force => true do |t|
     t.string  "name"
     t.string  "slug"
-    t.text    "path",            :default => ""
-    t.integer "display_color"
+    t.text    "path",                              :default => ""
     t.integer "environment_id"
     t.integer "parent_id"
     t.string  "type"
     t.float   "lat"
     t.float   "lng"
-    t.boolean "display_in_menu", :default => false
-    t.integer "children_count",  :default => 0
-    t.boolean "accept_products", :default => true
+    t.boolean "display_in_menu",                   :default => false
+    t.integer "children_count",                    :default => 0
+    t.boolean "accept_products",                   :default => true
     t.integer "image_id"
     t.string  "acronym"
     t.string  "abbreviation"
+    t.text    "ancestry"
+    t.boolean "visible_for_articles",              :default => true
+    t.boolean "visible_for_profiles",              :default => true
+    t.boolean "choosable",                         :default => true
+    t.string  "display_color",        :limit => 6
   end
 
-  add_index "categories", [nil], :name => "pg_search_plugin_category"
+  add_index "categories", ["parent_id"], :name => "index_categories_on_parent_id"
 
   create_table "categories_profiles", :id => false, :force => true do |t|
     t.integer "profile_id"
@@ -265,7 +272,13 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.datetime "updated_at"
   end
 
-  add_index "certifiers", [nil], :name => "pg_search_plugin_certifier"
+  create_table "chat_messages", :force => true do |t|
+    t.integer  "to_id"
+    t.integer  "from_id"
+    t.string   "body"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
 
   create_table "comment_classification_plugin_comment_label_user", :force => true do |t|
     t.integer  "profile_id"
@@ -322,7 +335,6 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
   end
 
   add_index "comments", ["source_id", "spam"], :name => "index_comments_on_source_id_and_spam"
-  add_index "comments", [nil], :name => "pg_search_plugin_comment"
 
   create_table "contact_lists", :force => true do |t|
     t.text     "list"
@@ -393,6 +405,7 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.string   "locked_by"
     t.datetime "created_at"
     t.datetime "updated_at"
+    t.string   "queue"
   end
 
   add_index "delayed_jobs", ["priority", "run_at"], :name => "delayed_jobs_priority"
@@ -403,6 +416,7 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.integer "owner_id"
     t.boolean "is_default",      :default => false
     t.string  "google_maps_key"
+    t.boolean "ssl"
   end
 
   add_index "domains", ["is_default"], :name => "index_domains_on_is_default"
@@ -480,6 +494,8 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.boolean "thumbnails_processed", :default => false
   end
 
+  add_index "images", ["parent_id"], :name => "index_images_on_parent_id"
+
   create_table "inputs", :force => true do |t|
     t.integer  "product_id",                                    :null => false
     t.integer  "product_category_id",                           :null => false
@@ -502,8 +518,6 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.string  "url"
     t.integer "environment_id", :null => false
   end
-
-  add_index "licenses", [nil], :name => "pg_search_plugin_license"
 
   create_table "mailing_sents", :force => true do |t|
     t.integer  "mailing_id"
@@ -568,7 +582,6 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
 
   add_index "national_regions", ["name"], :name => "name_index"
   add_index "national_regions", ["national_region_code"], :name => "code_index"
-  add_index "national_regions", [nil], :name => "pg_search_plugin_nationalregion"
 
   create_table "price_details", :force => true do |t|
     t.decimal  "price",              :default => 0.0
@@ -625,7 +638,7 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.string   "type"
     t.string   "identifier"
     t.integer  "environment_id"
-    t.boolean  "active",                                     :default => true
+    t.boolean  "active",                       :default => true
     t.string   "address"
     t.string   "contact_phone"
     t.integer  "home_page_id"
@@ -636,31 +649,31 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.float    "lat"
     t.float    "lng"
     t.integer  "geocode_precision"
-    t.boolean  "enabled",                                    :default => true
-    t.string   "nickname",                     :limit => 16
+    t.boolean  "enabled",                      :default => true
+    t.string   "nickname"
     t.text     "custom_header"
     t.text     "custom_footer"
     t.string   "theme"
-    t.boolean  "public_profile",                             :default => true
+    t.boolean  "public_profile",               :default => true
     t.date     "birth_date"
     t.integer  "preferred_domain_id"
     t.datetime "updated_at"
-    t.boolean  "visible",                                    :default => true
+    t.boolean  "visible",                      :default => true
     t.integer  "bsc_id"
     t.string   "company_name"
     t.integer  "image_id"
     t.string   "cnpj"
-    t.boolean  "validated",                                  :default => true
-    t.boolean  "shopping_cart",                              :default => true
-    t.boolean  "shopping_cart_delivery",                     :default => false
-    t.decimal  "shopping_cart_delivery_price",               :default => 0.0
+    t.boolean  "validated",                    :default => true
+    t.boolean  "shopping_cart",                :default => true
+    t.boolean  "shopping_cart_delivery",       :default => false
+    t.decimal  "shopping_cart_delivery_price", :default => 0.0
     t.string   "national_region_code"
-    t.boolean  "is_template",                                :default => false
+    t.boolean  "is_template",                  :default => false
     t.integer  "template_id"
     t.string   "redirection_after_login"
-    t.integer  "friends_count",                              :default => 0,     :null => false
-    t.integer  "members_count",                              :default => 0,     :null => false
-    t.integer  "activities_count",                           :default => 0,     :null => false
+    t.integer  "friends_count",                :default => 0,     :null => false
+    t.integer  "members_count",                :default => 0,     :null => false
+    t.integer  "activities_count",             :default => 0,     :null => false
     t.integer  "bar_id"
     t.string   "usp_id"
     t.string   "personal_website"
@@ -678,7 +691,6 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
   add_index "profiles", ["type"], :name => "index_profiles_on_type"
   add_index "profiles", ["validated"], :name => "index_profiles_on_validated"
   add_index "profiles", ["visible"], :name => "index_profiles_on_visible"
-  add_index "profiles", [nil], :name => "pg_search_plugin_profile"
 
   create_table "qualifier_certifiers", :force => true do |t|
     t.integer "qualifier_id"
@@ -691,8 +703,6 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.datetime "created_at"
     t.datetime "updated_at"
   end
-
-  add_index "qualifiers", [nil], :name => "pg_search_plugin_qualifier"
 
   create_table "refused_join_community", :id => false, :force => true do |t|
     t.integer "person_id"
@@ -741,8 +751,6 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.datetime "created_at"
     t.datetime "updated_at"
   end
-
-  add_index "scraps", [nil], :name => "pg_search_plugin_scrap"
 
   create_table "sessions", :force => true do |t|
     t.string   "session_id", :null => false
@@ -798,9 +806,12 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.integer  "taggable_id"
     t.string   "taggable_type"
     t.datetime "created_at"
+    t.integer  "tagger_id"
+    t.string   "tagger_type"
+    t.string   "context",       :limit => 128
   end
 
-  add_index "taggings", ["tag_id"], :name => "index_taggings_on_tag_id"
+  add_index "taggings", ["tag_id", "taggable_id", "taggable_type", "context", "tagger_id", "tagger_type"], :name => "taggings_idx", :unique => true
   add_index "taggings", ["taggable_id", "taggable_type"], :name => "index_taggings_on_taggable_id_and_taggable_type"
 
   create_table "tags", :force => true do |t|
@@ -808,6 +819,9 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.integer "parent_id"
     t.boolean "pending",   :default => false
   end
+
+  add_index "tags", ["name"], :name => "index_tags_on_name", :unique => true
+  add_index "tags", ["parent_id"], :name => "index_tags_on_parent_id"
 
   create_table "tasks", :force => true do |t|
     t.text     "data"
@@ -847,6 +861,8 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.integer "parent_id"
     t.string  "thumbnail"
   end
+
+  add_index "thumbnails", ["parent_id"], :name => "index_thumbnails_on_parent_id"
 
   create_table "tolerance_time_plugin_publications", :force => true do |t|
     t.integer  "target_id"
@@ -888,6 +904,7 @@ ActiveRecord::Schema.define(:version => 20141112181000) do
     t.string   "activation_code",           :limit => 40
     t.datetime "activated_at"
     t.string   "return_to"
+    t.datetime "last_login_at"
   end
 
   create_table "validation_infos", :force => true do |t|

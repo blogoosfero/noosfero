@@ -16,7 +16,10 @@ class Folder < Article
   #xss_terminate :only => [ :body ], :with => 'white_list', :on => 'validation'
 
   include WhiteListFilter
-  filter_iframes :body, :whitelist => lambda { profile && profile.environment && profile.environment.trusted_sites_for_iframe }
+  filter_iframes :body
+  def iframe_whitelist
+    profile && profile.environment && profile.environment.trusted_sites_for_iframe
+  end
 
   def self.short_description
     _('Folder')
@@ -33,7 +36,7 @@ class Folder < Article
   include ActionView::Helpers::TagHelper
   def to_html(options = {})
     folder = self
-    lambda do
+    proc do
       render :file => 'content_viewer/folder', :locals => {:folder => folder}
     end
   end
