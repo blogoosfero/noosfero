@@ -10114,6 +10114,10 @@ msgstr "Este conteúdo pode não estar disponível se o conteúdo for removido"
 msgid "Parent folder:"
 msgstr "Pasta superior:"
 
+#: app/views/cms/_general_fields.html.erb:1
+msgid "Publication date:"
+msgstr "Data de publicação:"
+
 #: app/views/profile/report_abuse.html.erb:3
 msgid "Report reasons"
 msgstr "Razões da denúncia"
