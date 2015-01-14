@@ -21,6 +21,10 @@ gem 'memcache-client'
 gem 'dalli'
 gem 'rack-cache'
 
+# diagramo plugin
+gem 'php-serialize'
+gem 'mechanize'
+
 #Indirect, matching debian squeeze versions
 gem 'builder', '2.1.2'
 gem 'cmdparse', '2.0.2'
