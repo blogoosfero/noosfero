@@ -22,7 +22,7 @@ class DiagramoPlugin::Diagram < Article
   end
 
   def author?
-    User.current and User.current.person.id == self.author_id
+    self.user and self.user.id == self.author_id
   end
 
   def diagramo_uri
@@ -33,11 +33,15 @@ class DiagramoPlugin::Diagram < Article
     end
   end
 
+  def user
+    @user ||= User.current.person rescue nil
+  end
+
   def diagramo_email
-    "#{self.profile.identifier}@#{self.profile.environment.default_hostname}"
+    "#{self.user.identifier}@#{self.profile.environment.default_hostname}"
   end
   def diagramo_password
-    Digest::MD5.hexdigest self.profile.identifier
+    Digest::MD5.hexdigest self.user.identifier
   end
 
   protected
