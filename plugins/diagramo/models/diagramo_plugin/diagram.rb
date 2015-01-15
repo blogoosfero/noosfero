@@ -48,7 +48,7 @@ class DiagramoPlugin::Diagram < Article
 
   # move to config file
   BaseUrl = "http://diagramas.blogoosfero.cc"
-  AdminEmail = 'blogoosfero@blogoosfero.cc'
+  AdminEmail = 'admindiagramo@blogoosfero.cc'
   AdminPassword = 'admindodiagramo'
 
   ControllerUrl = "#{BaseUrl}/editor/common/controller.php"
