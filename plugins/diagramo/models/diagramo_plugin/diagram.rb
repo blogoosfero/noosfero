@@ -17,6 +17,10 @@ class DiagramoPlugin::Diagram < Article
     "Construa um diagrama com o Diagramo"
   end
 
+  def self.icon_name article = nil
+    'diagramo'
+  end
+
   def description
     self.body
   end

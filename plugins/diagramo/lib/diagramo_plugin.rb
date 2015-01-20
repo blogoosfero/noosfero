@@ -12,4 +12,8 @@ class DiagramoPlugin < Noosfero::Plugin
     [DiagramoPlugin::Diagram]
   end
 
+  def stylesheet?
+    true
+  end
+
 end

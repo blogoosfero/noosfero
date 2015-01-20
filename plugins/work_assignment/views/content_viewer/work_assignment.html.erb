@@ -1,5 +1,7 @@
 <% extend WorkAssignmentPlugin::Helper %>
 
+<%= button :diagramo, _('Enviar diagrama'), profile.admin_url.merge(:controller => :cms, :action => :new, :type => 'DiagramoPlugin::Diagram', :parent_id => @page.id) %>
+
 <% unless @page.body.blank? %>
   <div><%= @page.body %></div>
   <hr/>
