@@ -16,4 +16,10 @@ class DiagramoPlugin < Noosfero::Plugin
     true
   end
 
+  def article_toolbar_actions article
+    lambda do
+      render 'content_viewer/diagramo_plugin/new_diagram_button', :article => article
+    end
+  end
+
 end

@@ -1,0 +1,4 @@
+<% if @page.allow_create?(user) %>
+  <%= button :diagramo, _('Enviar diagrama'), :controller => :cms, :action => :new, :type => 'DiagramoPlugin::Diagram', :parent_id => article.id %>
+<% end %>
+
