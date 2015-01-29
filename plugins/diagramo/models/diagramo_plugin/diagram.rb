@@ -26,8 +26,9 @@ class DiagramoPlugin::Diagram < Article
   end
 
   def to_html options = {}
+    article = self
     lambda do
-      render 'content_viewer/diagramo_plugin/diagram'
+      render 'content_viewer/diagramo_plugin/diagram', :article => article
     end
   end
 
