@@ -454,7 +454,7 @@ class Article < ActiveRecord::Base
   named_scope :folders, lambda {|profile|{:conditions => ['articles.type IN (?)', profile.folder_types] }}
   named_scope :no_folders, lambda {|profile|{:conditions => ['articles.type NOT IN (?)', profile.folder_types]}}
   named_scope :galleries, :conditions => [ "articles.type IN ('Gallery')" ]
-  named_scope :images, :conditions => { :is_image => true }
+  named_scope :images, :conditions => { :is_image => true }, order: 'updated_at DESC'
   named_scope :text_articles, :conditions => [ 'articles.type IN (?)', text_article_types ]
   named_scope :with_types, lambda { |types| { :conditions => [ 'articles.type IN (?)', types ] } }
 
