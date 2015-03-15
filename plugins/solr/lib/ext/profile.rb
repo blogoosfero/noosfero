@@ -30,6 +30,8 @@ class Profile
       # ordered/query-boosted fields
       {:solr_plugin_name_sortable => :string}, {:user_id => :integer},
       :enabled, :active, :validated, :public_profile, :visible,
+      # temporary
+      :no_templates,
       {:lat => :float}, {:lng => :float},
       :updated_at, :created_at,
     ],
@@ -125,6 +127,10 @@ class Profile
 
   def self.solr_plugin_f_profile_type_proc klass
     klass.constantize.type_name
+  end
+
+  def no_templates
+    !self.is_template
   end
 
 end
