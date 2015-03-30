@@ -23,7 +23,7 @@ class AddMember < Task
 
   def information
     {:message => _("%{requestor} wants to be a member of '%{organization}'."),
-     variables: {requestor: requestor.name, organization: organization.name}}
+     variables: {:requestor => requestor.name, :organization => organization.name}}
   end
 
   def accept_details
