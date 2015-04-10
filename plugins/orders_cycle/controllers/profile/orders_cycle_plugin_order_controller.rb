@@ -1,6 +1,3 @@
-# workaround for plugin class scope problem
-require 'suppliers_plugin/product_helper'
-
 class OrdersCyclePluginOrderController < OrdersPluginOrderController
 
   # FIXME: remove me when styles move from consumers_coop plugin
@@ -10,7 +7,7 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
   no_design_blocks
   before_filter :login_required, except: [:index]
 
-  helper OrdersCyclePlugin::OrdersCycleDisplayHelper
+  helper OrdersCyclePlugin::DisplayHelper
   helper SuppliersPlugin::ProductHelper
   helper OrdersCyclePlugin::TranslationHelper
 
@@ -37,7 +34,7 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
     else
       @consumer = user
       @cycle = OrdersCyclePlugin::Cycle.find params[:cycle_id]
-      @order = OrdersPlugin::Sale.new
+      @order = OrdersCyclePlugin::Sale.new
       @order.profile = profile
       @order.consumer = @consumer
       @order.cycle = @cycle
@@ -48,19 +45,46 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
 
   def edit
     return show_more if params[:page].present?
-    return super if request.xhr?
+
+    if request.xhr?
+      status = params[:order][:status]
+      if status == 'ordered'
+        if @order.items.size > 0
+          @order.update_attributes! params[:order]
+          session[:notice] = t('orders_plugin.controllers.profile.consumer.order_confirmed')
+        else
+          session[:notice] = t('orders_plugin.controllers.profile.consumer.can_not_confirm_your_')
+        end
+      end
+      return
+    end
 
     if cycle_id = params[:cycle_id]
       @cycle = OrdersCyclePlugin::Cycle.find_by_id cycle_id
       return render_not_found unless @cycle
       @consumer = user
+
+      # load the first order
+      unless @order
+        @consumer_orders = @cycle.sales.for_consumer @consumer
+        if @consumer_orders.size == 1
+          @order = @consumer_orders.first
+          redirect_to action: :edit, id: @order.id
+        elsif @consumer_orders.size > 1
+          # get the first open
+          @order = @consumer_orders.find{ |o| o.open? }
+          redirect_to action: :edit, id: @order.id if @order
+        end
+      end
     else
       return render_not_found unless @order
+      # an order was loaded on load_order
+
       @cycle = @order.cycle
 
       @consumer = @order.consumer
-      @admin_edit = (user and user != @consumer)
-      return render_access_denied if @admin_edit and not profile.admins.include? @consumer
+      @admin_edit = (user and user.in?(profile.admins) and user != @consumer)
+      return render_access_denied unless @admin_edit or user == @consumer
 
       @consumer_orders = @cycle.sales.for_consumer @consumer
     end
@@ -68,6 +92,17 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
     load_products_for_order
     @product_categories = @cycle.product_categories
     @consumer_orders = @cycle.sales.for_consumer @consumer
+  end
+
+  def reopen
+    @order.update_attributes! status: 'draft'
+    render 'edit'
+  end
+
+  def cancel
+    @order.update_attributes! status: 'cancelled'
+    session[:notice] = t('orders_plugin.controllers.profile.consumer.order_cancelled')
+    render 'edit'
   end
 
   def remove
@@ -80,17 +115,17 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
 
     @consumer = user
     @cycle = OrdersCyclePlugin::Cycle.find params[:cycle_id]
-    @order = OrdersPlugin::Sale.create! cycle: @cycle, consumer: @consumer
+    @order = OrdersCyclePlugin::Sale.create! cycle: @cycle, consumer: @consumer
     redirect_to action: :edit, id: @order.id, profile: profile.identifier
   end
 
   def filter
     if id = params[:id]
-      @order = OrdersPlugin::Sale.find id rescue nil
+      @order = OrdersCyclePlugin::Sale.find id rescue nil
       @cycle = @order.cycle
     else
       @cycle = OrdersCyclePlugin::Cycle.find params[:cycle_id]
-      @order = OrdersPlugin::Sale.find params[:order_id] rescue nil
+      @order = OrdersCyclePlugin::Sale.find params[:order_id] rescue nil
     end
     load_products_for_order
 
@@ -130,6 +165,6 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
   end
 
   extend ControllerInheritance::ClassMethods
-  hmvc OrdersCyclePlugin
+  hmvc OrdersCyclePlugin, orders_context: OrdersCyclePlugin
 
 end

@@ -13,11 +13,14 @@
 *= require jquery-validation/jquery.validate.js
 *= require jquery.cookie.js
 *= require jquery.ba-bbq.min.js
-*= require typeahead.bundle.js
 *= require jquery.tokeninput.js
+*= require jquery.typewatch.js
+*= require jquery.textchange.js
 *= require jquery-timepicker-addon/dist/jquery-ui-timepicker-addon.js
 *= require inputosaurus.js
 *= require reflection.js
+*= require select-or-die/_src/selectordie
+*= require typeahead.bundle.js
 *= require rails.js
 *= require rails-extended.js
 *= require jrails.js
@@ -25,6 +28,7 @@
 *= require_self
 *= require modal.js
 *= require form.js
+*= require timezone.js
 * views speficics
 *= require add-and-join.js
 *= require report-abuse.js
@@ -385,8 +389,7 @@ function toggleSubmenu(trigger, title, link_list) {
 }
 
 function toggleMenu(trigger) {
-  hideAllSubmenus();
-  jQuery(trigger).siblings('.simplemenu-submenu').toggle().toggleClass('opened');
+  jQuery(trigger).siblings('.simplemenu-submenu').toggle();
 }
 
 function hideAllSubmenus() {
@@ -413,12 +416,21 @@ function loading_for_button(selector) {
 function customUserDataCallback() {
 };
 
-// override this to take action after user_data load
-function customUserDataCallback() {
-};
-
-// override this to take action after user_data load
-function customUserDataCallback() {
+function userDataCallback(data) {
+  noosfero.user_data = data;
+  customUserDataCallback();
+  if (data.login) {
+    // logged in
+    jQuery('head').append('<meta content="authenticity_token" name="csrf-param" />');
+    jQuery('head').append('<meta content="'+jQuery.cookie("_noosfero_.XSRF-TOKEN")+'" name="csrf-token" />');
+  }
+  if (data.notice) {
+    display_notice(data.notice);
+    // clear notice so that it is not display again in the case this function is called again.
+    data.notice = null;
+  }
+  // Bind this event to do more actions with the user data (for example, inside plugins)
+  jQuery(window).trigger("userDataLoaded", data);
 };
 
 // controls the display of the login/logout stuff
@@ -431,20 +443,9 @@ jQuery(function($) {
   });
 
   var user_data = noosfero_root() + '/account/user_data';
-  $.getJSON(user_data, function userDataCallBack(data) {
-    noosfero.user_data = data;
-    customUserDataCallback();
-    if (data.login) {
-      $('head').append('<meta content="authenticity_token" name="csrf-param" />');
-      $('head').append('<meta content="'+$.cookie("_noosfero_.XSRF-TOKEN")+'" name="csrf-token" />');
-    }
-    if (data.notice) {
-      display_notice(data.notice);
-    }
-    // Bind this event to do more actions with the user data (for example, inside plugins)
-    $(window).trigger("userDataLoaded", data);
-  });
+  $.getJSON(user_data, userDataCallback)
 
+  $.ajaxSetup({ cache: false });
 });
 
 // controls the display of contact list
@@ -484,16 +485,6 @@ function display_notice(message) {
    var $noticeBox = jQuery('<div id="notice"></div>').html(message).appendTo('body').fadeTo('fast', 0.8);
    $noticeBox.click(function() { $(this).hide(); });
    setTimeout(function() { $noticeBox.fadeOut('fast'); }, 5000);
-}
-
-function open_chat_window(self_link, anchor) {
-   if(anchor) {
-      jQuery('#chat').show('fast');
-      jQuery("#chat" ).trigger('opengroup', anchor);
-   } else {
-      jQuery('#chat').toggle('fast');
-   }
-   return false;
 }
 
 jQuery(function($) {
@@ -677,7 +668,7 @@ function original_image_dimensions(src) {
 
 function gravatarCommentFailback(img) {
   var link = img.parentNode;
-  link.href = "http://www.gravatar.com";
+  link.href = "//www.gravatar.com";
   img.src = img.getAttribute("data-gravatar");
 }
 
@@ -707,9 +698,13 @@ Array.min = function(array) {
 };
 
 function hideAndGetUrl(link) {
+  document.body.style.cursor = 'wait';
   link = jQuery(link)
   link.hide();
-  jQuery.getScript(link.attr('href'));
+  url = link.attr('href');
+  jQuery.getScript(link.attr('href') , function(){
+    document.body.style.cursor = 'default';
+  });
 }
 
 jQuery(function($){
@@ -906,18 +901,56 @@ function showHideTermsOfUse() {
   }
 }
 
+jQuery('.profiles-suggestions .explain-suggestion').live('click', function() {
+  var clicked = jQuery(this);
+  clicked.toggleClass('active');
+  clicked.next('.extra_info').toggle();
+  return false;
+});
+
+jQuery('.suggestions-block .block-subtitle').live('click', function() {
+  var clicked = jQuery(this);
+  clicked.next('.profiles-suggestions').toggle();
+  clicked.nextAll('.more-suggestions').toggle();
+  return false;
+});
+
 jQuery(document).ready(function(){
   showHideTermsOfUse();
 
   jQuery("#article_has_terms_of_use").click(function(){
     showHideTermsOfUse();
   });
+
+  // Suggestions on search inputs
+  (function($) {
+    var suggestions_cache = {};
+    $(".search-input-with-suggestions").autocomplete({
+      minLength: 2,
+      select: function(event, ui){
+        $(this).val(ui.item.value);
+        $(this).closest('form').submit();
+      },
+      source: function(request, response) {
+        var term = request.term.toLowerCase();
+        if (term in suggestions_cache) {
+          response(suggestions_cache[term]);
+          return;
+        }
+        request["asset"] = this.element.data("asset");
+        $.getJSON("/search/suggestions", request, function(data, status, xhr) {
+          suggestions_cache[term] = data;
+          response(data);
+        });
+      }
+    });
+  })(jQuery);
 });
 
 function apply_zoom_to_images(zoom_text) {
   jQuery(function($) {
     $(window).load( function() {
-      $('#article .article-body img').each( function(index) {
+      $('#article .article-body img:not(.disable-zoom)').each( function(index) {
         var original = original_image_dimensions($(this).attr('src'));
         if ($(this).width() < original['width'] || $(this).height() < original['height']) {
           $(this).wrap('<div class="zoomable-image" />');
@@ -979,6 +1012,13 @@ function start_fetching(element){
 
 function stop_fetching(element){
   jQuery('.fetching-overlay', element).remove();
+}
+
+function add_new_file_fields() {
+  var cloned = jQuery('#uploaded_files p:last').clone();
+  cloned.find("input[type='file']").val('');
+  cloned.appendTo('#uploaded_files');
+  jQuery('body').scrollTo(cloned);
 }
 
 window.isHidden = function isHidden() { return (typeof(document.hidden) != 'undefined') ? document.hidden : !document.hasFocus() };

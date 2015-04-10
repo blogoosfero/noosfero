@@ -50,10 +50,6 @@ module ApplicationHelper
 
   include CaptchaHelper
 
-  include PluginsHelper
-
-  include PluginsHelper
-
   def locale
     (@page && !@page.language.blank?) ? @page.language : FastGettext.locale
   end
@@ -442,19 +438,19 @@ module ApplicationHelper
   end
 
   def theme_site_title
-    theme_include('site_title')
+    @theme_site_title ||= theme_include 'site_title'
   end
 
   def theme_header
-    theme_include('header')
+    @theme_header ||= theme_include 'header'
   end
 
   def theme_footer
-    theme_include('footer')
+    @theme_footer ||= theme_include 'footer'
   end
 
   def theme_extra_navigation
-    theme_include('navigation')
+    @theme_extra_navigation ||= theme_include 'navigation'
   end
 
   def is_testing_theme
@@ -604,7 +600,7 @@ module ApplicationHelper
     link_to(
       content_tag( 'span', profile_image( profile, size ), :class => 'profile-image' ) +
       content_tag( 'span', h(name), :class => ( profile.class == Person ? 'fn' : 'org' ) ) +
-      extra_info + profile_sex_icon( profile ) + profile_cat_icons( profile ),
+      extra_info + profile_sex_icon( profile ),# + profile_cat_icons( profile ),
       profile.url,
       :class => 'profile_link url',
       :help => _('Click on this icon to go to the <b>%s</b>\'s home page') % profile.name,
@@ -685,13 +681,14 @@ module ApplicationHelper
     html.join "\n"
   end
 
+  def theme_javascript_src
+    script = File.join theme_path, 'theme.js'
+    script if File.exists? File.join(Rails.root, 'public', script)
+  end
+
   def theme_javascript_ng
-    script = File.join(theme_path, 'theme.js')
-    if File.exists?(File.join(Rails.root, 'public', script))
-      javascript_include_tag script
-    else
-      nil
-    end
+    script = theme_javascript_src
+    javascript_include_tag script if script
   end
 
   def file_field_or_thumbnail(label, image, i)
@@ -872,8 +869,9 @@ module ApplicationHelper
   end
 
   def base_url
-    environment.top_url
+    environment.top_url(request.scheme)
   end
+  alias :top_url :base_url
 
   def helper_for_article(article)
     article_helper = ActionView::Base.new
@@ -905,27 +903,17 @@ module ApplicationHelper
     end
   end
 
-  def icon_theme_stylesheet_path
-    icon_themes = []
-    theme_icon_themes = theme_option(:icon_theme) || []
-    for icon_theme in theme_icon_themes do
-      theme_path = "/designs/icons/#{icon_theme}/style.css"
-      if File.exists?(Rails.root.join('public', theme_path[1..-1]))
-        icon_themes << theme_path
-      end
-    end
-    icon_themes
-  end
-
   def page_title
-    (@page ? @page.title + ' - ' : '') +
-    (@topic ? @topic.title + ' - ' : '') +
-    (@section ? @section.title + ' - ' : '') +
-    (@product ? @product.name + ' - ' : '') +
-    (@toc ? _('Online Manual') + ' - ' : '') +
-    (controller.controller_name == 'chat' ? _('Chat') + ' - ' : '') +
-    (profile ? profile.short_name : environment.name) +
-    (@category ? " - #{@category.full_name}" : '')
+    CGI.escapeHTML(
+      (@page ? @page.title + ' - ' : '') +
+      (@topic ? @topic.title + ' - ' : '') +
+      (@section ? @section.title + ' - ' : '') +
+      (@product ? @product.name + ' - ' : '') +
+      (@toc ? _('Online Manual') + ' - ' : '') +
+      (controller.controller_name == 'chat' ? _('Chat') + ' - ' : '') +
+      (profile ? profile.short_name : environment.name) +
+      (@category ? " - #{@category.full_name}" : '')
+    )
   end
 
   # DEPRECATED. Do not use this.
@@ -954,9 +942,9 @@ module ApplicationHelper
   # from Article model for an ArticleBlock.
   def reference_to_article(text, article, anchor=nil)
     if article.profile.domains.empty?
-      href = "/#{article.url[:profile]}/"
+      href = "#{Noosfero.root}/#{article.url[:profile]}/"
     else
-      href = "http://#{article.profile.domains.first.name}/"
+      href = "http://#{article.profile.domains.first.name}#{Noosfero.root}/"
     end
     href += article.url[:page].join('/')
     href += '#' + anchor if anchor
@@ -1309,11 +1297,13 @@ module ApplicationHelper
   end
 
   def delete_article_message(article)
-    if article.folder?
-      _("Are you sure that you want to remove the folder \"%s\"? Note that all the items inside it will also be removed!") % article.name
-    else
-      _("Are you sure that you want to remove the item \"%s\"?") % article.name
-    end
+    CGI.escapeHTML(
+      if article.folder?
+        _("Are you sure that you want to remove the folder \"%s\"? Note that all the items inside it will also be removed!") % article.name
+      else
+        _("Are you sure that you want to remove the item \"%s\"?") % article.name
+      end
+    )
   end
 
   def expirable_link_to(expired, content, url, options = {})
@@ -1325,8 +1315,19 @@ module ApplicationHelper
     end
   end
 
-  def remove_content_button(action)
-    @plugins.dispatch("content_remove_#{action.to_s}", @page).include?(true)
+  def content_remove_spread(content)
+    !content.public? || content.folder? || (profile == user && user.communities.blank? && !environment.portal_enabled)
+  end
+
+  def remove_content_button(action, content)
+    method_name = "content_remove_#{action.to_s}"
+    plugin_condition = @plugins.dispatch(method_name, content).include?(true)
+    begin
+      core_condition = self.send(method_name, content)
+    rescue NoMethodError
+      core_condition = false
+    end
+    core_condition || plugin_condition
   end
 
   def template_options(kind, field_name)
@@ -1334,10 +1335,8 @@ module ApplicationHelper
     return '' if templates.count == 0
     return hidden_field_tag("#{field_name}[template_id]", templates.first.id) if templates.count == 1
 
-    counter = 0
     radios = templates.map do |template|
-      counter += 1
-      content_tag('li', labelled_radio_button(link_to(template.name, template.url, :target => '_blank'), "#{field_name}[template_id]", template.id, counter==1))
+      content_tag('li', labelled_radio_button(link_to(template.name, template.url, :target => '_blank'), "#{field_name}[template_id]", template.id, environment.is_default_template?(template)))
     end.join("\n")
 
     content_tag('div', content_tag('label', _('Profile organization'), :for => 'template-options', :class => 'formlabel') +
@@ -1409,7 +1408,7 @@ module ApplicationHelper
     #TODO This way is more efficient but do not support macro inside of
     #     macro. You must parse them from the inside-out in order to enable
     #     that.
-    doc.search('.macro').each do |macro|
+    doc.css('.macro').each do |macro|
       macro_name = macro['data-macro']
       result = @plugins.parse_macro(macro_name, macro, source)
       macro.inner_html = result.kind_of?(Proc) ? self.instance_exec(&result) : result
@@ -1429,6 +1428,43 @@ module ApplicationHelper
 
   def display_article_versions(article, version = nil)
     content_tag('ul', article.versions.map {|v| link_to("r#{v.version}", @page.url.merge(:version => v.version))})
+  end
+
+  def search_input_with_suggestions(name, asset, default, options = {})
+    text_field_tag name, default, options.merge({:class => 'search-input-with-suggestions', 'data-asset' => asset})
+  end
+
+  def profile_suggestion_profile_connections(suggestion)
+    profiles = suggestion.profile_connections.first(4).map do |profile|
+      link_to(profile_image(profile, :icon, :title => profile.name), profile.url, :class => 'profile-suggestion-connection-icon')
+    end
+
+    controller_target = suggestion.suggestion_type == 'Person' ? :friends : :memberships
+    profiles << link_to("<big> +#{suggestion.profile_connections.count - 4}</big>", :controller => controller_target, :action => :connections, :id => suggestion.suggestion_id) if suggestion.profile_connections.count > 4
+
+    if profiles.present?
+      content_tag(:div, profiles.join , :class => 'profile-connections')
+    else
+      ''
+    end
+  end
+
+  def profile_suggestion_tag_connections(suggestion)
+    tags = suggestion.tag_connections.first(4).map do |tag|
+      tag.name + ', '
+    end
+    last_tag = tags.pop
+    tags << last_tag.strip.chop if last_tag.present?
+    title = tags.join
+
+    controller_target = suggestion.suggestion_type == 'Person' ? :friends : :memberships
+    tags << ' ' + link_to('...', {:controller => controller_target, :action => :connections, :id => suggestion.suggestion_id}, :class => 'more-tag-connections', :title => _('See all connections')) if suggestion.tag_connections.count > 4
+
+    if tags.present?
+      content_tag(:div, tags.join, :class => 'tag-connections', :title => title)
+    else
+      ''
+    end
   end
 
   def labelled_colorpicker_field(human_name, object_name, method, options = {})
