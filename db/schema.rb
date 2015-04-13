@@ -150,6 +150,7 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
     t.integer  "spam_comments_count",  :default => 0
     t.integer  "author_id"
     t.integer  "created_by_id"
+    t.boolean  "show_to_followers",    :default => false
   end
 
   add_index "articles", ["comments_count"], :name => "index_articles_on_comments_count"
@@ -449,7 +450,7 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
   create_table "external_feeds", :force => true do |t|
     t.string   "feed_title"
     t.datetime "fetched_at"
-    t.string   "address"
+    t.text     "address"
     t.integer  "blog_id",                         :null => false
     t.boolean  "enabled",       :default => true, :null => false
     t.boolean  "only_once",     :default => true, :null => false
@@ -631,7 +632,34 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
 
   add_index "products", ["created_at"], :name => "index_products_on_created_at"
   add_index "products", ["product_category_id"], :name => "index_products_on_product_category_id"
-  add_index "products", ["profile_id"], :name => "index_products_on_enterprise_id"
+  add_index "products", ["profile_id"], :name => "index_products_on_profile_id"
+
+  create_table "profile_activities", :force => true do |t|
+    t.integer  "profile_id"
+    t.integer  "activity_id"
+    t.string   "activity_type"
+    t.datetime "created_at",    :null => false
+    t.datetime "updated_at",    :null => false
+  end
+
+  add_index "profile_activities", ["activity_id", "activity_type"], :name => "index_profile_activities_on_activity_id_and_activity_type"
+  add_index "profile_activities", ["activity_type"], :name => "index_profile_activities_on_activity_type"
+  add_index "profile_activities", ["profile_id"], :name => "index_profile_activities_on_profile_id"
+
+  create_table "profile_suggestions", :force => true do |t|
+    t.integer  "person_id"
+    t.integer  "suggestion_id"
+    t.string   "suggestion_type"
+    t.text     "categories"
+    t.boolean  "enabled",         :default => true
+    t.float    "score",           :default => 0.0
+    t.datetime "created_at",                        :null => false
+    t.datetime "updated_at",                        :null => false
+  end
+
+  add_index "profile_suggestions", ["person_id"], :name => "index_profile_suggestions_on_person_id"
+  add_index "profile_suggestions", ["score"], :name => "index_profile_suggestions_on_score"
+  add_index "profile_suggestions", ["suggestion_id"], :name => "index_profile_suggestions_on_suggestion_id"
 
   create_table "profiles", :force => true do |t|
     t.string   "name"
@@ -794,12 +822,11 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
     t.string  "child_type"
   end
 
-  create_table "sub_organizations_plugin_relations", :force => true do |t|
-    t.integer "parent_id"
-    t.string  "parent_type"
-    t.integer "child_id"
-    t.string  "child_type"
-  end
+  add_index "search_terms", ["asset"], :name => "index_search_terms_on_asset"
+  add_index "search_terms", ["occurrence_score"], :name => "index_search_terms_on_occurrence_score"
+  add_index "search_terms", ["relevance_score"], :name => "index_search_terms_on_relevance_score"
+  add_index "search_terms", ["score"], :name => "index_search_terms_on_score"
+  add_index "search_terms", ["term"], :name => "index_search_terms_on_term"
 
   create_table "taggings", :force => true do |t|
     t.integer  "tag_id"
@@ -812,12 +839,14 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
   end
 
   add_index "taggings", ["tag_id", "taggable_id", "taggable_type", "context", "tagger_id", "tagger_type"], :name => "taggings_idx", :unique => true
+  add_index "taggings", ["taggable_id", "taggable_type", "context"], :name => "index_taggings_on_taggable_id_and_taggable_type_and_context"
   add_index "taggings", ["taggable_id", "taggable_type"], :name => "index_taggings_on_taggable_id_and_taggable_type"
 
   create_table "tags", :force => true do |t|
     t.string  "name"
     t.integer "parent_id"
-    t.boolean "pending",   :default => false
+    t.boolean "pending",        :default => false
+    t.integer "taggings_count", :default => 0
   end
 
   add_index "tags", ["name"], :name => "index_tags_on_name", :unique => true

@@ -18,8 +18,7 @@ fb_app = {
 
   timeline: {
     app_id: '',
-    //app_scope: 'publish_actions',
-    app_scope: '',
+    app_scope: 'publish_actions',
 
     loading: function() {
       jQuery('#fb-app-connect-status').empty().addClass('loading').height(150)
@@ -199,6 +198,7 @@ fb_app = {
     receive: function(response) {
       fb_app.fb.authResponse = response
       fb_app.auth.save(response)
+      jQuery('html,body').animate({ scrollTop: jQuery('#fb-app-settings').offset().top-100 }, 400)
     },
 
     transformParams: function(response) {

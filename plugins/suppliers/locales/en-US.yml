@@ -124,7 +124,6 @@
       product: 
         import_in_progress: "The products are being imported. Wait a while and reload the page to view them."
     models:
-      base_product:
       distributed_product: 
         greater: " > "
       product: 
@@ -216,7 +215,7 @@
           price: Price
           stock: Stock
           unit: Unit
-          showing_pcount_produc: "Showing %{pcount} products of %{allpcount}"
+          showing_pcount_produc: "Total: %{count} products"
           we_don_t_have_product: "We don't have products to show."
         index: 
           active: active
@@ -266,7 +265,18 @@
           register_new_supplier: "Register %{terms.supplier.new_undefined_article.singular}"
           registry_form: "Registry form"
           save: Save
+        _actions:
+          all: "all"
+          none: "none"
+          select: "select"
+          with_selection: "with selected"
+          activate: "activate"
+          deactivate: "deactivate"
         _supplier: 
+          edit: "Edit"
+          see_page: "See page"
+          see_products: "See products"
+          message: "Message"
           abreviated_name: "Abreviated Name"
           actions: Actions
           among_them: ", among them"
@@ -386,18 +396,18 @@
         product_name: "product name"
         products_report: "products report"
         projected_stock: "projected stock"
-        qtt_to_be_parcelled: "qtt to be parcelled"
+        qtt_to_be_parcelled: "qtt to be using stock"
         qty_ordered: "qty ordered"
         selled_total: "selled total"
         selled_value: "selled value"
         stock_qtt: "stock qtt"
         supplier: "%{terms.supplier.singular.capitalize}"
-        total_parcel_value: "Total parcel value"
+        total_parcel_value: "Total value using stock"
         total_selled_value: "Total selled value"
         total_value: "Total Value"
         un: un.
         value: value
-        value_parcel: "value parcel"
+        value_parcel: "value using stock"
         phone: 'Telephone'
         mail: 'Email'
         alert_formulas: "Atention! If you are using LibreOffice (BrOffice) you will need to update the formulas with the command CTRL + SHIFT + F9"
@@ -491,7 +501,7 @@
       order:
         _show: 
           open: "Open"
-          cancel_order: "cancel order"
+          cancel_order: "Cancel order"
           confirm_order: "Confirm order"
           confirming_this_order: "Confirming this order you are responsible for paying it. Do you want to continue?"
         _delivery: 
@@ -679,6 +689,7 @@
           your_order_was_cancel: "Your order was cancelled."
           your_order_wasn_t_con: "Your order wasn't confirmed and the cycle orders period already ended."
           your_orders_on_this_c: "Your orders on this cycle"
+          associate_to_order: "Associate to make orders"
         _filter_products: 
           active: active
           all_the_categories: "all the categories"
@@ -852,6 +863,7 @@
       layout_helper: 
         orders: Orders
         start: Start
+        products: Products
         administration: Administration
         volunteering: Volunteering
     terms:

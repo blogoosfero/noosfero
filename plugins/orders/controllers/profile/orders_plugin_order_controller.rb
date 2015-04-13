@@ -10,39 +10,15 @@ class OrdersPluginOrderController < ProfileController
   before_filter :set_actor_name
 
   helper OrdersPlugin::TranslationHelper
-  helper OrdersPlugin::OrdersDisplayHelper
-
-  def edit
-    status = params[:order][:status]
-    if status == 'ordered'
-      if @order.items.size > 0
-        @order.update_attributes! params[:order]
-        session[:notice] = t('orders_plugin.controllers.profile.consumer.order_confirmed')
-      else
-        session[:notice] = t('orders_plugin.controllers.profile.consumer.can_not_confirm_your_')
-      end
-    end
-    render 'orders_plugin_order/edit'
-  end
+  helper OrdersPlugin::DisplayHelper
 
   def repeat
-  end
-
-  def reopen
-    @order.update_attributes! status: 'draft'
-    render 'orders_plugin_order/edit'
-  end
-
-  def cancel
-    @order.update_attributes! status: 'cancelled'
-    session[:notice] = t('orders_plugin.controllers.profile.consumer.order_cancelled')
-    render 'orders_plugin_order/edit'
   end
 
   protected
 
   def load_order
-    @order = OrdersPlugin::Sale.find_by_id params[:id]
+    @order = hmvc_orders_context::Sale.find_by_id params[:id]
     render_access_denied if @order.present? and not @order.may_view? user
   end
 
@@ -62,6 +38,6 @@ class OrdersPluginOrderController < ProfileController
   end
 
   extend ControllerInheritance::ClassMethods
-  hmvc OrdersPlugin
+  hmvc OrdersPlugin, orders_context: OrdersPlugin
 
 end

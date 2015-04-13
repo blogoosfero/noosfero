@@ -1,3 +1,5 @@
+require 'pp'
+
 # locally-developed modules
 require 'acts_as_filesystem'
 require 'acts_as_having_settings'
@@ -19,7 +21,7 @@ require 'will_paginate'
 require 'will_paginate/array'
 require 'nokogiri'
 
-require 'fast_blank'
+require 'fast_blank' unless RUBY_ENGINE == 'jruby'
 # THESE DON'T HELP!
 #require 'escape_utils' #require 'escape_utils/html/rack' # to patch Rack::Utils
 #require 'escape_utils/html/erb' # to patch ERB::Util

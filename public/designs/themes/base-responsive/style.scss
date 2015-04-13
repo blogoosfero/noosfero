@@ -906,25 +906,24 @@ div#notice {
 .msie .search-results-box {
   width: 48%;
 }
-
 #content .no-boxes h1 {
   font-variant: small-caps;
   color: #555753;
   text-align: left;
   border-bottom: 2px solid #2e3436; /*8C0*/
 }
-
 .query {
   display: none;
 }
-
 .controller-search #content .search_form h3 {
   display: none;
 }
-
 .controller-search #content .search_form h4 {
   background: #DDD;
   color: #777;
+}
+.search-hint {
+  padding: 0;
 }
 .controller-search .search-options {
   border: 1px solid #777;
@@ -934,7 +933,6 @@ div#notice {
 .controller-search .search-options ul li {
   position: relative;
 }
-
 .controller-search .search-within select {
   display: block;
   margin-bottom: 5px;
@@ -949,17 +947,11 @@ div#notice {
   position: relative;
   top: 5px;
 }
-
-/*.controller-search a {
-  color: #555753;
-}*/
-
 #search-results h3 {
   color: #555753; /*6A0*/
   font-variant: small-caps;
   margin: 0px;
 }
-
 .search-results-innerbox {
   border: 1px solid #CCC;
   border-top: 2px solid #2e3436;
@@ -984,6 +976,36 @@ div#notice {
   text-decoration: underline;
 }
 
+ul#assets-menu {
+  width: auto;
+}
+.controller-search .search-field .formfield {
+    width: auto;
+    display: table;
+}
+@media (max-width: 500px) {
+  ul#assets-menu {
+    display: none;
+  }
+  #search-filters {
+    margin-top: 0;
+    float: none;
+  }
+}
+@media (min-width: 501px) and (max-width: 767px) {
+  ul#assets-menu {
+    display: none;
+  }
+  #search-filters {
+    margin-top: -40px;
+  }
+}
+@media (min-width: 768px) and (max-width: 991px) {
+  #search-filters {
+    margin-top: -80px;
+  }
+}
+
 /* ==> article.css <== */
 
 hr.pre-posts, hr.sep-posts {
@@ -1004,11 +1026,6 @@ hr.pre-posts, hr.sep-posts {
 }
 #article-actions a.button:hover {
   color: #555753;
-}
-#content a.disabled,
-#content a.disabled:hover {
-  color: #888;
-  text-decoration: none;
 }
 #content a.button.disabled,
 #content a.button.disabled:hover {
@@ -1120,8 +1137,7 @@ hr.pre-posts, hr.sep-posts {
 }
 
 #article.file-generic .download-link {
-  display: block;
-  margin-bottom: 10px;
+  margin: 20px 0;
 }
 #article.file-generic .download-link span {
   font-size: 150%;
@@ -1542,11 +1558,14 @@ div.tooltip-inner {
 .search-results-type-article ul {
   overflow: hidden;
 }
+.controller-search #search-results {
+  margin: 0;
+}
 .controller-search #search-column-left {
   overflow: hidden;
 }
 .controller-search #content .search-results-type-article li {
-  padding: 10px;
+  padding: 0 10px 10px 10px;
 }
 .search-product-item-first-column,
 .search-content-first-column {
@@ -1563,8 +1582,9 @@ div.tooltip-inner {
   margin: 0;
 }
 .search-product-item .search-result-title {
-  font-size: 15px;
+  font-size: 24px;
   display: block;
+  color: #333;
 }
 @media (max-width: 767px) {
   .search-no-image {
@@ -1600,7 +1620,7 @@ div.tooltip-inner {
   }
   .controller-search #content .search-results-type-product li {
     font-size: 13px;
-    padding: 10px;
+    padding: 0 10px 10px 10px;
   }
   .search-content-first-column [class*='icon-'] {
     font-size: 64px;
@@ -1895,6 +1915,10 @@ img, video, audio {
     padding: 3px 20px 8px 20px;
 }
 
+#noosferoModalContent{
+    padding: 15px;
+}
+
 @media screen and (max-width: 359px) {
     a.navbar-brand {
         font-size: 0px;
@@ -1902,11 +1926,13 @@ img, video, audio {
     }
 }
 
+/* dtygel: This breaks things, so I'll comment out
 @media screen and (min-width: 768px ) {
   .box-container-1, .box-container-2, .box-container-3 {
     padding-right: 0px;
   }
 }
+*/
 
 .container > #content {
     margin-right: 0px;
@@ -1916,11 +1942,12 @@ body {
     background-color: #eeeeee;
 }
 
+.no-boxes {
+	margin-bottom: 20px;
+}
 .block, .no-boxes {
     position: relative;
-    padding: 10px;
-    margin-bottom: 20px;
-    /* margin: 0px 0px 20px 0px; */
+    padding: 8px;
     float: none;
     border-radius: 3px;
     border: 1px solid rgba(0,0,0,0.2);/*#d8d8d8;*/
@@ -1936,6 +1963,7 @@ body {
     height: 41px;
 }
 
+/* dtygel: This breaks things, so I'll comment it out
 $padding_value:7px;
 
 .col-xs-1, .col-sm-1, .col-md-1, .col-lg-1, .col-xs-2, .col-sm-2, .col-md-2, .col-lg-2, .col-xs-3, .col-sm-3, .col-md-3, .col-lg-3, .col-xs-4, .col-sm-4, .col-md-4, .col-lg-4, .col-xs-5, .col-sm-5, .col-md-5, .col-lg-5, .col-xs-6, .col-sm-6, .col-md-6, .col-lg-6, .col-xs-7, .col-sm-7, .col-md-7, .col-lg-7, .col-xs-8, .col-sm-8, .col-md-8, .col-lg-8, .col-xs-9, .col-sm-9, .col-md-9, .col-lg-9, .col-xs-10, .col-sm-10, .col-md-10, .col-lg-10, .col-xs-11, .col-sm-11, .col-md-11, .col-lg-11, .col-xs-12, .col-sm-12, .col-md-12, .col-lg-12 {
@@ -1947,6 +1975,7 @@ $padding_value:7px;
   margin-left: -$padding_value;
   margin-right: -$padding_value;
 }
+*/
 
 #content-inner {
   padding-top: 21px;
@@ -1980,6 +2009,10 @@ input.ui-autocomplete-input {
 }
 
 /* CMS management */
+#new-folder-button {
+  margin: -10px 0 15px 0;
+}
+
 .article-controls .btn,
 table.cms-articles a.icon, 
 table.cms-articles a.icon-parent-folder,
@@ -2018,3 +2051,8 @@ table.cms-articles .article-name {
 
 /*PROVISORY!*/
 #product-owner { display:none; }
+
+.required-field {
+  color: #E75252;
+  font-weight: bold;
+}

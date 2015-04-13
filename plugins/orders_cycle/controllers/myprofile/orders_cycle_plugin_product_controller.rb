@@ -7,7 +7,7 @@ class OrdersCyclePluginProductController < SuppliersPluginProductController
   include OrdersCyclePlugin::TranslationHelper
 
   helper OrdersCyclePlugin::TranslationHelper
-  helper OrdersCyclePlugin::OrdersCycleDisplayHelper
+  helper OrdersCyclePlugin::DisplayHelper
 
   def edit
     super
@@ -16,7 +16,8 @@ class OrdersCyclePluginProductController < SuppliersPluginProductController
 
   def remove_from_order
     @offered_product = OrdersCyclePlugin::OfferedProduct.find params[:id]
-    @order = OrdersPlugin::Sale.find params[:order_id]
+    @order = OrdersCyclePlugin::Sale.find params[:order_id]
+    raise 'Order confirmed or cycle is closed for orders' unless @order.open?
     @item = @order.items.find_by_product_id @offered_product.id
     @item.destroy rescue render :nothing => true
   end
@@ -40,6 +41,6 @@ class OrdersCyclePluginProductController < SuppliersPluginProductController
   protected
 
   extend ControllerInheritance::ClassMethods
-  hmvc OrdersCyclePlugin
+  hmvc OrdersCyclePlugin, orders_context: OrdersCyclePlugin
 
 end

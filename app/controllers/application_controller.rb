@@ -9,6 +9,7 @@ class ApplicationController < ActionController::Base
   before_filter :allow_cross_domain_access
   before_filter :login_required, :if => :private_environment?
   before_filter :verify_members_whitelist, :if => [:private_environment?, :user]
+  around_filter :set_time_zone
 
   def verify_members_whitelist
     render_access_denied unless user.is_admin? || environment.in_whitelist?(user)
@@ -21,6 +22,18 @@ class ApplicationController < ActionController::Base
   end
 
   protected
+
+  def set_time_zone
+    old_time_zone = Time.zone
+    Time.zone = browser_timezone rescue old_time_zone if browser_timezone.present?
+    yield
+  ensure
+    Time.zone = old_time_zone
+  end
+
+  def browser_timezone
+    cookies['browser.timezone']
+  end
 
   cattr_accessor :controller_path_class
   self.controller_path_class = {}
@@ -147,6 +160,9 @@ class ApplicationController < ActionController::Base
 
   # TODO: move this logic somewhere else (Domain class?)
   def detect_stuff_by_domain
+    # Sets text domain based on request host for custom internationalization
+    FastGettext.text_domain = Domain.custom_locale(request.host)
+
     @domain = Domain.find_by_name(request.host)
     if @domain.nil?
       @environment = Environment.default
@@ -205,22 +221,13 @@ class ApplicationController < ActionController::Base
     end
   end
 
-  def find_by_contents(asset, scope, query, paginate_options={:page => 1}, options={})
-    plugins.dispatch_first(:find_by_contents, asset, scope, query, paginate_options, options) ||
-    fallback_find_by_contents(asset, scope, query, paginate_options, options)
-  end
+  include SearchTermHelper
+
+  private
 
   def autocomplete asset, scope, query, paginate_options={:page => 1}, options={:field => 'name'}
     plugins.dispatch_first(:autocomplete, asset, scope, query, paginate_options, options) ||
     fallback_autocomplete(asset, scope, query, paginate_options, options)
-  end
-
-  private
-
-  def fallback_find_by_contents(asset, scope, query, paginate_options, options)
-    scope = scope.like_search(query) unless query.blank?
-    scope = scope.send(options[:filter]) unless options[:filter].blank?
-    {:results => scope.paginate(paginate_options)}
   end
 
   def fallback_autocomplete asset, scope, query, paginate_options, options
@@ -232,8 +239,17 @@ class ApplicationController < ActionController::Base
     {:results => scope.paginate(paginate_options)}
   end
 
+  def find_by_contents(asset, context, scope, query, paginate_options={:page => 1}, options={})
+    search = plugins.dispatch_first(:find_by_contents, asset, scope, query, paginate_options, options)
+    register_search_term(query, scope.count, search[:results].count, context, asset)
+    search
+  end
+
+  def find_suggestions(query, context, asset, options={})
+    plugins.dispatch_first(:find_suggestions, query, context, asset, options)
+  end
+
   def private_environment?
     @environment.enabled?(:restrict_to_members)
   end
-
 end

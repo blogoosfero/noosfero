@@ -79,8 +79,8 @@ Noosfero::Application.routes.draw do
   match 'catalog(/:profile)', :controller => :catalog, :action => :index, :profile => /#{Noosfero.identifier_format}/, :as => :catalog
 
   # invite
-  match 'profile(/:profile)/invite/friends', :controller => 'invite', :action => 'select_address_book', :profile => /#{Noosfero.identifier_format}/
-  match 'profile(/:profile)/invite/:action', :controller => 'invite', :profile => /#{Noosfero.identifier_format}/
+  match 'profile(/:profile/)invite/friends', :controller => 'invite', :action => 'invite_friends', :profile => /#{Noosfero.identifier_format}/
+  match 'profile(/:profile/)invite/:action', :controller => 'invite', :profile => /#{Noosfero.identifier_format}/
 
   # feeds per tag
   match 'profile(/:profile)/tags/:id/feed', :controller => 'profile', :action =>'tag_feed', :id => /.+/, :profile => /#{Noosfero.identifier_format}/, :as => :tag_feed
@@ -96,7 +96,8 @@ Noosfero::Application.routes.draw do
   match 'profile(/:profile)/comment/:action/:id', :controller => 'comment', :profile => /#{Noosfero.identifier_format}/
 
   # public profile information
-  match 'profile(/:profile)(/:action(/:id))', :controller => 'profile', :action => 'index', :id => /[^\/]*/, :profile => /#{Noosfero.identifier_format}/, :as => :profile
+  match 'profile/:profile(/:action(/:id))', :controller => 'profile', :action => 'index', :id => /[^\/]*/, :profile => /#{Noosfero.identifier_format}/, :as => :profile
+  match 'profile/(/:action(/:id))', :controller => 'profile', :action => 'index', :id => /[^\/]*/, :profile => /#{Noosfero.identifier_format}/, :as => :profile
 
   # contact
   match 'contact(/:profile)/:action(/:id)', :controller => 'contact', :action => 'index', :id => /.*/, :profile => /#{Noosfero.identifier_format}/

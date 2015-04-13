@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class MacrosHelperTest < ActionView::TestCase
   include MacrosHelper
@@ -6,6 +6,7 @@ class MacrosHelperTest < ActionView::TestCase
   include ActionView::Helpers::FormOptionsHelper
   include ActionView::Helpers::FormTagHelper
   include ActionView::Helpers::TagHelper
+  include Noosfero::Plugin::HotSpot
 
   CONFIG = {
     :params => [

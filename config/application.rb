@@ -66,10 +66,6 @@ module Noosfero
       config.active_record.observers = :article_sweeper, :role_assignment_sweeper, :friendship_sweeper, :category_sweeper, :block_sweeper
     end
 
-    # Set Time.zone default to the specified zone and make Active Record auto-convert to this zone.
-    # Run "rake -D time" for a list of tasks for finding time zone names. Default is UTC.
-    # config.time_zone = 'Central Time (US & Canada)'
-
     # The default locale is :en and all translations from config/locales/*.rb,yml are auto loaded.
     # config.i18n.load_path += Dir[Rails.root.join('my', 'locales', '*.{rb,yml}').to_s]
     config.i18n.available_locales = Noosfero.available_locales
@@ -98,17 +94,15 @@ module Noosfero
     # Enable the asset pipeline
     config.assets.enabled = true
 
-    # Straight support for assets from a rails 2 pattern
-    # See also config/initializers/assets.rb
-
-    # avoid readd to config.assets.paths
+    # don't let rails prepend app/assets to config.assets.paths
+    # as we are doing it
     config.paths['app/assets'] = ''
 
     config.assets.paths =
       Dir.glob("app/assets/plugins/*/{,stylesheets,javascripts}") +
       Dir.glob("app/assets/{,stylesheets,javascripts}") +
       # no precedence over core
-      Dir.glob("app/assets/designs/{themes,user_themes}/*")
+      Dir.glob("app/assets/designs/{icons,themes,user_themes}/*")
 
     # Version of your assets, change this if you want to expire all your assets
     config.assets.version = '1.0'
@@ -139,9 +133,14 @@ module Noosfero
     config.action_dispatch.session = {
       :key    => '_noosfero_session',
     }
+    # from noosfero master, using buggy cookie_store
+    #config.session_store :cookie_store, :key => '_noosfero_session'
 
+    # Set Time.zone default to the specified zone and make Active Record auto-convert to this zone.
+    # Run "rake -D time" for a list of tasks for finding time zone names. Default is UTC.
     config.time_zone = File.read('/etc/timezone').split("\n").first
-    config.active_record.default_timezone = :local
+    # timezone varies for each request, see ApplicationController#set_time_zone
+    config.active_record.default_timezone = :utc
 
     config.i18n.fallbacks = [:en_US, :en]
 

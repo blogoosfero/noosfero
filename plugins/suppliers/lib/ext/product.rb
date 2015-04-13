@@ -40,6 +40,11 @@ class Product
     self.from_products.first
   end
 
+  # defined just as *from_products above
+  # may be overiden in different subclasses
+  has_many :sources_supplier_products, foreign_key: :to_product_id, class_name: 'SuppliersPlugin::SourceProduct'
+  has_many :supplier_products, through: :sources_from_products, source: :from_product, order: 'id ASC'
+
   has_many :sources_from_2x_products, through: :sources_from_products, source: :sources_from_products
   has_many :sources_to_2x_products, through: :sources_to_product, source: :sources_to_products
   has_many :from_2x_products, through: :sources_from_2x_products, source: :from_product
@@ -56,7 +61,6 @@ class Product
   scope :from_supplier_id, lambda { |supplier_id| { conditions: ['suppliers_plugin_suppliers.id = ?', supplier_id] } }
 
   after_create :distribute_to_consumers
-  after_destroy :destroy_dependent
 
   def own?
     self.class == Product
@@ -65,19 +69,19 @@ class Product
     self.class == SuppliersPlugin::DistributedProduct
   end
 
-  # Redefine these two methods on
-  def sources_supplier_products
-    self.sources_from_products
-  end
-  def supplier_products
-    self.from_products
-  end
-
   def sources_supplier_product
     self.sources_supplier_products.first
   end
   def supplier_product
     self.supplier_products.first
+  end
+
+  def buy_price
+    self.supplier_products.inject(0){ |sum, p| sum += p.price || 0 }
+  end
+  def buy_unit
+    #TODO: handle multiple products
+    unit = (self.supplier_product.unit rescue nil) || self.class.default_unit
   end
 
   def supplier
@@ -100,7 +104,23 @@ class Product
   end
 
   def distribute_to_consumer consumer
-    SuppliersPlugin::DistributedProduct.create! profile: consumer, from_products: [self]
+    distributed_product = consumer.distributed_products.where(profile_id: consumer.id, from_products_products: {id: self.id}).first
+    distributed_product ||= SuppliersPlugin::DistributedProduct.create! profile: consumer, from_products: [self]
+  end
+
+  def destroy_dependent
+    self.to_products.each do |to_product|
+      to_product.destroy if to_product.dependent?
+    end
+  end
+
+  # before_destroy and after_destroy don't work,
+  # see http://stackoverflow.com/questions/14175330/associations-not-loaded-in-before-destroy-callback
+  def destroy
+    self.class.transaction do
+      self.destroy_dependent
+      super
+    end
   end
 
   protected
@@ -113,13 +133,5 @@ class Product
       self.distribute_to_consumer consumer.profile
     end
   end
-
-  # to_products doesn't work when triggered from supplier.destroy. delay workaround that
-  def destroy_dependent
-    self.to_products.each do |to_product|
-      to_product.destroy if to_product.dependent?
-    end
-  end
-  handle_asynchronously :destroy_dependent
 
 end

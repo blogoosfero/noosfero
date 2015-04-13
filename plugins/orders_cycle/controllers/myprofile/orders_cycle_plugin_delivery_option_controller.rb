@@ -10,11 +10,11 @@ class OrdersCyclePluginDeliveryOptionController < DeliveryPluginOptionController
   include OrdersCyclePlugin::TranslationHelper
 
   helper OrdersCyclePlugin::TranslationHelper
-  helper OrdersCyclePlugin::OrdersCycleDisplayHelper
+  helper OrdersCyclePlugin::DisplayHelper
 
   protected
 
   extend ControllerInheritance::ClassMethods
-  hmvc OrdersCyclePlugin
+  hmvc OrdersCyclePlugin, orders_context: OrdersCyclePlugin
 
 end

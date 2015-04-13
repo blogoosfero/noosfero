@@ -2,10 +2,30 @@ module LayoutHelper
 
   def body_classes
     # Identify the current controller and action for the CSS:
+    (logged_in? ? " logged-in" : "") +
+    "#{" responsive" if theme_option :responsive}" +
     " controller-#{controller.controller_name}" +
     " action-#{controller.controller_name}-#{controller.action_name}" +
     " template-#{@layout_template || if profile.blank? then 'default' else profile.layout_template end}" +
     (!profile.nil? && profile.is_on_homepage?(request.path,@page) ? " profile-homepage" : "")
+  end
+
+  def html_tag_classes
+    [
+      body_classes, (
+        profile.blank? ? nil : [
+          'profile-type-is-' + profile.class.name.downcase,
+          'profile-name-is-' + profile.identifier,
+        ]
+      ), 'theme-' + current_theme,
+      @plugins.dispatch(:html_tag_classes).map do |content|
+        if content.respond_to?(:call)
+          instance_exec(&content)
+        else
+          content.html_safe
+        end
+      end
+    ].flatten.compact.join(' ')
   end
 
   def noosfero_javascript
@@ -17,6 +37,7 @@ module LayoutHelper
       output += javascript_include_tag *plugins_javascripts
     end
     output += theme_javascript_ng.to_s
+    output += javascript_tag 'render_all_jquery_ui_widgets()'
 
     output += javascript_tag 'render_all_jquery_ui_widgets()'
     output
@@ -54,7 +75,7 @@ module LayoutHelper
     icon_themes = []
     theme_icon_themes = theme_option(:icon_theme) || []
     for icon_theme in theme_icon_themes do
-      theme_path = "/designs/icons/#{icon_theme}/style.css"
+      theme_path = "designs/icons/#{icon_theme}/style.css"
       if File.exists?(Rails.root.join('public', theme_path))
         icon_themes << theme_path
       end
@@ -70,14 +91,14 @@ module LayoutHelper
     "#{theme_path[1..-1]}/style.css"
   end
 
+  def layout_template
+    if profile then profile.layout_template else environment.layout_template end
+  end
+
   def addthis_javascript
     if NOOSFERO_CONF['addthis_enabled']
       "<script src='//s7.addthis.com/js/300/addthis_widget.js#pubid=#{NOOSFERO_CONF['addthis_pub']}'></script>"
     end
-  end
-
-  def meta_description_tag(article=nil)
-    article ? truncate(strip_tags(article.body.to_s), :length => 200) : environment.name
   end
 
 end

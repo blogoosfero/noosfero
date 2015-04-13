@@ -8,7 +8,7 @@ if [ -e /etc/default/noosfero ]; then
   . /etc/default/noosfero
 fi
 
-if [ -z "$NOOSFERO_DIR"]; then
+if [ -z "$NOOSFERO_DIR" ]; then
   this_script=$(readlink -f $0)
   NOOSFERO_DIR=$(dirname $this_script | xargs dirname)
 fi
@@ -81,7 +81,20 @@ run(){
 
 _enable(){
   local plugin="$1"
-  local source="$available_plugins_dir/$plugin"
+
+  if [ -d "$available_plugins_dir/$plugin" ]; then
+    local source="$available_plugins_dir/$plugin"
+  else
+    if [ ! -d "$plugin" ]; then
+      echo "E: $plugin not found (needs to be an existing directory)"
+      return
+    fi
+
+    # out-of-tree plugins
+    local source="$plugin"
+    local plugin=$(basename "$plugin")
+  fi
+
   local target="$enabled_plugins_dir/$plugin"
   local base="$base_plugins_dir/$plugin"
   run "$source/before_enable.rb"
@@ -112,6 +125,8 @@ _enable(){
       fi
     fi
     if [ "$installation_ok" = true ] && [ "$dependencies_ok" = true ]; then
+
+      # check dependencies
       if [ -z "$plugin_dependencies" ]; then
         plugin_dependencies=`$dependency_calc $plugin`
         _say "Enabling dependencies: $plugin_dependencies"
@@ -176,7 +191,7 @@ _new(){
     mkdir "$target"
 
     plugin_name=$(echo "$plugin" | sed -e 's/^./\u&/; s/_\(.\)/\u\1/g')
-    for source_file in $(find "$template" -type f); do
+    for source_file in $(find "$template" -type f -and '(' -not -name '*.po' -and -not -name '*.mo' ')'); do
       target_file=$(echo "$source_file" | sed -e "s/template/$plugin/g")
       mkdir -p $(dirname "$target_file")
       sed "s/TemplatePlugin/${plugin_name}Plugin/g" "$source_file" > "$target_file"
