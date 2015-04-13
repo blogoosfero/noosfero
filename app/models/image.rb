@@ -31,6 +31,6 @@ class Image < ActiveRecord::Base
 
   def public_filename *args
     "http://blogoosfero.cc#{super *args}"
-  end if Rails.env.development?
+  end
 
 end
