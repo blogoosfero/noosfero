@@ -27,10 +27,22 @@ class CustomFormsPlugin::FieldTest < ActiveSupport::TestCase
     license_field = CustomFormsPlugin::Field.create!(:name => 'License', :form => form)
     url_field = CustomFormsPlugin::Field.create!(:name => 'URL', :form => form)
 
-    assert_no_difference CustomFormsPlugin::Form, :count do
+    assert_no_difference 'CustomFormsPlugin::Form.count' do
       url_field.destroy
     end
     assert_equal form.fields, [license_field]
+  end
+
+  should 'destroy its answers after removing a field' do
+    form = CustomFormsPlugin::Form.create!(:name => 'Free Software', :profile => fast_create(Profile))
+    field = CustomFormsPlugin::Field.create!(:name => 'Project name', :form => form)
+
+    CustomFormsPlugin::Answer.create(:field => field, :value => 'My Project')
+    CustomFormsPlugin::Answer.create(:field => field, :value => 'Other Project')
+
+    assert_difference 'CustomFormsPlugin::Answer.count', -2 do
+      field.destroy
+    end
   end
 
   should 'have alternative if type is SelectField' do

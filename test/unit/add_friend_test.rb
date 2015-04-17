@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class AddFriendTest < ActiveSupport::TestCase
 
@@ -16,7 +16,7 @@ class AddFriendTest < ActiveSupport::TestCase
 
     task = fast_create(AddFriend, :requestor_id => person1.id, :target_id => person2.id, :target_type => 'Person')
 
-    assert_difference Friendship, :count, 2 do
+    assert_difference 'Friendship.count', 2 do
       task.finish
     end
     person1.friends.reload
@@ -32,7 +32,7 @@ class AddFriendTest < ActiveSupport::TestCase
     task.group_for_friend = 'friend2'
     assert task.save
 
-    assert_difference Friendship, :count, 2 do
+    assert_difference 'Friendship.count', 2 do
       task.finish
     end
 
@@ -44,11 +44,11 @@ class AddFriendTest < ActiveSupport::TestCase
     task = AddFriend.new
     task.valid?
 
-    ok('must not validate with empty requestor') { task.errors.invalid?(:requestor_id) }
+    ok('must not validate with empty requestor') { task.errors[:requestor_id.to_s].present? }
 
     task.requestor = Person.new
     task.valid?
-    ok('must validate when requestor is given') { task.errors.invalid?(:requestor_id)}
+    ok('must validate when requestor is given') { task.errors[:requestor_id.to_s].present?}
 
   end
 
@@ -56,15 +56,17 @@ class AddFriendTest < ActiveSupport::TestCase
     task = AddFriend.new
     task.valid?
 
-    ok('must not validate with empty target') { task.errors.invalid?(:target_id) }
+    ok('must not validate with empty target') { task.errors[:target_id.to_s].present? }
 
     task.target = Person.new
     task.valid?
-    ok('must validate when target is given') { task.errors.invalid?(:target_id)}
+    ok('must validate when target is given') { task.errors[:target_id.to_s].present?}
   end
 
   should 'send e-mails' do
-    TaskMailer.expects(:deliver_target_notification).at_least_once
+    mailer = mock
+    mailer.expects(:deliver).at_least_once
+    TaskMailer.expects(:target_notification).returns(mailer).at_least_once
 
     task = AddFriend.create!(:person => person1, :friend => person2)
   end
@@ -75,9 +77,9 @@ class AddFriendTest < ActiveSupport::TestCase
   end
 
   should 'not add friend twice' do
-    fast_create(AddFriend, :requestor_id => person1.id, :target_id => person2.id)
+    create AddFriend, person: person1, friend: person2, status: 1
     assert_raise ActiveRecord::RecordInvalid do
-      AddFriend.create!(:person => person1, :friend => person2)
+      create AddFriend, person: person1, friend: person2, status: 1
     end
   end
 
@@ -95,11 +97,11 @@ class AddFriendTest < ActiveSupport::TestCase
 
     task.group_for_person = big_word
     task.valid?
-    assert task.errors[:group_for_person]
+    assert task.errors[:group_for_person].present?
 
     task.group_for_person = 'short name'
     task.valid?
-    assert !task.errors[:group_for_person]
+    assert !task.errors[:group_for_person].present?
   end
 
   should 'limit "group for friend" number of characters' do
@@ -109,11 +111,11 @@ class AddFriendTest < ActiveSupport::TestCase
 
     task.group_for_friend = big_word
     task.valid?
-    assert task.errors[:group_for_friend]
+    assert task.errors[:group_for_friend].present?
 
     task.group_for_friend = 'short name'
     task.valid?
-    assert !task.errors[:group_for_friend]
+    assert !task.errors[:group_for_friend].present?
   end
 
   should 'have target notification message if is organization and not moderated' do
@@ -131,8 +133,15 @@ class AddFriendTest < ActiveSupport::TestCase
   should 'deliver target notification message' do
     task = AddFriend.new(:person => person1, :friend => person2)
 
-    email = TaskMailer.deliver_target_notification(task, task.target_notification_message)
+    email = TaskMailer.target_notification(task, task.target_notification_message).deliver
     assert_match(/#{task.requestor.name} wants to be your friend/, email.subject)
+  end
+
+  should 'disable suggestion if profile requested friendship' do
+    suggestion = ProfileSuggestion.create(:person => person1, :suggestion => person2, :enabled => true)
+
+    task = AddFriend.create(:person => person1, :friend => person2)
+    assert_equal false, ProfileSuggestion.find(suggestion.id).enabled
   end
 
 end

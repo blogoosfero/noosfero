@@ -1,17 +1,17 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class LicenseTest < ActiveSupport::TestCase
   should 'validate presence of name and environment' do
     license = License.new
     license.valid?
-    assert license.errors.invalid?(:name)
-    assert license.errors.invalid?(:environment)
+    assert license.errors[:name].any?
+    assert license.errors[:environment].any?
 
     license.name = 'GPLv3'
     license.environment = Environment.default
     license.valid?
-    assert !license.errors.invalid?(:name)
-    assert !license.errors.invalid?(:environment)
+    assert !license.errors[:name].any?
+    assert !license.errors[:environment].any?
   end
 
   should 'fill in slug before creation' do

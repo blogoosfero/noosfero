@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class BlockTest < ActiveSupport::TestCase
 
@@ -6,7 +6,7 @@ class BlockTest < ActiveSupport::TestCase
   should 'describe itself' do
     assert_kind_of String, Block.description
   end
-  
+
   should 'access owner through box' do
     user = create_user('testinguser').person
 
@@ -64,15 +64,15 @@ class BlockTest < ActiveSupport::TestCase
   end
 
   should 'not display when set to hidden' do
-    assert_equal false, Block.new(:display => 'never').visible?
-    assert_equal false, Block.new(:display => 'never').visible?(:article => Article.new)
+    assert_equal false, build(Block, :display => 'never').visible?
+    assert_equal false, build(Block, :display => 'never').visible?(:article => Article.new)
   end
 
   should 'be able to be displayed only in the homepage' do
     profile = Profile.new
     home_page = Article.new
     profile.home_page = home_page
-    block = Block.new(:display => 'home_page_only')
+    block = build(Block, :display => 'home_page_only')
     block.stubs(:owner).returns(profile)
 
     assert_equal true, block.visible?(:article => home_page)
@@ -80,9 +80,9 @@ class BlockTest < ActiveSupport::TestCase
   end
 
   should 'be able to be displayed only in the homepage (index) of the environment' do
-    block = Block.new(:display => 'home_page_only')
+    block = build(Block, :display => 'home_page_only')
 
-    assert_equal true, block.visible?(:article => nil, :request_path => '/')
+    assert_equal true, block.visible?(:article => nil, :request_path => "#{Noosfero.root('/')}")
     assert_equal false, block.visible?(:article => nil)
   end
 
@@ -90,7 +90,7 @@ class BlockTest < ActiveSupport::TestCase
     profile = Profile.new
     home_page = Article.new
     profile.home_page = home_page
-    block = Block.new(:display => 'except_home_page')
+    block = build(Block, :display => 'except_home_page')
     block.stubs(:owner).returns(profile)
 
     assert_equal false, block.visible?(:article => home_page)
@@ -98,11 +98,11 @@ class BlockTest < ActiveSupport::TestCase
   end
 
   should 'be able to be displayed everywhere except on profile index' do
-    profile = Profile.new(:identifier => 'testinguser')
-    block = Block.new(:display => 'except_home_page')
+    profile = build(Profile, :identifier => 'testinguser')
+    block = build(Block, :display => 'except_home_page')
     block.stubs(:owner).returns(profile)
 
-    assert_equal false, block.visible?(:article => nil, :request_path => '/testinguser')
+    assert_equal false, block.visible?(:article => nil, :request_path => "#{Noosfero.root('/')}profile/testinguser")
     assert_equal true, block.visible?(:article => nil)
   end
 
@@ -133,7 +133,7 @@ class BlockTest < ActiveSupport::TestCase
 
   should 'be able to be displayed in all languages' do
     profile = Profile.new
-    block = Block.new(:language => 'all')
+    block = build(Block, :language => 'all')
     block.stubs(:owner).returns(profile)
 
     assert_equal true, block.visible?(:locale => 'pt')
@@ -142,7 +142,7 @@ class BlockTest < ActiveSupport::TestCase
 
   should 'be able to be displayed only in the selected language' do
     profile = Profile.new
-    block = Block.new(:language => 'pt')
+    block = build(Block, :language => 'pt')
     block.stubs(:owner).returns(profile)
 
     assert_equal true, block.visible?(:locale => 'pt')
@@ -151,7 +151,7 @@ class BlockTest < ActiveSupport::TestCase
 
   should 'delegate environment to box' do
     box = fast_create(Box, :owner_id => fast_create(Profile).id)
-    block = Block.new(:box => box)
+    block = build(Block, :box => box)
     box.stubs(:environment).returns(Environment.default)
 
     assert_equal box.environment, block.environment
@@ -169,14 +169,14 @@ class BlockTest < ActiveSupport::TestCase
 
   should 'create a cloned block' do
     block = fast_create(Block, :title => 'test 1', :position => 1)
-    assert_difference Block, :count, 1 do
+    assert_difference 'Block.count', 1 do
       block.duplicate
     end
   end
 
   should 'clone and keep some fields' do
     box = fast_create(Box, :owner_id => fast_create(Profile).id)
-    block = TagsBlock.create!(:title => 'test 1', :box_id => box.id, :settings => {:test => 'test'})
+    block = create(TagsBlock, :title => 'test 1', :box_id => box.id, :settings => {:test => 'test'})
     duplicated = block.duplicate
     [:title, :box_id, :type].each do |f|
       assert_equal duplicated.send(f), block.send(f)
@@ -186,8 +186,8 @@ class BlockTest < ActiveSupport::TestCase
 
   should 'clone block and set fields' do
     box = fast_create(Box, :owner_id => fast_create(Profile).id)
-    block = TagsBlock.create!(:title => 'test 1', :box_id => box.id, :settings => {:test => 'test'}, :position => 1)
-    block2 = TagsBlock.create!(:title => 'test 2', :box_id => box.id, :settings => {:test => 'test'}, :position => 2)
+    block = create(TagsBlock, :title => 'test 1', :box_id => box.id, :settings => {:test => 'test'}, :position => 1)
+    block2 = create(TagsBlock, :title => 'test 2', :box_id => box.id, :settings => {:test => 'test'}, :position => 2)
     duplicated = block.duplicate
     block2.reload
     block.reload
@@ -198,8 +198,8 @@ class BlockTest < ActiveSupport::TestCase
   end
 
   should 'not clone date creation and update attributes' do
-     box = fast_create(Box, :owner_id => fast_create(Profile).id)
-    block = TagsBlock.create!(:title => 'test 1', :box_id => box.id, :settings => {:test => 'test'}, :position => 1)
+    box = fast_create(Box, :owner_id => fast_create(Profile).id)
+    block = create(TagsBlock, :title => 'test 1', :box_id => box.id, :settings => {:test => 'test'}, :position => 1)
     duplicated = block.duplicate
 
       assert_not_equal block.created_at, duplicated.created_at
@@ -213,14 +213,69 @@ class BlockTest < ActiveSupport::TestCase
       end
 
       def display_even_context(context)
-        context % 2 == 0
+        context[:value] % 2 == 0
       end
     end
 
     block = MyBlock.new
 
-    assert block.visible?(2)
-    assert !block.visible?(3)
+    assert block.visible?({:value => 2})
+    assert !block.visible?({:value => 3})
+  end
+
+  should 'not be embedable by default' do
+    assert !Block.new.embedable?
+  end
+
+  should 'generate embed code' do
+    b = Block.new
+    b.stubs(:url_for).returns('http://myblogtest.com/embed/block/1')
+    assert_equal "<iframe class=\"embed block block\" frameborder=\"0\" height=\"768\" src=\"http://myblogtest.com/embed/block/1\" width=\"1024\"></iframe>", b.embed_code.call
+  end
+
+  should 'default value for display_user is all' do
+    block = Block.new
+    assert_equal 'all', block.display_user
+  end
+
+  should 'display block to not logged users for display_user = all' do
+    block = Block.new
+    assert block.display_to_user?(nil)
+  end
+
+  should 'display block to logged users for display_user = all' do
+    block = Block.new
+    assert block.display_to_user?(User.new)
+  end
+
+  should 'display block to logged users for display_user = logged' do
+    block = Block.new
+    block.display_user = 'logged'
+    assert block.display_to_user?(User.new)
+  end
+
+  should 'do not display block to logged users for display_user = not_logged' do
+    block = Block.new
+    block.display_user = 'not_logged'
+    assert !block.display_to_user?(User.new)
+  end
+
+  should 'do not display block to not logged users for display_user = logged' do
+    block = Block.new
+    block.display_user = 'logged'
+    assert !block.display_to_user?(nil)
+  end
+
+  should 'display block to not logged users for display_user = not_logged' do
+    block = Block.new
+    block.display_user = 'not_logged'
+    assert block.display_to_user?(nil)
+  end
+
+  should 'not be visible if display_to_user? is false' do
+    block = Block.new
+    block.expects(:display_to_user?).once.returns(false)
+    assert !block.visible?({})
   end
 
   should 'accept user as parameter on cache_key without change its value' do
@@ -229,4 +284,50 @@ class BlockTest < ActiveSupport::TestCase
     assert_equal block.cache_key('en'), block.cache_key('en', person)
   end
 
+  should 'display block to members of community for display_user = members' do
+    community = fast_create(Community)
+    user = create_user('testinguser')
+    community.add_member(user.person)
+
+    box = fast_create(Box, :owner_id => community.id, :owner_type => 'Community')
+    block = create(Block, :box_id => box.id)
+    block.display_user = 'followers'
+    block.save!
+    assert block.display_to_user?(user.person)
+  end
+
+  should 'do not display block to non members of community for display_user = members' do
+    community = fast_create(Community)
+    user = create_user('testinguser')
+
+    box = fast_create(Box, :owner_id => community.id, :owner_type => 'Community')
+    block = create(Block, :box_id => box.id)
+    block.display_user = 'followers'
+    block.save!
+    assert !block.display_to_user?(user.person)
+  end
+
+  should 'display block to friends of person for display_user = friends' do
+    person = create_user('person_one').person
+    person_friend = create_user('person_friend').person
+
+    person.add_friend(person_friend)
+
+    box = fast_create(Box, :owner_id => person.id, :owner_type => 'Person')
+    block = create(Block, :box_id => box.id)
+    block.display_user = 'followers'
+    block.save!
+    assert block.display_to_user?(person_friend)
+  end
+
+  should 'do not display block to non friends of person for display_user = friends' do
+    person = create_user('person_one').person
+    person_friend = create_user('person_friend').person
+
+    box = fast_create(Box, :owner_id => person.id, :owner_type => 'Person')
+    block = create(Block, :box_id => box.id)
+    block.display_user = 'followers'
+    block.save!
+    assert !block.display_to_user?(person_friend)
+  end
 end

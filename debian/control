@@ -3,18 +3,25 @@ Section: web
 Priority: extra
 Maintainer: Noosfero developers <noosfero-dev@listas.softwarelivre.org>
 Uploaders: Antonio Terceiro <terceiro@colivre.coop.br>
-Build-Depends:
- debhelper (>= 7.0.50~),
- po4a,
- libgettext-ruby-util,
- libgettext-ruby1.8,
- libsqlite3-ruby1.8,
- rake,
- rails (>= 2.3.5-1~),
- rails-ruby1.8 (>= 2.3.5-1~),
- libwill-paginate-ruby,
- tango-icon-theme,
- rcov
+Build-Depends: cucumber,
+               debhelper (>= 7.0.50~),
+               imagemagick,
+               po4a,
+               rails3 (>= 3.2.21-1~),
+               rake,
+               ruby-capybara,
+               ruby-cucumber-rails,
+               ruby-database-cleaner,
+               ruby-gettext,
+               ruby-mocha,
+               ruby-rspec,
+               ruby-rspec-rails,
+               ruby-selenium-webdriver,
+               ruby-sqlite3,
+               ruby-tidy,
+               ruby-will-paginate,
+               tango-icon-theme,
+               xvfb
 Standards-Version: 3.8.4
 Homepage: http://noosfero.org/
 Vcs-Git: git://git.colivre.coop.br/noosfero.git
@@ -22,34 +29,43 @@ Vcs-Browser: http://git.colivre.coop.br/?p=noosfero.git
 
 Package: noosfero
 Architecture: all
-Depends:
- rails (>= 2.3.5-1~),
- rails-ruby1.8 (>= 2.3.5-1~),
- ruby1.8,
- ruby,
- rake,
- libgettext-rails-ruby1.8,
- libsqlite3-ruby,
- libpgsql-ruby,
- librmagick-ruby,
- libredcloth-ruby,
- libwill-paginate-ruby (>= 2.3.12-1~),
- iso-codes,
- libfeedparser-ruby,
- libdaemons-ruby,
- rcov,
- thin,
- tango-icon-theme,
- libhpricot-ruby,
- memcached,
- debconf,
- dbconfig-common,
- adduser,
- exim4 | mail-transport-agent,
- ${misc:Depends}
-Recommends:
- postgresql,
- postgresql-client
+Pre-Depends: ruby1.8 (>= 1.8.7.358)
+Depends: adduser,
+         dbconfig-common,
+         debconf,
+         exim4 | mail-transport-agent,
+         iso-codes,
+         memcached,
+         rails3 (>= 3.2.6-1~),
+         rake,
+         ruby (>= 1:1.9.3),
+         ruby-acts-as-taggable-on,
+         ruby-daemons,
+         ruby-dalli,
+         ruby-eita-jrails (>= 0.9.3-5~),
+         ruby-eventmachine (>= 0.12.10-4~),
+         ruby-exception-notification,
+         ruby-fast-gettext,
+         ruby-feedparser,
+         ruby-feedparser (>= 0.7-3~),
+         ruby-gettext,
+         ruby-memcache-client,
+         ruby-minitest,
+         ruby-nokogiri,
+         ruby-pg,
+         ruby-progressbar,
+         ruby-rack (>= 1.4.5-2~),
+         ruby-rails-autolink,
+         ruby-redcloth,
+         ruby-rest-client,
+         ruby-rmagick,
+         ruby-tzinfo (>= 1.1.0-2~),
+         ruby-whenever,
+         ruby-will-paginate (>= 2.3.12-1~),
+         tango-icon-theme,
+         thin,
+         ${misc:Depends}
+Recommends: postgresql, postgresql-client
 Description: free web-based platform for social networks
  Noosfero is a web platform for social and solidarity economy networks with
  blog, e-Porfolios, CMS, RSS, thematic discussion, events agenda and collective

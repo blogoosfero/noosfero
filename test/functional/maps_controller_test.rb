@@ -1,4 +1,5 @@
-require File.dirname(__FILE__) + '/../test_helper'
+# encoding: UTF-8
+require_relative "../test_helper"
 require 'maps_controller'
 
 # Re-raise errors caught by the controller.

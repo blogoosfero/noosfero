@@ -4,6 +4,12 @@ class CmsController < MyProfileController
 
   include ArticleHelper
 
+  def search_tags
+    arg = params[:term].downcase
+    result = ActsAsTaggableOn::Tag.find(:all, :conditions => ['LOWER(name) LIKE ?', "%#{arg}%"])
+    render :text => prepare_to_token_input_by_label(result).to_json, :content_type => 'application/json'
+  end
+
   def self.protect_if(*args)
     before_filter(*args) do |c|
       user, profile = c.send(:user), c.send(:profile)
@@ -17,6 +23,9 @@ class CmsController < MyProfileController
   end
 
   before_filter :login_required, :except => [:suggest_an_article]
+  before_filter :load_recent_files, :only => [:new, :edit]
+
+  helper_method :file_types
 
   protect_if :only => :upload_files do |c, user, profile|
     article_id = c.params[:parent_id]
@@ -24,7 +33,7 @@ class CmsController < MyProfileController
     (user && (user.has_permission?('post_content', profile) || user.has_permission?('publish_content', profile)))
   end
 
-  protect_if :except => [:suggest_an_article, :set_home_page, :edit, :destroy, :publish, :upload_files, :new] do |c, user, profile|
+  protect_if :except => [:suggest_an_article, :set_home_page, :edit, :destroy, :publish, :publish_on_portal_community, :publish_on_communities, :search_communities_to_publish, :upload_files, :new] do |c, user, profile|
     user && (user.has_permission?('post_content', profile) || user.has_permission?('publish_content', profile))
   end
 
@@ -34,7 +43,7 @@ class CmsController < MyProfileController
     (user && (user.has_permission?('post_content', profile) || user.has_permission?('publish_content', profile)))
   end
 
-  protect_if :only => [:destroy, :publish] do |c, user, profile|
+  protect_if :only => :destroy do |c, user, profile|
     profile.articles.find(c.params[:id]).allow_post_content?(user)
   end
 
@@ -53,8 +62,7 @@ class CmsController < MyProfileController
       conditions = ['type != ?', 'RssFeed']
     end
 
-    @articles = @article.children.paginate(
-      :order => "case when type = 'Folder' then 0 when type ='Blog' then 1 else 2 end, updated_at DESC",
+    @articles = @article.children.reorder("case when type = 'Folder' then 0 when type ='Blog' then 1 else 2 end, updated_at DESC, name").paginate(
       :conditions => conditions,
       :per_page => per_page,
       :page => params[:npage]
@@ -112,13 +120,13 @@ class CmsController < MyProfileController
     @success_back_to = params[:success_back_to]
     # user must choose an article type first
 
-    @parent = profile.articles.find(params[:parent_id]) if params && params[:parent_id]
+    @parent = profile.articles.find(params[:parent_id]) if params && params[:parent_id].present?
     record_coming
     @type = params[:type]
     if @type.blank?
       @article_types = []
       # Avoid the Event type to be available for users when they add a new post to a blog or a topic to a forum.
-      types = (@parent.is_a? (Blog) || @parent.is_a? (Forum)) ? available_article_types - [Event] : available_article_types
+      types = if (@parent.is_a? Blog or @parent.is_a? Forum) then available_article_types - [Event] else available_article_types end
       types.each do |type|
         @article_types.push({
           :class => type,
@@ -148,6 +156,7 @@ class CmsController < MyProfileController
     @article.profile = profile
     @article.author = user
     @article.last_changed_by = user
+    @article.created_by = user
 
     translations if @article.translatable?
 
@@ -159,7 +168,10 @@ class CmsController < MyProfileController
         if continue
           redirect_to :action => 'edit', :id => @article
         else
-          success_redirect
+          respond_to do |format|
+            format.html { success_redirect }
+            format.json { render :text => {:id => @article.id, :full_name => profile.identifier + '/' + @article.full_name}.to_json }
+          end
         end
         return
       end
@@ -170,6 +182,8 @@ class CmsController < MyProfileController
 
   post_only :set_home_page
   def set_home_page
+    return render_access_denied unless user.can_change_homepage?
+
     article = params[:id].nil? ? nil : profile.articles.find(params[:id])
     profile.update_attribute(:home_page, article)
 
@@ -191,12 +205,24 @@ class CmsController < MyProfileController
     end
     if request.post? && params[:uploaded_files]
       params[:uploaded_files].each do |file|
-        @uploaded_files << UploadedFile.create(:uploaded_data => file, :profile => profile, :parent => @parent, :author => user, :last_changed_by => user) unless file == ''
+        unless file == ''
+          @uploaded_files << UploadedFile.create(
+            {
+              :uploaded_data => file,
+              :profile => profile,
+              :parent => @parent,
+              :last_changed_by => user,
+              :author => user,
+            },
+            :without_protection => true
+          )
+        end
       end
       @errors = @uploaded_files.select { |f| f.errors.any? }
       if @errors.any?
         render :action => 'upload_files', :parent_id => @parent_id
       else
+        session[:notice] = _('File(s) successfully uploaded') 
         if @back_to
           redirect_to @back_to
         elsif @parent
@@ -212,8 +238,8 @@ class CmsController < MyProfileController
     @article = profile.articles.find(params[:id])
     if request.post?
       @article.destroy
-      session[:notice] = _("\"#{@article.name}\" was removed.")
-      referer = ActionController::Routing::Routes.recognize_path URI.parse(request.referer).path rescue nil
+      session[:notice] = _("\"%s\" was removed." % @article.name)
+      referer = Rails.application.routes.recognize_path URI.parse(request.referer).path rescue nil
       if referer and referer[:controller] == 'cms' and referer[:action] != 'edit'
         redirect_to referer
       elsif @article.parent
@@ -233,31 +259,27 @@ class CmsController < MyProfileController
     @categories = @toplevel_categories = environment.top_level_categories
     if params[:category_id]
       @current_category = Category.find(params[:category_id])
-      @categories = @current_category.children
+      @categories = @current_category.children.alphabetical
     end
-    render :partial => 'shared/select_categories', :locals => {:object_name => 'article', :multiple => true}, :layout => false
+    render :template => 'shared/update_categories', :locals => { :category => @current_category, :object_name => 'article' }
+  end
+
+  def search_communities_to_publish
+    render :text => find_by_contents(:profiles, environment, user.memberships, params['q'], {:page => 1}, {:fields => ['name']})[:results].map {|community| {:id => community.id, :name => community.name} }.to_json
   end
 
   def publish
     @article = profile.articles.find(params[:id])
     record_coming
-    @groups = profile.memberships - [profile]
-    @marked_groups = []
-    groups_ids = profile.memberships.map{|m|m.id.to_s}
-    @marked_groups = params[:marked_groups].map do |key, item|
-      if groups_ids.include?(item[:group_id])
-        item.merge :group => Profile.find(item.delete(:group_id))
-      end
-    end.compact unless params[:marked_groups].nil?
+    @failed = {}
     if request.post?
-      @failed = {}
-      @marked_groups.each do |item|
-        task = ApproveArticle.create!(:article => @article, :name => item[:name], :target => item[:group], :requestor => profile)
-        begin
-          task.finish unless item[:group].moderated_articles?
-        rescue Exception => ex
-           @failed[ex.clean_message] ? @failed[ex.clean_message] << item[:group].name : @failed[ex.clean_message] = [item[:group].name]
-        end
+      article_name = params[:name]
+      task = ApproveArticle.create!(:article => @article, :name => article_name, :target => user, :requestor => user)
+      begin
+        task.finish
+      rescue Exception => ex
+         @failed[ex.message] ? @failed[ex.message] << @article.name : @failed[ex.message] = [@article.name]
+         task.cancel
       end
       if @failed.blank?
         session[:notice] = _("Your publish request was sent successfully")
@@ -270,19 +292,55 @@ class CmsController < MyProfileController
     end
   end
 
-  def publish_on_portal_community
-    @article = profile.articles.find(params[:id])
+  def publish_on_communities
     if request.post?
-      if environment.portal_community
+      @back_to = params[:back_to]
+      @article = profile.articles.find(params[:id])
+      @failed = {}
+      article_name = params[:name]
+      params_marked = (params['q'] || '').split(',').select { |marked| user.memberships.map(&:id).include? marked.to_i }
+      @marked_groups = Profile.find(params_marked)
+      if @marked_groups.empty?
+        redirect_to @back_to
+        return session[:notice] = _("Select some group to publish your article")
+      end
+      @marked_groups.each do |item|
+        task = ApproveArticle.create!(:article => @article, :name => article_name, :target => item, :requestor => user)
+        begin
+          task.finish unless item.moderated_articles?
+        rescue Exception => ex
+           @failed[ex.message] ? @failed[ex.message] << item.name : @failed[ex.message] = [item.name]
+           task.cancel
+        end
+      end
+      if @failed.blank?
+        session[:notice] = _("Your publish request was sent successfully")
+        if @back_to
+          redirect_to @back_to
+        else
+          redirect_to @article.view_url
+        end
+      else
+        session[:notice] = _("Some of your publish requests couldn't be sent.")
+        render :action => 'publish'
+      end
+    end
+  end
+
+  def publish_on_portal_community
+    if request.post?
+      @article = profile.articles.find(params[:id])
+      if environment.portal_enabled
         task = ApproveArticle.create!(:article => @article, :name => params[:name], :target => environment.portal_community, :requestor => user)
         begin
           task.finish unless environment.portal_community.moderated_articles?
-          flash[:notice] = _("Your publish request was sent successfully")
+          session[:notice] = _("Your publish request was sent successfully")
         rescue
-          flash[:error] = _("Your publish request couldn't be sent.")
+          session[:notice] = _("Your publish request couldn't be sent.")
+          task.cancel
         end
       else
-        flash[:notice] = _("There is no portal community to publish your article.")
+        session[:notice] = _("There is no portal community to publish your article.")
       end
 
       if @back_to
@@ -301,7 +359,7 @@ class CmsController < MyProfileController
       @task.ip_address = request.remote_ip
       @task.user_agent = request.user_agent
       @task.referrer = request.referrer
-      if verify_recaptcha(:model => @task, :message => _('Please type the words correctly')) && @task.save
+      if captcha_verify(:model => @task, :message => _('Please type the words correctly')) && @task.save
         session[:notice] = _('Thanks for your suggestion. The community administrators were notified.')
         redirect_to @back_to
       end
@@ -310,7 +368,7 @@ class CmsController < MyProfileController
 
   def search
     query = params[:q]
-    results = find_by_contents(:uploaded_files, profile.files.published, query)[:results]
+    results = find_by_contents(:uploaded_files, profile, profile.files.published, query)[:results]
     render :text => article_list_to_json(results), :content_type => 'application/json'
   end
 
@@ -321,15 +379,26 @@ class CmsController < MyProfileController
   end
 
   def media_upload
-    files_uploaded = []
     parent = check_parent(params[:parent_id])
-    files = [:file1,:file2, :file3].map { |f| params[f] }.compact
     if request.post?
-      files.each do |file|
-        files_uploaded << UploadedFile.create(:uploaded_data => file, :profile => profile, :parent => parent) unless file == ''
+      begin
+        @file = UploadedFile.create!(:uploaded_data => params[:file], :profile => profile, :parent => parent) unless params[:file] == ''
+        @file = FilePresenter.for(@file)
+      rescue Exception => exception
+        render :text => exception.to_s, :status => :bad_request
       end
     end
-    render :text => article_list_to_json(files_uploaded), :content_type => 'text/plain'
+  end
+
+  def published_media_items
+    load_recent_files(params[:parent_id], params[:q])
+    render :partial => 'published_media_items'
+  end
+
+  def view_all_media
+    paginate_options = {:page => params[:page].blank? ? 1 : params[:page] }
+    @key = params[:key].to_sym
+    load_recent_files(params[:parent_id], params[:q], paginate_options)
   end
 
   protected
@@ -392,7 +461,7 @@ class CmsController < MyProfileController
   end
 
   def per_page
-    10
+    20
   end
 
   def translations
@@ -421,6 +490,38 @@ class CmsController < MyProfileController
       redirect_to @success_back_to
     else
       redirect_to @article.view_url
+    end
+  end
+
+  def file_types
+    {:images => _('Images'), :generics => _('Files')}
+  end
+
+  def load_recent_files(parent_id = nil, q = nil, paginate_options = {:page => 1, :per_page => 6})
+    #TODO Since we only have special support for images, I'm limiting myself to
+    #     consider generic files as non-images. In the future, with more supported
+    #     file types we'll need to have a smart way to fetch from the database
+    #     scopes of each supported type as well as the non-supported types as a
+    #     whole.
+    @recent_files = {}
+
+    parent = parent_id.present? ? profile.articles.find(parent_id) : nil
+    if parent.present?
+      files = parent.children.files
+    else
+      files = profile.files
+    end
+
+    files = files.reorder('created_at DESC')
+    images = files.images
+    generics = files.no_images
+
+    if q.present?
+      @recent_files[:images] = find_by_contents(:images, profile, images, q, paginate_options)[:results]
+      @recent_files[:generics] = find_by_contents(:generics, profile, generics, q, paginate_options)[:results]
+    else
+      @recent_files[:images] = images.paginate(paginate_options)
+      @recent_files[:generics] = generics.paginate(paginate_options)
     end
   end
 

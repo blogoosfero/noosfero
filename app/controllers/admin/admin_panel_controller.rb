@@ -7,6 +7,7 @@ class AdminPanelController < AdminController
   end
 
   def site_info
+    @no_design_blocks = true
     if request.post?
       if params[:environment][:languages]
         params[:environment][:languages] = params[:environment][:languages].map {|lang, value| lang if value=='true'}.compact
@@ -42,7 +43,7 @@ class AdminPanelController < AdminController
         end
         redirect_to :action => 'set_portal_folders'
       else
-        session[:notice] = __('Community not found. You must insert the identifier of a community from this environment')
+        session[:notice] = _('Community not found. You must insert the identifier of a community from this environment')
       end
     end
   end
@@ -69,5 +70,23 @@ class AdminPanelController < AdminController
         redirect_to :action => 'index'
       end
     end
+  end
+
+  def manage_organizations_status
+    scope = environment.organizations
+    @filter = params[:filter] || 'any'
+    @title = "Organization profiles"
+    @title = @title+" - "+@filter if @filter != 'any'
+
+    if @filter == 'enabled'
+      scope = scope.visible
+    elsif @filter == 'disabled'
+      scope = scope.disabled
+    end
+
+    scope = scope.order('name ASC')
+
+    @q = params[:q]
+    @collection = find_by_contents(:organizations, environment, scope, @q, {:per_page => 10, :page => params[:npage]})[:results]
   end
 end

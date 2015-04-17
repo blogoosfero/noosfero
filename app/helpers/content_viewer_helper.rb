@@ -10,7 +10,7 @@ module ContentViewerHelper
   end
 
   def number_of_comments(article)
-    display_number_of_comments(article.comments_count - article.spam_comments_count)
+    display_number_of_comments(article.comments_count - article.spam_comments_count.to_i)
   end
 
   def article_title(article, args = {})
@@ -26,7 +26,7 @@ module ContentViewerHelper
       end
       title << content_tag('span',
         content_tag('span', show_date(article.published_at), :class => 'date') +
-        content_tag('span', [_(", by %s") % (article.author ? link_to(article.author_name, article.author_url) : article.author_name)], :class => 'author') +
+        content_tag('span', _(", by %s") % (article.author ? link_to(article.author_name, article.author_url) : article.author_name), :class => 'author') +
         content_tag('span', comments, :class => 'comments'),
         :class => 'created-at'
       )
@@ -45,14 +45,14 @@ module ContentViewerHelper
         { article.environment.locales[translation.language] => { :href => url_for(translation.url) } }
       end
       content_tag(:div, link_to(_('Translations'), '#',
-                                :onmouseover => "toggleSubmenu(this, '#{_('Translations')}', #{links.to_json}); return false",
+                                :onmouseover => "toggleSubmenu(this, '#{_('Translations')}', #{CGI::escape_html(links.to_json)}); return false",
                                 :class => 'article-translations-menu simplemenu-trigger up'),
                   :class => 'article-translations')
     end
   end
 
   def addthis_image_tag
-    if File.exists?(File.join(Rails.root, 'public', theme_path, 'images', 'addthis.gif'))
+    if File.exists?(Rails.root.join('public', theme_path, 'images', 'addthis.gif'))
       image_tag(File.join(theme_path, 'images', 'addthis.gif'), :border => 0, :alt => '')
     else
       image_tag("/images/bt-bookmark.gif", :width => 53, :height => 16, :border => 0, :alt => '')

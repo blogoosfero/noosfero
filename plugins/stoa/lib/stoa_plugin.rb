@@ -2,8 +2,6 @@ require_dependency 'person'
 
 class StoaPlugin < Noosfero::Plugin
 
-  Person.human_names[:usp_id] = _('USP number')
-
   def self.plugin_name
     "Stoa"
   end
@@ -17,7 +15,7 @@ class StoaPlugin < Noosfero::Plugin
   end
 
   def signup_extra_contents
-    lambda {
+    proc {
       content_tag(:div, labelled_form_field(_('USP number'), text_field(:profile_data, :usp_id, :id => 'usp_id_field')) +
       content_tag(:small, _('The usp id grants you special powers in the network. Don\'t forget to fill it with a valid number if you have one.'), :id => 'usp-id-balloon') +
       content_tag('p', _("Either this usp number is being used by another user or is not valid"), :id => 'usp-id-invalid') +
@@ -36,7 +34,7 @@ class StoaPlugin < Noosfero::Plugin
       lambda {
         content_tag('div', labelled_form_field(_('USP number'), text_field_tag('profile_data[usp_id]', usp_id, :id => 'usp_id_field', :disabled => usp_id.present?)) +
         content_tag(:small, _('The usp id grants you special powers in the network. Don\'t forget to fill it if you have one.')) +
-        content_tag('div', labelled_check_box(_('Public'), '', '', false, :disabled => true, :title => _('This field must be private'), :class => 'disabled'), :class => 'field-privacy-selector'), :class => 'field-with-privacy-selector') +
+        content_tag('div', labelled_check_box(c_('Public'), '', '', false, :disabled => true, :title => _('This field must be private'), :class => 'disabled'), :class => 'field-privacy-selector'), :class => 'field-with-privacy-selector') +
         content_tag('div', required(labelled_form_field(_('Birth date (yyyy-mm-dd)'), text_field_tag('birth_date', ''))), :id => 'signup-birth-date', :style => 'display: none') +
         content_tag('div', required(labelled_form_field(_('CPF'), text_field_tag('cpf', ''))), :id => 'signup-cpf', :style => 'display:none') +
         javascript_include_tag('../plugins/stoa/javascripts/jquery.observe_field', '../plugins/stoa/javascripts/signup_complement')
@@ -45,9 +43,9 @@ class StoaPlugin < Noosfero::Plugin
   end
 
   def login_extra_contents
-    lambda {
+    proc {
       content_tag('div', labelled_form_field(_('USP number / Username'), text_field_tag('usp_id_login', '', :id => 'stoa_field_login')) +
-      labelled_form_field(_('Password'), password_field_tag('password', '', :id => 'stoa_field_password')), :id => 'stoa-login-fields')
+      labelled_form_field(c_('Password'), password_field_tag('password', '', :id => 'stoa_field_password')), :id => 'stoa-login-fields')
     }
   end
 
@@ -62,14 +60,14 @@ class StoaPlugin < Noosfero::Plugin
   end
 
   def account_controller_filters
-    environment = context.environment
-    block = lambda do
+    block = proc do
       params[:profile_data] ||= {}
       params[:profile_data][:invitation_code] = params[:invitation_code]
       invitation = Task.pending.find(:first, :conditions => {:code => params[:invitation_code]})
       if request.post?
         if !invitation && !StoaPlugin::UspUser.matches?(params[:profile_data][:usp_id], params[:confirmation_field], params[params[:confirmation_field]])
-          @person = Person.new(:environment => environment)
+          # `self` below is evaluated in the context of account_controller
+          @person = Person.new(:environment => self.environment)
           @person.errors.add(:usp_id, _(' validation failed'))
           render :action => :signup
         end
@@ -83,7 +81,7 @@ class StoaPlugin < Noosfero::Plugin
   end
 
   def profile_editor_controller_filters
-    block = lambda do
+    block = proc do
       if request.post?
         if !params[:profile_data][:usp_id].blank? && !StoaPlugin::UspUser.matches?(params[:profile_data][:usp_id], params[:confirmation_field], params[params[:confirmation_field]])
           @profile_data = profile
@@ -106,14 +104,14 @@ class StoaPlugin < Noosfero::Plugin
   def invite_controller_filters
     [{ :type => 'before_filter',
       :method_name => 'check_usp_id_existence',
-      :block => lambda {render_access_denied if !user || user.usp_id.blank?} }]
+      :block => proc {render_access_denied if !user || user.usp_id.blank?} }]
   end
 
   def control_panel_buttons
-    { :title => _('Invite friends'),
+    { :title => c_('Invite friends'),
       :icon => 'invite-friends',
       :url => {:controller => 'invite',
-               :action => 'select_address_book'} } if context.send(:user) && context.send(:user).usp_id.present?
+               :action => 'invite_friends'} } if context.send(:user) && context.send(:user).usp_id.present?
   end
 
   def remove_invite_friends_button
@@ -122,6 +120,10 @@ class StoaPlugin < Noosfero::Plugin
 
   def change_password_fields
     {:field => :usp_id, :name => _('USP Number'), :model => 'person'}
+  end
+
+  def search_friend_fields
+    [{:field => :usp_id, :name => _('USP Number')}]
   end
 
 end

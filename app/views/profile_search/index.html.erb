@@ -1,0 +1,9 @@
+<div id='profile-search-results'>
+  <h1><%= _("Search on %s's profile") % profile.short_name %></h1>
+
+  <%= render :partial => 'shared/profile_search_form' %>
+
+  <%= render :partial => 'results-list' %>
+
+</div>
+<%= javascript_include_tag 'search' %>

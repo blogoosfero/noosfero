@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class BoxTest < ActiveSupport::TestCase
 
@@ -16,86 +16,74 @@ class BoxTest < ActiveSupport::TestCase
   end
 
   should 'list allowed blocks for center box' do
-    blocks = Box.new(:position => 1).acceptable_blocks
+    blocks = Box.new.tap { |b| b.position = 1 }.acceptable_blocks
 
-    assert !blocks.include?('block')
-    assert !blocks.include?('disabled-enterprise-message-block')
-    assert !blocks.include?('featured-products-block')
-    assert !blocks.include?('products-block')
-    assert !blocks.include?('profile-info-block')
-    assert !blocks.include?('profile-list-block')
-    assert !blocks.include?('profile-search-block')
-    assert !blocks.include?('slideshow-block')
-    assert !blocks.include?('location-block')
+    assert !blocks.include?('.block')
+    assert !blocks.include?('.disabled-enterprise-message-block')
+    assert !blocks.include?('.featured-products-block')
+    assert !blocks.include?('.products-block')
+    assert !blocks.include?('.profile-info-block')
+    assert !blocks.include?('.profile-list-block')
+    assert !blocks.include?('.profile-search-block')
+    assert !blocks.include?('.slideshow-block')
+    assert !blocks.include?('.location-block')
 
-    assert blocks.include?('article-block')
-    assert blocks.include?('blog-archives-block')
-    assert blocks.include?('categories-block')
-    assert blocks.include?('communities-block')
-    assert blocks.include?('enterprises-block')
-    # TODO EnvironmentStatisticsBlock is DEPRECATED and will be removed from
-    #      the Noosfero core soon, see ActionItem3045
-    assert blocks.include?('environment-statistics-block')
-    assert blocks.include?('fans-block')
-    assert blocks.include?('favorite-enterprises-block')
-    assert blocks.include?('feed-reader-block')
-    assert blocks.include?('friends-block')
-    assert blocks.include?('highlights-block')
-    assert blocks.include?('link-list-block')
-    assert blocks.include?('login-block')
-    assert blocks.include?('main-block')
-    assert blocks.include?('members-block')
-    assert blocks.include?('my-network-block')
-    assert blocks.include?('people-block')
-    assert blocks.include?('profile-image-block')
-    assert blocks.include?('raw-html-block')
-    assert blocks.include?('recent-documents-block')
-    assert blocks.include?('sellers-search-block')
-    assert blocks.include?('tags-block')
+    assert blocks.include?('.article-block')
+    assert blocks.include?('.blog-archives-block')
+    assert blocks.include?('.categories-block')
+    assert blocks.include?('.communities-block')
+    assert blocks.include?('.enterprises-block')
+    assert blocks.include?('.fans-block')
+    assert blocks.include?('.favorite-enterprises-block')
+    assert blocks.include?('.feed-reader-block')
+    assert blocks.include?('.highlights-block')
+    assert blocks.include?('.link-list-block')
+    assert blocks.include?('.login-block')
+    assert blocks.include?('.main-block')
+    assert blocks.include?('.my-network-block')
+    assert blocks.include?('.profile-image-block')
+    assert blocks.include?('.raw-html-block')
+    assert blocks.include?('.recent-documents-block')
+    assert blocks.include?('.sellers-search-block')
+    assert blocks.include?('.tags-block')
   end
 
   should 'list allowed blocks for box at position 2' do
-    blocks = Box.new(:position => 2).acceptable_blocks
+    blocks = Box.new.tap { |b| b.position = 2 }.acceptable_blocks
 
-    assert !blocks.include?('main-block')
-    assert !blocks.include?('block')
-    assert !blocks.include?('profile-list-block')
+    assert !blocks.include?('.main-block')
+    assert !blocks.include?('.block')
+    assert !blocks.include?('.profile-list-block')
 
-    assert blocks.include?('article-block')
-    assert blocks.include?('blog-archives-block')
-    assert blocks.include?('categories-block')
-    assert blocks.include?('communities-block')
-    assert blocks.include?('disabled-enterprise-message-block')
-    assert blocks.include?('enterprises-block')
-    # TODO EnvironmentStatisticsBlock is DEPRECATED and will be removed from
-    #      the Noosfero core soon, see ActionItem3045
-    assert blocks.include?('environment-statistics-block')
-    assert blocks.include?('fans-block')
-    assert blocks.include?('favorite-enterprises-block')
-    assert blocks.include?('featured-products-block')
-    assert blocks.include?('feed-reader-block')
-    assert blocks.include?('friends-block')
-    assert blocks.include?('highlights-block')
-    assert blocks.include?('link-list-block')
-    assert blocks.include?('location-block')
-    assert blocks.include?('login-block')
-    assert blocks.include?('members-block')
-    assert blocks.include?('my-network-block')
-    assert blocks.include?('people-block')
-    assert blocks.include?('products-block')
-    assert blocks.include?('profile-image-block')
-    assert blocks.include?('profile-info-block')
-    assert blocks.include?('profile-search-block')
-    assert blocks.include?('raw-html-block')
-    assert blocks.include?('recent-documents-block')
-    assert blocks.include?('sellers-search-block')
-    assert blocks.include?('slideshow-block')
-    assert blocks.include?('tags-block')
+    assert blocks.include?('.article-block')
+    assert blocks.include?('.blog-archives-block')
+    assert blocks.include?('.categories-block')
+    assert blocks.include?('.communities-block')
+    assert blocks.include?('.disabled-enterprise-message-block')
+    assert blocks.include?('.enterprises-block')
+    assert blocks.include?('.fans-block')
+    assert blocks.include?('.favorite-enterprises-block')
+    assert blocks.include?('.featured-products-block')
+    assert blocks.include?('.feed-reader-block')
+    assert blocks.include?('.highlights-block')
+    assert blocks.include?('.link-list-block')
+    assert blocks.include?('.location-block')
+    assert blocks.include?('.login-block')
+    assert blocks.include?('.my-network-block')
+    assert blocks.include?('.products-block')
+    assert blocks.include?('.profile-image-block')
+    assert blocks.include?('.profile-info-block')
+    assert blocks.include?('.profile-search-block')
+    assert blocks.include?('.raw-html-block')
+    assert blocks.include?('.recent-documents-block')
+    assert blocks.include?('.sellers-search-block')
+    assert blocks.include?('.slideshow-block')
+    assert blocks.include?('.tags-block')
   end
 
   should 'list plugin block as allowed for box at position 1' do
     class SomePlugin < Noosfero::Plugin
-      def self.extra_blocks
+      def extra_blocks
         { PluginBlock => {:position => 1} }
       end
     end
@@ -104,13 +92,13 @@ class BoxTest < ActiveSupport::TestCase
     end
     Noosfero::Plugin::Manager.any_instance.stubs(:enabled_plugins).returns([SomePlugin.new])
 
-    blocks = Box.new(:position => 1).acceptable_blocks
+    blocks = build(Box, :position => 1).acceptable_blocks
     assert blocks.include?('box-test_plugin-block')
   end
 
   should 'list plugin block as allowed for box at position 2' do
     class SomePlugin < Noosfero::Plugin
-      def self.extra_blocks
+      def extra_blocks
         { PluginBlock => {:position => 2} }
       end
     end
@@ -119,13 +107,13 @@ class BoxTest < ActiveSupport::TestCase
     end
     Noosfero::Plugin::Manager.any_instance.stubs(:enabled_plugins).returns([SomePlugin.new])
 
-    blocks = Box.new(:position => 2).acceptable_blocks
+    blocks = build(Box, :position => 2).acceptable_blocks
     assert blocks.include?('box-test_plugin-block')
   end
 
   should 'list plugin block as allowed for the right holder' do
     class SomePlugin < Noosfero::Plugin
-      def self.extra_blocks
+      def extra_blocks
         { PluginBlock => {:position => 1, :type => [Person, Enterprise]} }
       end
     end
@@ -134,13 +122,13 @@ class BoxTest < ActiveSupport::TestCase
     end
     Noosfero::Plugin::Manager.any_instance.stubs(:enabled_plugins).returns([SomePlugin.new])
 
-    blocks = Box.new(:position => 1, :owner => Person.new).acceptable_blocks
+    blocks = build(Box, :position => 1, :owner => Person.new).acceptable_blocks
     assert blocks.include?('box-test_plugin-block')
 
-    blocks = Box.new(:position => 1, :owner => Enterprise.new).acceptable_blocks
+    blocks = build(Box, :position => 1, :owner => Enterprise.new).acceptable_blocks
     assert blocks.include?('box-test_plugin-block')
 
-    blocks = Box.new(:position => 1, :owner => Community.new).acceptable_blocks
+    blocks = build(Box, :position => 1, :owner => Community.new).acceptable_blocks
     assert !blocks.include?('box-test_plugin-block')
   end
 

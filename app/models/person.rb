@@ -1,10 +1,14 @@
 # A person is the profile of an user holding all relationships with the rest of the system
 class Person < Profile
 
-  SEARCH_FILTERS += %w[
-    more_popular
-    more_active
-  ]
+  attr_accessible :organization, :contact_information, :sex, :birth_date, :cell_phone, :comercial_phone, :jabber_id, :personal_website, :nationality, :address_reference, :district, :schooling, :schooling_status, :formation, :custom_formation, :area_of_study, :custom_area_of_study, :professional_activity, :organization_website
+
+  SEARCH_FILTERS = {
+    :order => %w[more_recent],
+    #:order => %w[more_recent more_popular more_active],
+    :display => %w[compact]
+  }
+
 
   def self.type_name
     _('Person')
@@ -13,30 +17,40 @@ class Person < Profile
   acts_as_trackable :after_add => Proc.new {|p,t| notify_activity(t)}
   acts_as_accessor
 
-  @@human_names = {}
-
-  def self.human_names
-    @@human_names
-  end
-
-  # FIXME ugly workaround
-  def self.human_attribute_name(attrib)
-    human_names.each do |key, human_text|
-      return human_text if attrib.to_sym == key.to_sym
-    end
-    super
-  end
-
-  named_scope :members_of, lambda { |resources|
+  scope :members_of, lambda { |resources|
     resources = [resources] if !resources.kind_of?(Array)
     conditions = resources.map {|resource| "role_assignments.resource_type = '#{resource.class.base_class.name}' AND role_assignments.resource_id = #{resource.id || -1}"}.join(' OR ')
     { :select => 'DISTINCT profiles.*', :joins => :role_assignments, :conditions => [conditions] }
   }
 
-  def has_permission_with_plugins?(permission, profile)
-    permissions = [has_permission_without_plugins?(permission, profile)]
+  scope :not_members_of, lambda { |resources|
+    resources = [resources] if !resources.kind_of?(Array)
+    conditions = resources.map {|resource| "role_assignments.resource_type = '#{resource.class.base_class.name}' AND role_assignments.resource_id = #{resource.id || -1}"}.join(' OR ')
+    { :select => 'DISTINCT profiles.*', :conditions => ['"profiles"."id" NOT IN (SELECT DISTINCT profiles.id FROM "profiles" INNER JOIN "role_assignments" ON "role_assignments"."accessor_id" = "profiles"."id" AND "role_assignments"."accessor_type" = (\'Profile\') WHERE "profiles"."type" IN (\'Person\') AND (%s))' % conditions] }
+  }
+
+  scope :by_role, lambda { |roles|
+    roles = [roles] unless roles.kind_of?(Array)
+    { :select => 'DISTINCT profiles.*', :joins => :role_assignments, :conditions => ['role_assignments.role_id IN (?)',
+roles] }
+  }
+
+  scope :not_friends_of, lambda { |resources|
+    resources = Array(resources)
+    { :select => 'DISTINCT profiles.*', :conditions => ['"profiles"."id" NOT IN (SELECT DISTINCT profiles.id FROM "profiles" INNER JOIN "friendships" ON "friendships"."person_id" = "profiles"."id" WHERE "friendships"."friend_id" IN (%s))' % resources.map(&:id)] }
+  }
+
+  def has_permission_with_admin?(permission, resource)
+    return true if resource.blank? || resource.admins.include?(self)
+    return true if resource.kind_of?(Profile) && resource.environment.admins.include?(self)
+    has_permission_without_admin?(permission, resource)
+  end
+  alias_method_chain :has_permission?, :admin
+
+  def has_permission_with_plugins?(permission, resource)
+    permissions = [has_permission_without_plugins?(permission, resource)]
     permissions += plugins.map do |plugin|
-      plugin.has_permission?(self, permission, profile)
+      plugin.has_permission?(self, permission, resource)
     end
     permissions.include?(true)
   end
@@ -51,14 +65,14 @@ class Person < Profile
     ScopeTool.union *scopes
   end
 
-   def memberships_by_role(role)
-     memberships.where('role_assignments.role_id = ?', role.id)
-   end
+  def memberships_by_role(role)
+    memberships.where('role_assignments.role_id = ?', role.id)
+  end
 
   has_many :friendships, :dependent => :destroy
   has_many :friends, :class_name => 'Person', :through => :friendships
 
-  named_scope :online, lambda { { :include => :user, :conditions => ["users.chat_status != '' AND users.chat_status_at >= ?", DateTime.now - User.expires_chat_status_every.minutes] } }
+  scope :online, lambda { { :include => :user, :conditions => ["users.chat_status != '' AND users.chat_status_at >= ?", DateTime.now - User.expires_chat_status_every.minutes] } }
 
   has_many :requested_tasks, :class_name => 'Task', :foreign_key => :requestor_id, :dependent => :destroy
 
@@ -68,23 +82,34 @@ class Person < Profile
 
   has_many :scraps_sent, :class_name => 'Scrap', :foreign_key => :sender_id, :dependent => :destroy
 
+  has_many :favorite_enterprise_people
+  has_many :favorite_enterprises, source: :enterprise, through: :favorite_enterprise_people
+
   has_and_belongs_to_many :acepted_forums, :class_name => 'Forum', :join_table => 'terms_forum_people'
   has_and_belongs_to_many :articles_with_access, :class_name => 'Article', :join_table => 'article_privacy_exceptions'
 
-  named_scope :more_popular, :order => 'friends_count DESC'
+  has_many :profile_suggestions, :foreign_key => :person_id, :order => 'score DESC', :dependent => :destroy
+  has_many :suggested_people, :through => :profile_suggestions, :source => :suggestion, :conditions => ['profile_suggestions.suggestion_type = ? AND profile_suggestions.enabled = ?', 'Person', true]
+  has_many :suggested_communities, :through => :profile_suggestions, :source => :suggestion, :conditions => ['profile_suggestions.suggestion_type = ? AND profile_suggestions.enabled = ?', 'Community', true]
 
-  named_scope :abusers, :joins => :abuse_complaints, :conditions => ['tasks.status = 3'], :select => 'DISTINCT profiles.*'
-  named_scope :non_abusers, :joins => "LEFT JOIN tasks ON profiles.id = tasks.requestor_id AND tasks.type='AbuseComplaint'", :conditions => ["tasks.status != 3 OR tasks.id is NULL"], :select => "DISTINCT profiles.*"
+  scope :more_popular, :order => 'friends_count DESC'
 
-  named_scope :admins, :joins => [:role_assignments => :role], :conditions => ['roles.key = ?', 'environment_administrator' ]
-  named_scope :activated, :joins => :user, :conditions => ['users.activation_code IS NULL AND users.activated_at IS NOT NULL']
-  named_scope :deactivated, :joins => :user, :conditions => ['NOT (users.activation_code IS NULL AND users.activated_at IS NOT NULL)']
+  scope :abusers, :joins => :abuse_complaints, :conditions => ['tasks.status = 3'], :select => 'DISTINCT profiles.*'
+  scope :non_abusers, :joins => "LEFT JOIN tasks ON profiles.id = tasks.requestor_id AND tasks.type='AbuseComplaint'", :conditions => ["tasks.status != 3 OR tasks.id is NULL"], :select => "DISTINCT profiles.*"
+
+  scope :admins, :joins => [:role_assignments => :role], :conditions => ['roles.key = ?', 'environment_administrator' ]
+  scope :activated, :joins => :user, :conditions => ['users.activation_code IS NULL AND users.activated_at IS NOT NULL']
+  scope :deactivated, :joins => :user, :conditions => ['NOT (users.activation_code IS NULL AND users.activated_at IS NOT NULL)']
 
   after_destroy do |person|
     Friendship.find(:all, :conditions => { :friend_id => person.id}).each { |friendship| friendship.destroy }
   end
 
   belongs_to :user, :dependent => :delete
+
+  def can_change_homepage?
+    !environment.enabled?('cant_change_homepage') || is_admin?
+  end
 
   def can_control_scrap?(scrap)
     begin
@@ -120,13 +145,16 @@ class Person < Profile
   end
 
   def add_friend(friend, group = nil)
-   unless self.is_a_friend?(friend)
-      self.friendships.build(:friend => friend, :group => group).save!
-   end
+    unless self.is_a_friend?(friend)
+      friendship = self.friendships.build
+      friendship.friend = friend
+      friendship.group = group
+      friendship.save
+    end
   end
 
   def already_request_friendship?(person)
-    person.tasks.find_by_requestor_id(self.id, :conditions => { :type => 'AddFriend' })
+    person.tasks.where(requestor_id: self.id, type: 'AddFriend', status: Task::Status::ACTIVE).first
   end
 
   def remove_friend(friend)
@@ -147,6 +175,7 @@ class Person < Profile
   district
   zip_code
   address
+  address_line2
   address_reference
   cell_phone
   comercial_phone
@@ -166,18 +195,13 @@ class Person < Profile
 
   validates_multiparameter_assignments
 
-  validates_each :birth_date do |record,attr,value|
-    if value && value.year == 1
-      record.errors.add(attr)
-    end
-  end
-
   def self.fields
     FIELDS
   end
 
-  def validate
-    super
+  validate :presence_of_required_fields, :unless => :is_template
+
+  def presence_of_required_fields
     self.required_fields.each do |field|
       if self.send(field).blank?
         unless (field == 'custom_area_of_study' && self.area_of_study != 'Others') || (field == 'custom_formation' && self.formation != 'Others')
@@ -216,8 +240,8 @@ class Person < Profile
   N_('Education'); N_('Custom education'); N_('Custom area of study');
   settings_items :formation, :custom_formation, :custom_area_of_study
 
-  N_('Contact information'); N_('City'); N_('State'); N_('Country'); N_('Sex'); N_('Zip code'); N_('District'); N_('Address reference')
-  settings_items :photo, :contact_information, :sex, :city, :state, :country, :zip_code, :district, :address_reference
+  N_('Contact information'); N_('City'); N_('State'); N_('Country'); N_('Sex'); N_('Zip code'); N_('District'); N_('Address completion'); N_('Address reference')
+  settings_items :photo, :contact_information, :sex, :city, :state, :country, :zip_code, :district, :address_line2, :address_reference
 
   extend SetProfileRegionFromCityState::ClassMethods
   set_profile_region_from_city_state
@@ -283,7 +307,7 @@ class Person < Profile
     [
       [MainBlock.new],
       [ProfileImageBlock.new(:show_name => true), LinkListBlock.new(:links => links), RecentDocumentsBlock.new],
-      [FriendsBlock.new, CommunitiesBlock.new]
+      [CommunitiesBlock.new]
     ]
   end
 
@@ -293,8 +317,6 @@ class Person < Profile
       Gallery.new(:name => _('Gallery')),
     ]
   end
-
-  has_and_belongs_to_many :favorite_enterprises, :class_name => 'Enterprise', :join_table => 'favorite_enteprises_people'
 
   def email_domain
     user && user.email_domain || environment.default_hostname(true)
@@ -314,7 +336,7 @@ class Person < Profile
   end
 
   def default_template
-    environment.person_template
+    environment.person_default_template
   end
 
   def apply_type_specific_template(template)
@@ -416,6 +438,7 @@ class Person < Profile
   end
 
   def follows?(profile)
+    return false if profile.nil?
     profile.followed_by?(self)
   end
 
@@ -474,8 +497,8 @@ class Person < Profile
     user.save!
   end
 
-  def activities
-    Scrap.find_by_sql("SELECT id, updated_at, '#{Scrap.to_s}' AS klass FROM #{Scrap.table_name} WHERE scraps.receiver_id = #{self.id} AND scraps.scrap_id IS NULL UNION SELECT id, updated_at, '#{ActionTracker::Record.to_s}' AS klass FROM #{ActionTracker::Record.table_name} WHERE action_tracker.user_id = #{self.id} and action_tracker.verb != 'leave_scrap_to_self' and action_tracker.verb != 'add_member_in_community' and action_tracker.verb != 'reply_scrap_on_self' ORDER BY updated_at DESC")
+  def exclude_verbs_on_activities
+    %w[leave_scrap_to_self add_member_in_community reply_scrap_on_self]
   end
 
   # by default, all fields are private
@@ -499,6 +522,15 @@ class Person < Profile
 
   after_update do |person|
     person.notifier.reschedule_next_notification_mail
+  end
+
+  def remove_suggestion(profile)
+    suggestion = profile_suggestions.find_by_suggestion_id profile.id
+    suggestion.disable if suggestion
+  end
+
+  def allow_invitation_from?(person)
+    person.has_permission?(:manage_friends, self)
   end
 
   protected

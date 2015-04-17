@@ -1,14 +1,14 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class ValidationInfoTest < ActiveSupport::TestCase
 
   should 'validate the presence of validation methodology description' do
     info = ValidationInfo.new
     info.valid?
-    assert info.errors.invalid?(:validation_methodology)
+    assert info.errors[:validation_methodology].any?
     info.validation_methodology = 'lalala'
     info.valid?
-    assert !info.errors.invalid?(:validation_methodology)
+    assert !info.errors[:validation_methodology].any?
   end
 
   should 'refer to and validate the presence of an organization' do

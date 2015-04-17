@@ -1,5 +1,7 @@
 module ActionTracker
   class Record < ActiveRecord::Base
+    attr_accessible :verb, :params, :user, :target
+
     set_table_name 'action_tracker'
 
     belongs_to :user, :polymorphic => true
@@ -22,17 +24,15 @@ module ActionTracker
     # In days
     RECENT_DELAY = 30
 
-    named_scope :recent, :conditions => ['created_at >= ?', RECENT_DELAY.days.ago]
-    named_scope :visible, :conditions => { :visible => true }
+    scope :recent, :conditions => ['created_at >= ?', RECENT_DELAY.days.ago]
+    scope :visible, :conditions => { :visible => true }
 
-    def self.current_user_from_model
-      u = new
-      u.valid?
-      u.user
+    def self.current_user
+      ActionTrackerConfig.current_user.call
     end
 
     def self.update_or_create(params)
-      u = params[:user] || current_user_from_model
+      u = params[:user] || current_user
       return if u.nil?
       target_hash = params[:target].nil? ? {} : {:target_type => params[:target].class.base_class.to_s, :target_id => params[:target].id}
       conditions = { :user_id => u.id, :user_type => u.class.base_class.to_s, :verb => params[:verb].to_s }.merge(target_hash)
@@ -42,7 +42,7 @@ module ActionTracker
     end
 
     def self.add_or_create(params)
-      u = params[:user] || current_user_from_model
+      u = params[:user] || current_user
       return if u.nil?
       target_hash = params[:target].nil? ? {} : {:target_type => params[:target].class.base_class.to_s, :target_id => params[:target].id}
       l = last :conditions => { :user_id => u.id, :user_type => u.class.base_class.to_s, :verb => params[:verb].to_s }.merge(target_hash)
@@ -70,7 +70,7 @@ module ActionTracker
     def description
       text = ActionTrackerConfig.get_verb(self.verb)[:description] || ""
       if text.is_a?(Proc)
-        self.instance_eval(&text)
+        self.instance_exec(&text)
       else
         text
       end

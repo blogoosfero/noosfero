@@ -11,9 +11,9 @@ class FilePresenter
     #FIXME This check after the || is redundant but increases the blog_page
     #      speed considerably.
     return f if f.is_a?(FilePresenter ) || (!f.kind_of?(UploadedFile) && !f.kind_of?(Image))
-    klass = FilePresenter.subclasses.sort_by {|class_name|
-      class_name.constantize.accepts?(f) || 0
-    }.last.constantize
+    klass = FilePresenter.subclasses.sort_by {|class_instance|
+      class_instance.accepts?(f) || 0
+    }.last
     klass.accepts?(f) ? klass.new(f) : f
   end
 
@@ -74,11 +74,13 @@ class FilePresenter
   #     [super, 'myclass'].flatten
   #   end
   def css_class_list
-    [ @file.css_class_list,
-      'file-' + self.class.to_s.split(/:+/).map(&:underscore)[1..-1].join('-'),
+    list = @file.css_class_list
+    list << 'file-' + self.class.to_s.split(/:+/).map(&:underscore)[1..-1].join('-')
+    list.concat [
       'content-type_' + self.content_type.split('/')[0],
       'content-type_' + self.content_type.gsub(/[^a-z0-9]/i,'-')
-    ].flatten
+    ] if self.content_type.present?
+    list
   end
 
   # Enable file presenter to customize the css classes on view_page.rhtml
@@ -109,7 +111,7 @@ class FilePresenter
   # required `FilePresenter::Image` instance in the `image` variable.
   def to_html(options = {})
     file = self
-    lambda do
+    proc do
       render :partial => file.class.to_s.underscore,
              :locals => { :options => options },
              :object => file

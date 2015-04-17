@@ -21,7 +21,7 @@ Noosfero is written in Ruby with the "[Rails framework](http://www.rubyonrails.o
 You need to install some packages Noosfero depends on. On Debian GNU/Linux or Debian-based systems, all of these packages are available through the Debian archive. You can install them with the following command:
 
     # apt-get install ruby rake po4a libgettext-ruby-util libgettext-ruby1.8 \
-      libsqlite3-ruby rcov librmagick-ruby libredcloth-ruby libhpricot-ruby \
+      libsqlite3-ruby rcov librmagick-ruby libredcloth-ruby \
       libwill-paginate-ruby iso-codes libfeedparser-ruby libdaemons-ruby thin \
       tango-icon-theme
 
@@ -40,7 +40,6 @@ On other systems, they may or may not be available through your regular package 
 * Daemons - http://daemons.rubyforge.org
 * Thin: http://code.macournoyer.com/thin
 * tango-icon-theme: http://tango.freedesktop.org/Tango_Icon_Library
-* Hpricot: http://hpricot.com
 
 If you manage to install Noosfero successfully on other systems than Debian,
 please feel free to contact the Noosfero development mailing with the
@@ -186,8 +185,8 @@ Apache instalation
 
     # apt-get install apache2
 
-Apache configuration
---------------------
+Configuration - noosfero at /
+-----------------------------
 
 First you have to enable the following some apache modules:
 
@@ -257,6 +256,62 @@ Now restart your apache server (as root):
 
     # invoke-rc.d apache2 restart
 
+Configuration - noosfero at a /subdirectory
+-------------------------------------------
+
+This section describes how to configure noosfero at a subdirectory, what is
+specially useful when you want Noosfero to share a domain name with other
+applications. For example you can host noosfero at yourdomain.com/social, a
+webmail application at yourdomain.com/webmail, and have a static HTML website
+at yourdomain.com/.
+
+**NOTE:** Some plugins might not work well with this setting. Before deploying
+this setting, make sure you test that everything  you need works properly with
+it.
+
+The configuration is similar to the main configuration instructions, except for
+the following points. In the description below, replace '/subdirectory' with
+the actual subdirectory you want.
+
+1) add a `prefix: /subdirectory` line to your thin configuration file (thin.yml).
+
+1.1) remember to restart the noosfero application server whenever you make
+changes to that configuration file.
+
+    # service noosfero restart
+
+2) add a line saying `export RAILS_RELATIVE_URL_ROOT=/subdirectory` to
+/etc/default/noosfero (you can create it with just this line if it does not
+exist already).
+
+3) You should add the following apache configuration to an existing virtual
+host (plus the `<Proxy balancer://noosfero>` section as displayed above):
+
+```
+Alias /subdirectory /path/to/noosfero/public
+<Directory "/path/to/noosfero/public">
+  Options FollowSymLinks
+  AllowOverride None
+  Order Allow,Deny
+  Allow from all
+
+  Include /path/to/noosfero/etc/noosfero/apache/cache.conf
+
+  RewriteEngine On
+  RewriteBase /subdirectory
+  # Rewrite index to check for static index.html
+  RewriteRule ^$ index.html [QSA]
+  # Rewrite to check for Rails cached page
+  RewriteRule ^([^.]+)$ $1.html [QSA]
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteRule ^(.*)$ http://localhost:3000%{REQUEST_URI} [P,QSA,L]
+</Directory>
+```
+
+3.1) remember to reload the apache server whenever any apache configuration
+file changes.
+
+    # sudo service apache2 reload
 
 Enabling exception notifications
 ================================

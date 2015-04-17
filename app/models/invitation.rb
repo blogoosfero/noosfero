@@ -11,6 +11,8 @@ class Invitation < Task
 
   validates_presence_of :message, :if => Proc.new{|invite| invite.target_id.blank?}
 
+  validate :not_invite_yourself
+
   alias :person :requestor
   alias :person= :requestor=
 
@@ -24,18 +26,17 @@ class Invitation < Task
   end
 
   after_create do |task|
-    TaskMailer.deliver_invitation_notification(task) unless task.friend
+    TaskMailer.invitation_notification(task).deliver unless task.friend
   end
 
   def title
     _('Invitation')
   end
 
-  def validate
-    super
+  def not_invite_yourself
     email = friend ? friend.user.email : friend_email
     if person && email && person.user.email == email
-      self.errors.add_to_base(_("You can't invite youself"))
+      self.errors.add(:base, _("You can't invite youself"))
     end
   end
 
@@ -50,7 +51,10 @@ class Invitation < Task
       next if contact_to_invite == _("Firstname Lastname <friend@email.com>")
 
       contact_to_invite.strip!
-      if match = contact_to_invite.match(/(.*)<(.*)>/) and match[2].match(Noosfero::Constants::EMAIL_FORMAT)
+      find_by_profile_id = false
+      if contact_to_invite.match(/^\d*$/)
+        find_by_profile_id = true
+      elsif match = contact_to_invite.match(/(.*)<(.*)>/) and match[2].match(Noosfero::Constants::EMAIL_FORMAT)
         friend_name = match[1].strip
         friend_email = match[2]
       elsif match = contact_to_invite.strip.match(Noosfero::Constants::EMAIL_FORMAT)
@@ -60,22 +64,24 @@ class Invitation < Task
         next
       end
 
-      user = User.find_by_email(friend_email)
+      begin
+        user = find_by_profile_id ? Person.find_by_id(contact_to_invite).user : User.find_by_email(friend_email)
+      rescue
+        user = nil
+      end
 
-      task_args = if user.nil?
+      task_args = if user.nil? && !find_by_profile_id
         {:person => person, :friend_name => friend_name, :friend_email => friend_email, :message => message}
-      elsif !user.person.is_a_friend?(person)
+      elsif user.present? && !(user.person.is_a_friend?(person) && profile.person?)
         {:person => person, :target => user.person}
       end
 
-      if !task_args.nil?
-        if profile.person?
-          InviteFriend.create(task_args)
-        elsif profile.community?
-          InviteMember.create(task_args.merge(:community_id => profile.id))
-        else
-          raise NotImplementedError, 'Don\'t know how to invite people to a %s' % profile.class.to_s
-        end
+      if profile.person?
+        InviteFriend.create(task_args) if user.nil? || !user.person.is_a_friend?(person)
+      elsif profile.community?
+        InviteMember.create(task_args.merge(:community_id => profile.id)) if user.nil? || !user.person.is_member_of?(profile)
+      else
+        raise NotImplementedError, 'Don\'t know how to invite people to a %s' % profile.class.to_s
       end
     end
   end

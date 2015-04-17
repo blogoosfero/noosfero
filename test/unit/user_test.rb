@@ -1,4 +1,5 @@
-require File.dirname(__FILE__) + '/../test_helper'
+# encoding: UTF-8
+require_relative "../test_helper"
 
 class UserTest < ActiveSupport::TestCase
   # Be sure to include AuthenticatedTestHelper in test/test_helper.rb instead.
@@ -7,37 +8,37 @@ class UserTest < ActiveSupport::TestCase
   fixtures :users, :environments
 
   def test_should_create_user
-    assert_difference User, :count do
+    assert_difference 'User.count' do
       user = new_user
       assert !user.new_record?, "#{user.errors.full_messages.to_sentence}"
     end
   end
 
   def test_should_require_login
-    assert_no_difference User, :count do
+    assert_no_difference 'User.count' do
       u = new_user(:login => nil)
-      assert u.errors.on(:login)
+      assert u.errors[:login].present?
     end
   end
 
   def test_should_require_password
-    assert_no_difference User, :count do
+    assert_no_difference 'User.count' do
       u = new_user(:password => nil)
-      assert u.errors.on(:password)
+      assert u.errors[:password].present?
     end
   end
 
   def test_should_require_password_confirmation
-    assert_no_difference User, :count do
+    assert_no_difference 'User.count' do
       u = new_user(:password_confirmation => nil)
-      assert u.errors.on(:password_confirmation)
+      assert u.errors[:password_confirmation].present?
     end
   end
 
   def test_should_require_email
-    assert_no_difference User, :count do
+    assert_no_difference 'User.count' do
       u = new_user(:email => nil)
-      assert u.errors.on(:email)
+      assert u.errors[:email].present?
     end
   end
 
@@ -89,27 +90,27 @@ class UserTest < ActiveSupport::TestCase
   def test_login_validation
     u = User.new
     u.valid?
-    assert u.errors.invalid?(:login)
+    assert u.errors[:login.to_s].present?
 
     u.login = 'with space'
     u.valid?
-    assert u.errors.invalid?(:login)
+    assert u.errors[:login.to_s].present?
 
     u.login = 'áéíóú'
     u.valid?
-    assert u.errors.invalid?(:login)
+    assert u.errors[:login.to_s].present?
 
     u.login = 'rightformat2007'
     u.valid?
-    assert ! u.errors.invalid?(:login)
+    assert ! u.errors[:login.to_s].present?
 
     u.login = 'rightformat'
     u.valid?
-    assert ! u.errors.invalid?(:login)
+    assert ! u.errors[:login.to_s].present?
 
     u.login = 'right_format'
     u.valid?
-    assert ! u.errors.invalid?(:login)
+    assert ! u.errors[:login.to_s].present?
   end
 
   def test_should_change_password
@@ -187,6 +188,12 @@ class UserTest < ActiveSupport::TestCase
     # makes 'test' a terrible password. :)
     user = new_user(:login => 'lalala', :email => 'lalala@example.com', :password => 'test', :password_confirmation => 'test', :password_type => 'md5')
     assert_equal '098f6bcd4621d373cade4e832627b4f6', user.crypted_password
+  end
+
+
+  def test_should_support_salted_md5_passwords
+    user = new_user(:login => 'lalala', :email => 'lalala@example.com', :password => 'test', :password_confirmation => 'test', :password_type => 'salted_md5', :salt => 'test')
+    assert_equal '05a671c66aefea124cc08b76ea6d30bb', user.crypted_password
   end
 
   def test_should_support_crypt_passwords
@@ -295,6 +302,17 @@ class UserTest < ActiveSupport::TestCase
     assert !user.email_activation_pending?
   end
 
+  should 'has moderate registration pending' do
+    user = create_user('cooler')
+    ModerateUserRegistration.create!(:requestor => user.person, :target => Environment.default)
+    assert user.moderate_registration_pending?
+  end
+
+  should 'not has moderate registration pending if not have a pending task' do
+    user = create_user('cooler')
+    assert !user.moderate_registration_pending?
+  end
+
   should 'be able to use [] operator to find users by login' do
     user = fast_create(User)
     assert_equal user, User[user.login]
@@ -348,7 +366,7 @@ class UserTest < ActiveSupport::TestCase
     assert_equal expected_hash['since_year'], person.user.data_hash['since_year']
 
     # Avatar stuff
-    assert_match 'http://www.gravatar.com/avatar/a0517761d5125820c28d87860bc7c02e', person.user.data_hash['avatar']
+    assert_match '/www.gravatar.com/avatar/a0517761d5125820c28d87860bc7c02e', person.user.data_hash['avatar']
     assert_match 'only_path=false', person.user.data_hash['avatar']
     assert_match 'd=', person.user.data_hash['avatar']
     assert_match 'size=20', person.user.data_hash['avatar']
@@ -473,7 +491,7 @@ class UserTest < ActiveSupport::TestCase
   end
 
   should 'deliver e-mail with activation code after creation' do
-    assert_difference(ActionMailer::Base.deliveries, :size, 1) do
+    assert_difference 'ActionMailer::Base.deliveries.size', 1 do
       new_user :email => 'pending@activation.com'
     end
     assert_equal 'pending@activation.com', ActionMailer::Base.deliveries.last['to'].to_s
@@ -481,18 +499,9 @@ class UserTest < ActiveSupport::TestCase
 
   should 'not try to deliver email to template users' do
     Person.any_instance.stubs(:is_template?).returns(true)
-    assert_no_difference ActionMailer::Base.deliveries, :size do
+    assert_no_difference 'ActionMailer::Base.deliveries.size' do
       new_user
     end
-  end
-
-  should 'not mass assign activated at' do
-    user = User.new :activated_at => 5.days.ago
-    assert_nil user.activated_at
-    user.attributes = { :activated_at => 5.days.ago }
-    assert_nil user.activated_at
-    user.activated_at = 5.days.ago
-    assert_not_nil user.activated_at
   end
 
   should 'authenticate an activated user' do
@@ -528,10 +537,26 @@ class UserTest < ActiveSupport::TestCase
     assert user.activated?
   end
 
-  should 'delay activation check' do
-    assert_difference Delayed::Job, :count, 1 do
-      user = new_user
-    end
+  should 'delay activation check with default time' do
+    user = new_user
+    job = Delayed::Job.last
+    assert_match /UserActivationJob/, job.handler
+    assert_equal 72, ((job.run_at - user.created_at)/1.hour).round
+  end
+
+  should 'delay activation check with custom time' do
+    NOOSFERO_CONF.stubs(:[]).with('hours_until_user_activation_check').returns(240)
+    user = new_user
+    job = Delayed::Job.last
+    assert_match /UserActivationJob/, job.handler
+    assert_equal 240, ((job.run_at - user.created_at)/1.hour).round
+  end
+
+  should 'not create job to check activation to template users' do
+    Person.any_instance.stubs(:is_template?).returns(true)
+
+    user = new_user
+    assert_equal 0, Delayed::Job.by_handler("--- !ruby/struct:UserActivationJob\nuser_id: #{user.id}\n").count
   end
 
   should 'deactivate an user' do
@@ -580,7 +605,7 @@ class UserTest < ActiveSupport::TestCase
     env.save
 
     user = new_user :email => 'pending@activation.com'
-    assert_no_difference(ActionMailer::Base.deliveries, :size) do
+    assert_no_difference 'ActionMailer::Base.deliveries.size' do
       user.activate
     end
   end
@@ -595,14 +620,15 @@ class UserTest < ActiveSupport::TestCase
     env.save
 
     user = new_user :email => 'pending@activation.com'
-    assert_difference(ActionMailer::Base.deliveries, :size, 1) do
+    assert_difference 'ActionMailer::Base.deliveries.size', 1 do
       user.activate
+      process_delayed_job_queue
     end
 
     sent = ActionMailer::Base.deliveries.last
     assert_equal ['pending@activation.com'], sent.to
     assert_equal 'Welcome to this environment', sent.subject
-    assert_equal 'Thanks for signing up!', sent.body
+    assert_match /Thanks for signing up!/, sent.body.to_s
   end
 
   should 'deliver welcome e-mail after user activation if enabled on environment with default subject if not defined' do
@@ -614,8 +640,9 @@ class UserTest < ActiveSupport::TestCase
     env.save
 
     user = new_user :email => 'pending@activation.com'
-    assert_difference(ActionMailer::Base.deliveries, :size, 1) do
+    assert_difference 'ActionMailer::Base.deliveries.size', 1 do
       user.activate
+      process_delayed_job_queue
     end
 
     sent = ActionMailer::Base.deliveries.last
@@ -632,12 +659,13 @@ class UserTest < ActiveSupport::TestCase
     env.save
 
     user = new_user :name => 'John Doe', :email => 'pending@activation.com'
-    assert_difference(ActionMailer::Base.deliveries, :size, 1) do
+    assert_difference 'ActionMailer::Base.deliveries.size', 1 do
       user.activate
+      process_delayed_job_queue
     end
 
     sent = ActionMailer::Base.deliveries.last
-    assert_equal "Thanks for signing up, #{user.name}!", sent.body
+    assert_match /Thanks for signing up, #{user.name}!/, sent.body.to_s
   end
 
   should 'not deliver welcome e-mail after user activation if enabled on environment but body not filled in' do
@@ -649,7 +677,7 @@ class UserTest < ActiveSupport::TestCase
     env.save
 
     user = new_user :email => 'pending@activation.com'
-    assert_no_difference(ActionMailer::Base.deliveries, :size) do
+    assert_no_difference 'ActionMailer::Base.deliveries.size' do
       user.activate
     end
   end
@@ -660,7 +688,7 @@ class UserTest < ActiveSupport::TestCase
     env.save
 
     user = new_user :email => 'pending@activation.com'
-    assert_no_difference(ActionMailer::Base.deliveries, :size) do
+    assert_no_difference 'ActionMailer::Base.deliveries.size' do
       user.activate
     end
   end

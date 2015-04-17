@@ -6,23 +6,28 @@ program_name=$(basename $0)
 
 if [ -e /etc/default/noosfero ]; then
   . /etc/default/noosfero
-else
+fi
+
+if [ -z "$NOOSFERO_DIR" ]; then
   this_script=$(readlink -f $0)
   NOOSFERO_DIR=$(dirname $this_script | xargs dirname)
 fi
 
 # data
+plugins_public_dir="$NOOSFERO_DIR/public/plugins"
+plugins_features_dir="$NOOSFERO_DIR/features/plugins"
 available_plugins_dir="$NOOSFERO_DIR/plugins"
 enabled_plugins_dir="$NOOSFERO_DIR/config/plugins"
+base_plugins_dir="$NOOSFERO_DIR/baseplugins"
 available_plugins=$(find "$available_plugins_dir" -maxdepth 1 -mindepth 1 -type d -not -name 'template' -printf '%f\n' | sort)
 enabled_plugins=$(find -L "$enabled_plugins_dir" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | sort)
-disabled_plugins=$(printf "%s\n" $available_plugins $enabled_plugins_dir | sort | uniq -u)
+base_plugins=$(find -L "$base_plugins_dir" -maxdepth 1 -mindepth 1 -type d -printf '%f\n' | sort)
 
 # operation defaults
 quiet=false
 needs_migrate=false
 load_paths="$NOOSFERO_DIR/lib:$(echo $NOOSFERO_DIR/vendor/plugins/*/lib | tr ' ' :)"
-
+dependency_calc="$NOOSFERO_DIR/lib/noosfero/plugin/dependency_calc.rb"
 
 _list() {
   for plugin in $available_plugins; do
@@ -32,7 +37,7 @@ _list() {
 
 _status() {
   for plugin in $available_plugins; do
-    if [ -h "$enabled_plugins_dir/$plugin" ]; then
+    if [ -h "$enabled_plugins_dir/$plugin" -o -h "$base_plugins_dir/$plugin" ]; then
       status="*"
     else
       status=" "
@@ -75,33 +80,68 @@ run(){
 }
 
 _enable(){
-  plugin="$1"
-  source="$available_plugins_dir/$plugin"
-  target="$enabled_plugins_dir/$plugin"
+  local plugin="$1"
+
+  if [ -d "$available_plugins_dir/$plugin" ]; then
+    local source="$available_plugins_dir/$plugin"
+  else
+    if [ ! -d "$plugin" ]; then
+      echo "E: $plugin not found (needs to be an existing directory)"
+      return
+    fi
+
+    # out-of-tree plugins
+    local source="$plugin"
+    local plugin=$(basename "$plugin")
+  fi
+
+  local target="$enabled_plugins_dir/$plugin"
+  local base="$base_plugins_dir/$plugin"
   run "$source/before_enable.rb"
-  if [ -h "$target" ]; then
+  if [ -h "$target" -o -h "$base" ]; then
     _say "$plugin already enabled"
   else
     if [ ! -d "$source" ]; then
       echo "E: $plugin plugin does not exist!"
       return
     fi
-    installation_ok=true
-    installation_file="$source/install.rb"
+    local installation_ok=true
+    local installation_file="$source/install.rb"
     if ! run $installation_file; then
       installation_ok=false
     else
-      dependencies_ok=true
-      dependencies_file="$source/dependencies.rb"
+      local dependencies_ok=true
+      local dependencies_file="$source/dependencies.rb"
+      #if [ -e $source/Gemfile ]; then
+        #gemfile=$(mktemp --tmpdir=.)
+        #cat Gemfile $source/Gemfile > $gemfile
+        #if ! RUBYOPT='' BUNDLE_GEMFILE="$gemfile" bundle --local --quiet; then
+          #dependencies_ok=false
+        #fi
+        #rm -f $gemfile $gemfile.lock
+      #fi
       if ! run $dependencies_file; then
         dependencies_ok=false
       fi
     fi
     if [ "$installation_ok" = true ] && [ "$dependencies_ok" = true ]; then
+
+      # check dependencies
+      if [ -z "$plugin_dependencies" ]; then
+        plugin_dependencies=`$dependency_calc $plugin`
+        _say "Enabling dependencies: $plugin_dependencies"
+        if [ $? != 0 ]; then
+          exit $?
+        fi
+        for dependency in $plugin_dependencies; do
+          _enable $dependency
+        done
+      fi
+
       ln -s "$source" "$target"
       plugins_public_dir="$NOOSFERO_DIR/public/plugins"
       plugins_features_dir="$NOOSFERO_DIR/features/plugins"
-      test -d "$target/public/" && ln -s "$target/public" "$plugins_public_dir/$plugin"
+      test -d "$target/public" && ln -s "$target/public" "$plugins_public_dir/$plugin"
       test -d "$NOOSFERO_DIR/features" && test -d "$target/features" && ln -s "$target/features" "$plugins_features_dir/$plugin"
       _say "$plugin enabled"
       run "$source/after_enable.rb"
@@ -113,6 +153,7 @@ _enable(){
       echo "W: failed to load dependencies for $plugin; not enabling"
       echo
     fi
+
   fi
 }
 
@@ -122,7 +163,12 @@ _disable(){
   target="$enabled_plugins_dir/$plugin"
   plugins_public_dir="$NOOSFERO_DIR/public/plugins"
   plugins_features_dir="$NOOSFERO_DIR/features/plugins"
-  run "$source/before_disable.rb"
+
+  if [ -h "$base_plugins_dir/$plugin" ]; then
+    _say "$plugin is a base plugin and cannot be disabled"
+    return
+  fi
+
   if [ -h "$target" ]; then
     rm "$target"
     test -h "$plugins_public_dir/$plugin" && rm "$plugins_public_dir/$plugin"
@@ -145,7 +191,7 @@ _new(){
     mkdir "$target"
 
     plugin_name=$(echo "$plugin" | sed -e 's/^./\u&/; s/_\(.\)/\u\1/g')
-    for source_file in $(find "$template" -type f); do
+    for source_file in $(find "$template" -type f -and '(' -not -name '*.po' -and -not -name '*.mo' ')'); do
       target_file=$(echo "$source_file" | sed -e "s/template/$plugin/g")
       mkdir -p $(dirname "$target_file")
       sed "s/TemplatePlugin/${plugin_name}Plugin/g" "$source_file" > "$target_file"

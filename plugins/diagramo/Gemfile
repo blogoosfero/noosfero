@@ -1,3 +1,2 @@
-#gem 'php_serialize'
+gem 'php-serialize'
 gem 'mechanize'
-

@@ -1,6 +1,6 @@
 # FIXME: this tests must me moved into design plugin
 
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 require 'edit_template_controller'
 
 # Re-raise errors caught by the controller.
@@ -15,14 +15,6 @@ class EditTemplateControllerTest < ActionController::TestCase
     login_as 'ze'
   end
 
-  def test_local_files_reference
-    assert_local_files_reference
-  end
-  
-  def test_valid_xhtml
-    assert_valid_xhtml
-  end
-  
   def test_redirect_to_design_editor_when_index_action_is_called
     give_permission('ze', 'edit_environment_design', Environment.default)
     get :index

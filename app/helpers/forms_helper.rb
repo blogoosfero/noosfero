@@ -1,11 +1,5 @@
 module FormsHelper
 
-  def generate_form( name, obj, fields={} )
-    labelled_form_for name, obj do |f|
-      f.text_field(:name)
-    end
-  end
-
   def labelled_radio_button( human_name, name, value, checked = false, options = {} )
     options[:id] ||= 'radio-' + FormsHelper.next_id_number
     radio_button_tag( name, value, checked, options ) +
@@ -14,9 +8,10 @@ module FormsHelper
 
   def labelled_check_box( human_name, name, value = "1", checked = false, options = {} )
     options[:id] ||= 'checkbox-' + FormsHelper.next_id_number
-    hidden_field_tag(name, '0') +
+    content_tag 'div',
+      hidden_field_tag(name, '0', options ) +
       check_box_tag( name, value, checked, options ) +
-      content_tag( 'label', human_name, :for => options[:id] )
+      content_tag( 'label', human_name, options.merge(:for => options[:id]) )
   end
 
   def labelled_text_field( human_name, name, value=nil, options={} )
@@ -41,6 +36,7 @@ module FormsHelper
       the_class << ' ' << html_options[:class]
     end
 
+    html_options.delete(:cancel)
     bt_submit = submit_tag(label, html_options.merge(:class => the_class))
 
     bt_submit + bt_cancel
@@ -56,14 +52,14 @@ module FormsHelper
 
   def select_city( simple=false )
     states = State.find(:all, :order => 'name')
-    
+
     state_id = 'state-' + FormsHelper.next_id_number
     city_id = 'city-' + FormsHelper.next_id_number
 
     if states.length < 1
       return
     end
-    
+
     if simple
       states = [State.new(:name => _('Select the State'))] + states
       cities = [City.new(:name => _('Select the City'))]
@@ -87,7 +83,7 @@ module FormsHelper
       states = [State.new(:name => '---')] + states
       cities = [City.new(:name => '---')]
 
-      html = 
+      html =
       content_tag( 'div',
                    labelled_select( _('State:'), 'state', :id, :name, nil, states, :id => state_id ),
                    :class => 'select_state_for_origin' ) +
@@ -95,7 +91,7 @@ module FormsHelper
                    labelled_select( _('City:'), 'city', :id, :name, nil, cities, :id => city_id ),
                    :class => 'select_city_for_origin' )
     end
-    
+
     html +
     observe_field( state_id, :update => city_id, :function => "new Ajax.Updater(#{city_id.inspect}, #{url_for(:controller => 'search', :action => 'cities').inspect}, {asynchronous:true, evalScripts:true, parameters:'state_id=' + value}); $(#{city_id.inspect}).innerHTML = '<option>#{_('Loading...')}</option>'", :with => 'state_id')
   end
@@ -105,10 +101,7 @@ module FormsHelper
   end
 
   def required_fields_message
-    content_tag('p', content_tag('span',
-      _("The <label class='pseudoformlabel'>highlighted</label> fields are mandatory."),
-      :class => 'required-field'
-    ))
+    content_tag('p', _("The %{highlighted} fields are mandatory.") % {highlighted: content_tag('span', _("highlighted"), :class=>'required-field')})
   end
 
   def options_for_select_with_title(container, selected = nil)
@@ -271,7 +264,7 @@ module FormsHelper
     )
   end
 
-  def select_profile_folder(label_text, field_id, profile, default_value='', html_options = {}, js_options = {}, find_options = {})
+  def select_profile_folder(label_text, field_id, profile, default_value='', html_options = {}, js_options = {}, find_options = {}, extra_options = {})
     if find_options.empty?
       folders = profile.folders
     else
@@ -282,7 +275,7 @@ module FormsHelper
       select_tag(
         field_id,
         options_for_select(
-          [[profile.identifier, '']] +
+          [[(extra_options[:root_label] || profile.identifier), '']] +
           folders.collect {|f| [ profile.identifier + '/' +  f.full_name, f.id.to_s ] },
           default_value.to_s
         ),

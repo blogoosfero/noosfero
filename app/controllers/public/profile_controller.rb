@@ -3,7 +3,7 @@ class ProfileController < PublicController
   needs_profile
   before_filter :check_access_to_profile, :except => [:join, :join_not_logged, :index, :add]
   before_filter :store_location, :only => [:join, :join_not_logged, :report_abuse, :send_mail]
-  before_filter :login_required, :only => [:add, :join, :join_not_logged, :leave, :unblock, :leave_scrap, :remove_scrap, :remove_activity, :view_more_activities, :view_more_network_activities, :report_abuse, :register_report, :leave_comment_on_activity, :send_mail]
+  before_filter :login_required, :only => [:add, :join, :leave, :unblock, :leave_scrap, :remove_scrap, :remove_activity, :view_more_activities, :view_more_network_activities, :report_abuse, :register_report, :leave_comment_on_activity, :send_mail]
 
   helper TagsHelper
 
@@ -16,9 +16,7 @@ class ProfileController < PublicController
       @activities = @profile.activities.paginate(:per_page => 15, :page => params[:page])
     end
     @tags = profile.article_tags
-    unless profile.display_info_to?(user)
-      profile.visible? ? private_profile : invisible_profile
-    end
+    allow_access_to_page
   end
 
   def tags
@@ -32,7 +30,7 @@ class ProfileController < PublicController
     @tag = params[:id]
     @tag_cache_key = "tag_#{CGI.escape(@tag.to_s)}_#{profile.id.to_s}_page_#{params[:npage]}"
     if is_cache_expired?(@tag_cache_key)
-      @tagged = profile.find_tagged_with(@tag).paginate(:per_page => 20, :page => params[:npage])
+      @tagged = profile.tagged_with(@tag).paginate(:per_page => 20, :page => params[:npage])
     end
   end
 
@@ -51,7 +49,7 @@ class ProfileController < PublicController
 
   def communities
     if is_cache_expired?(profile.communities_cache_key(params))
-      @communities = profile.communities.includes(relations_to_include).paginate(:per_page => per_page, :page => params[:npage])
+      @communities = profile.communities.includes(relations_to_include).paginate(:per_page => per_page, :page => params[:npage], :total_entries => profile.communities.count)
     end
   end
 
@@ -60,14 +58,15 @@ class ProfileController < PublicController
   end
 
   def friends
+    return redirect_to profile.url unless profile.person?
     if is_cache_expired?(profile.friends_cache_key(params))
-      @friends = profile.friends.includes(relations_to_include).paginate(:per_page => per_page, :page => params[:npage])
+      @friends = profile.friends.includes(relations_to_include).paginate(:per_page => per_page, :page => params[:npage], :total_entries => profile.friends.count)
     end
   end
 
   def members
     if is_cache_expired?(profile.members_cache_key(params))
-      @members = profile.members_by_name.includes(relations_to_include).paginate(:per_page => members_per_page, :page => params[:npage])
+      @members = profile.members_by_name.includes(relations_to_include).paginate(:per_page => members_per_page, :page => params[:npage], :total_entries => profile.members.count)
     end
   end
 
@@ -76,6 +75,7 @@ class ProfileController < PublicController
   end
 
   def favorite_enterprises
+    return redirect_to action: :index unless profile.enterprise?
     @favorite_enterprises = profile.favorite_enterprises.includes(relations_to_include)
   end
 
@@ -97,21 +97,12 @@ class ProfileController < PublicController
   end
 
   def join_not_logged
-    if request.post?
-      profile.add_member(user)
-      session[:notice] = _('%s administrator still needs to accept you as member.') % profile.name if profile.closed?
-      redirect_to_previous_location
+    session[:join] = profile.identifier
+
+    if user
+      redirect_to :controller => 'profile', :action => 'join'
     else
-      if user.memberships.include?(profile)
-        session[:notice] = _('You are already a member of %s.') % profile.name
-        redirect_to profile.url
-        return
-      end
-      if request.xhr?
-        render :layout => false
-      else
-        redirect_to profile.url
-      end
+      redirect_to :controller => '/account', :action => 'login'
     end
   end
 
@@ -167,7 +158,7 @@ class ProfileController < PublicController
       session[:notice] = _("You have unblocked %s successfully. ") % profile.name
       redirect_to :controller => 'profile', :action => 'index'
     else
-      message = __('You are not allowed to unblock enterprises in this environment.')
+      message = _('You are not allowed to unblock enterprises in this environment.')
       render_access_denied(message)
     end
   end
@@ -211,7 +202,8 @@ class ProfileController < PublicController
   end
 
   def more_comments
-    activity = ActionTracker::Record.find(:first, :conditions => {:id => params[:activity], :user_id => @profile})
+    profile_filter = @profile.person? ? {:user_id => @profile} : {:target_id => @profile}
+    activity = ActionTracker::Record.find(:first, :conditions => {:id => params[:activity]}.merge(profile_filter))
     comments_count = activity.comments.count
     comment_page = (params[:comment_page] || 1).to_i
     comments_per_page = 5
@@ -219,7 +211,7 @@ class ProfileController < PublicController
 
     render :update do |page|
       page.insert_html :bottom, 'profile-wall-activities-comments-'+params[:activity],
-        :partial => 'comment', :collection => activity.comments.paginate(:per_page => comments_per_page, :page => comment_page)
+        :partial => 'comment', :collection => activity.comments.flatten.paginate(:per_page => comments_per_page, :page => comment_page)
 
       if no_more_pages
         page.remove 'profile-wall-activities-comments-more-'+params[:activity]
@@ -310,7 +302,7 @@ class ProfileController < PublicController
   end
 
   def register_report
-    unless user.is_admin? || verify_recaptcha
+    unless user.is_admin? || captcha_verify
       render :text => {
         :ok => false,
         :error => {
@@ -323,7 +315,7 @@ class ProfileController < PublicController
         abuse_report = AbuseReport.new(params[:abuse_report])
         if !params[:content_type].blank?
           article = params[:content_type].constantize.find(params[:content_id])
-          abuse_report.content = instance_eval(&article.reported_version)
+          abuse_report.content = article_reported_version(article)
         end
 
         user.register_report(abuse_report, profile)
@@ -397,16 +389,6 @@ class ProfileController < PublicController
       redirect_to back
     else
       redirect_to profile.url
-    end
-  end
-
-  def private_profile
-    private_profile_partial_parameters
-  end
-
-  def invisible_profile
-    unless profile.is_template?
-      render_access_denied(_("This profile is inaccessible. You don't have the permission to view the content here."), _("Oops ... you cannot go ahead here"))
     end
   end
 

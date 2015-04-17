@@ -1,82 +1,93 @@
 source "https://rubygems.org"
+gem 'rails',                    '~> 3.2.21'
+gem 'minitest',                 '~> 3.2.0'
+gem 'fast_gettext',             '~> 0.6.8'
+gem 'acts-as-taggable-on',      '~> 3.4.2'
+gem 'rails_autolink',           '~> 1.1.5'
+gem 'RedCloth',                 '~> 4.2.9'
+gem 'ruby-feedparser',          '~> 0.7'
+gem 'daemons',                  '~> 1.1.5'
+gem 'nokogiri',                 '~> 1.5.5'
+gem 'rake', require: false
+gem 'rest-client',              '~> 1.6.7'
+gem 'exception_notification',   '~> 4.0.1'
+gem 'gettext',                  '~> 2.2.1', :require => false
+gem 'locale',                   '~> 2.0.5'
+gem 'whenever', :require => false
+gem 'eita-jrails', '>= 0.9.5', :require => 'jrails'
+gem 'i18n',                     '~> 0.6.0'
+gem 'will-paginate-i18n'
+gem 'utf8-cleaner'
+gem 'premailer-rails'
 
-gem 'sass'
-gem 'progressbar'
+platform :ruby do
+  gem 'pg'
+  gem 'rmagick',                '~> 2.13.1'
+  gem 'thin',                   '~> 1.3.1'
 
-gem 'rake', '0.8.7'
-gem 'rails', '2.3.15'
-gem 'gettext', '2.1.0'
-gem 'gettext_rails', '2.1.0'
-gem 'rmagick', '2.13.1'
-gem 'RedCloth', '4.2.2'
-gem 'system_timer'
-gem 'will_paginate', '2.3.12'
-gem 'ruby-feedparser', '0.7'
-gem 'hpricot', '0.8.2'
-gem 'i18n'
-gem 'daemons', '1.0.10'
-gem 'rubyzip', '< 1.0.0'
-gem 'memcache-client'
+  gem 'unicode'
 
-gem 'dalli'
-gem 'rack-cache'
+  group :performance do
+    gem 'fast_blank'
+    gem 'gctools' if RUBY_VERSION >= '2.1.0' and RUBY_VERSION < '2.2.0'
+    # DON'T IMPROVE
+    #gem 'escape_utils'
+  end
 
-# diagramo plugin
-gem 'php-serialize'
-gem 'mechanize'
+  group :production do
+    gem 'unicorn'
+    #gem 'rainbows'
+    gem 'unicorn-worker-killer'
+  end
+end
+platform :jruby do
+  gem 'activerecord-jdbcpostgresql-adapter'
+  gem 'rmagick4j'
+end
 
-#Indirect, matching debian squeeze versions
-gem 'builder', '2.1.2'
-gem 'cmdparse', '2.0.2'
-gem 'gem_plugin', '0.2.3'
-gem 'eventmachine', '0.12.10'
-gem 'log4r', '1.0.6'
-gem 'mmap', '0.2.6'
-gem 'mocha', '0.9.8'
-gem 'nokogiri', '1.4.7'
-gem 'rest-client', '1.6.0'
-gem 'ruby-breakpoint', '0.5.1'
-gem 'mime-types', '< 2.0'
-gem 'locale', '2.0.9'
+group :assets do
+  gem 'assets_live_compile'
+  gem 'therubyracer', platforms: :ruby
+  gem 'uglifier', '>= 1.0.3'
+  gem 'coffee-rails'
+  gem 'sass'
+  gem 'sass-rails'
+end
 
 group :production do
   gem 'newrelic_rpm'
-  gem 'unicorn'
-  gem 'unicorn-worker-killer'
-  gem 'thin', '1.2.4'
-  gem 'exception_notification', '1.0.20090728'
-end
-
-group :development do
-  gem 'rdoc'
-  gem 'mongrel', '1.1.5'
-  gem 'mongrel_cluster', '1.0.5'
-end
-
-group :databases do
-  gem 'sqlite3-ruby', '1.2.4'
-  gem 'pg'
+  gem 'redis-rails'
+  gem 'rack-cache'
 end
 
 group :test do
-  gem 'tidy'
-  gem 'rcov'
-  gem 'rspec', '1.2.9'
-  gem 'rspec-rails', '1.2.9'
+  gem 'test-unit' if RUBY_VERSION >= '2.2.0'
+  gem 'rspec',                  '~> 2.10.0'
+  gem 'rspec-rails',            '~> 2.10.1'
+  gem 'mocha',                  '~> 1.1.0', require: false
 end
 
 group :cucumber do
-  gem 'cucumber-rails', '0.3.2'
-  gem 'capybara', '1.1.1'
-  gem 'cucumber', '1.1.0'
-  gem 'database_cleaner'
+  gem 'cucumber-rails',         '~> 1.0.6', require: false
+  gem 'capybara',               '~> 2.1.0'
+  gem 'cucumber',               '~> 1.0.6'
+  gem 'database_cleaner',       '~> 1.2.0'
+  # FIXME: conflicts with axlsx version 2, that requires rubyzip 1.0.0 and selenium-webdriver requires rubyzip 1.1.6
+  #gem 'selenium-webdriver',     '~> 2.39.0'
 end
 
-def program(name)
-  unless system("which #{name} > /dev/null")
-    puts "W: Program #{name} is needed, but was not found in your PATH"
-  end
+group :development do
+  gem 'wirble'
+  #gem 'byebug'
+  #gem 'method_source'
 end
 
-program 'java'
-program 'firefox'
+# Requires custom dependencies
+eval(File.read('config/Gemfile'), binding) rescue nil
+
+# include gemfiles from enabled plugins
+# plugins in baseplugins/ are not included on purpose. They should not have any
+# dependencies.
+Dir.glob('config/plugins/*/Gemfile').each do |gemfile|
+  eval File.read(gemfile)
+end

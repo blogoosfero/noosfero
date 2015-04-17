@@ -10,11 +10,11 @@ module CustomFormsPlugin::Helper
   end
 
   def access_text(form)
-    return _('Public') if form.access.nil?
+    return c_('Public') if form.access.nil?
     return _('Logged users') if form.access == 'logged'
     if form.access == 'associated'
-      return _('Members') if form.profile.organization?
-      return _('Friends') if form.profile.person?
+      return c_('Members') if form.profile.organization?
+      return c_('Friends') if form.profile.person?
     end
     return _('Custom')
   end
@@ -41,9 +41,9 @@ module CustomFormsPlugin::Helper
   # TODO add the custom option that should offer the user the hability to
   # choose the profiles one by one, using something like tokeninput
   def access_options(profile)
-    associated = profile.organization? ? _('Members') : _('Friends')
+    associated = profile.organization? ? c_('Members') : c_('Friends')
     [
-      [_('Public'), nil         ],
+      [c_('Public'), nil         ],
       [_('Logged users'), 'logged'    ],
       [ associated, 'associated'],
     ]
@@ -51,7 +51,7 @@ module CustomFormsPlugin::Helper
 
   def type_options
     [
-      [_('Text'),   'text_field'  ],
+      [c_('Text'),   'text_field'  ],
       [_('Select'), 'select_field']
     ]
   end
@@ -84,7 +84,14 @@ module CustomFormsPlugin::Helper
 
   def display_text_field(field, answer, form)
     value = answer.present? ? answer.value : field.default_value
-    text_field(form, "#{field.id}", :value => value, :disabled => display_disabled?(field, answer))
+    case field.show_as
+    when 'textarea'
+      text_area form, "#{field.id}", :value => value, :disabled => display_disabled?(field, answer)
+    when 'tinymce'
+      text_area form, "#{field.id}", :value => value, :disabled => display_disabled?(field, answer), :class => 'mceEditor'
+    else # includes 'input'
+      text_field form, "#{field.id}", :value => value, :disabled => display_disabled?(field, answer)
+    end
   end
 
   def default_selected(field, answer)
@@ -92,7 +99,7 @@ module CustomFormsPlugin::Helper
   end
 
   def display_select_field(field, answer, form)
-    case field.select_field_type
+    case field.show_as
     when 'select'
       selected = default_selected(field, answer)
       select_tag form.to_s + "[#{field.id}]", options_for_select([['','']] + field.alternatives.map {|a| [a.label, a.id.to_s]}, selected), :disabled => display_disabled?(field, answer)
@@ -113,11 +120,11 @@ module CustomFormsPlugin::Helper
   end
 
   def radio_button?(field)
-    type_for_options(field.class) == 'select_field' && field.select_field_type == 'radio'
+    type_for_options(field.class) == 'select_field' && field.show_as == 'radio'
   end
 
   def check_box?(field)
-    type_for_options(field.class) == 'select_field' && field.select_field_type == 'check_box'
+    type_for_options(field.class) == 'select_field' && field.show_as == 'check_box'
   end
 
 end

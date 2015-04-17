@@ -1,11 +1,13 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class MailingSentTest < ActiveSupport::TestCase
 
   should 'return mailing and person' do
     person = fast_create(Person)
-    mailing = Mailing.create(:source => Environment.default, :subject => 'Hello', :body => 'We have some news')
-    sent = MailingSent.create(:mailing => mailing, :person => person)
+    environment = Environment.default
+    mailing = environment.mailings.create(:subject => 'Hello', :body => 'We have some news')
+
+    sent = mailing.mailing_sents.create(:person => person)
 
     mailing_sent = MailingSent.find(sent.id)
     assert_equal [mailing, person], [mailing_sent.mailing, mailing_sent.person]

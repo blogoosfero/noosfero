@@ -3,6 +3,8 @@ class BreadcrumbsPlugin::ContentBreadcrumbsBlock < Block
   settings_items :show_cms_action, :type => :boolean, :default => true
   settings_items :show_profile, :type => :boolean, :default => true
 
+  attr_accessible :show_cms_action, :show_profile
+
   def self.description
     _('Content Breadcrumbs')
   end
@@ -35,7 +37,7 @@ class BreadcrumbsPlugin::ContentBreadcrumbsBlock < Block
 
   def content(args={})
     block = self
-    lambda do
+    proc do
       trail = block.trail(@page, @profile, params)
       if !trail.empty?
         trail.map { |t| link_to(t[:name], t[:url], :class => 'item') }.join(content_tag('span', ' > ', :class => 'separator'))
@@ -51,7 +53,7 @@ class BreadcrumbsPlugin::ContentBreadcrumbsBlock < Block
 
   protected
 
-  CMS_ACTIONS = {:edit => _('Edit'), :upload_files => _('Upload Files'), :new => _('New')}
+  CMS_ACTIONS = {:edit => c_('Edit'), :upload_files => _('Upload Files'), :new => c_('New')}
 
   def cms_action(action)
     CMS_ACTIONS[action.to_sym] || action

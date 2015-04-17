@@ -1,12 +1,12 @@
 module BoxesHelper
 
   def insert_boxes(content)
-    if @controller.send(:boxes_editor?) && @controller.send(:uses_design_blocks?)
-      content + display_boxes_editor(@controller.boxes_holder)
+    if controller.send(:boxes_editor?) && controller.send(:uses_design_blocks?)
+      content + display_boxes_editor(controller.boxes_holder)
     else
-      maybe_display_custom_element(@controller.boxes_holder, :custom_header_expanded, :id => 'profile-header') +
-      if @controller.send(:uses_design_blocks?)
-        display_boxes(@controller.boxes_holder, content)
+      maybe_display_custom_element(controller.boxes_holder, :custom_header_expanded, :id => 'profile-header') +
+      if controller.send(:uses_design_blocks?)
+        display_boxes(controller.boxes_holder, content)
       else
         content_tag('div',
           content_tag('div',
@@ -16,7 +16,7 @@ module BoxesHelper
           :class => 'no-boxes'
         )
       end +
-      maybe_display_custom_element(@controller.boxes_holder, :custom_footer_expanded, :id => 'profile-footer')
+      maybe_display_custom_element(controller.boxes_holder, :custom_footer_expanded, :id => 'profile-footer')
     end
   end
 
@@ -38,13 +38,18 @@ module BoxesHelper
     end
   end
 
+  def boxes_limit holder
+    controller.send(:custom_design)[:boxes_limit] || holder.boxes_limit(controller.send(:custom_design)[:layout_template])
+  end
+
   def display_boxes(holder, main_content)
-    boxes = holder.boxes.with_position.first(holder.boxes_limit)
+    boxes = holder.boxes.with_position.first(boxes_limit(holder))
     content = boxes.reverse.map { |item| display_box(item, main_content) }.join("\n")
     content = main_content if (content.blank?)
 
     content_tag('div', content, :class => 'boxes', :id => 'boxes' )
   end
+
 
   def maybe_display_custom_element(holder, element, options = {})
     if holder.respond_to?(element)
@@ -65,11 +70,13 @@ module BoxesHelper
   end
 
   def display_box_content(box, main_content)
-    context = { :article => @page, :request_path => request.path, :locale => locale, :params => request.params }
-    box_decorator.select_blocks(box.blocks.includes(:box), context).map { |item| display_block(item, main_content) }.join("\n") + box_decorator.block_target(box)
+    context = { :article => @page, :request_path => request.path, :locale => locale, :params => request.params, :user => user, :controller => controller }
+    box_decorator.select_blocks(box, box.blocks.includes(:box), context).map do |item|
+      display_block item, main_content
+    end.join("\n") + box_decorator.block_target(box)
   end
 
-  def select_blocks(arr, context)
+  def select_blocks box, arr, context
     arr
   end
 
@@ -150,8 +157,22 @@ module BoxesHelper
     def self.block_edit_buttons(block)
       ''
     end
-    def self.select_blocks(arr, context)
-      arr.select { |block| block.visible?(context) }
+    def self.select_blocks box, arr, context
+      arr = arr.select{ |block| block.visible? context }
+
+      custom_design = context[:controller].send(:custom_design)
+      inserts = [custom_design[:insert]].flatten.compact
+      inserts.each do |insert_opts|
+        next unless box.position == insert_opts[:box]
+        position, block = insert_opts[:position], insert_opts[:block]
+        block = block.new box: box if block.is_a? Class
+
+        if not insert_opts[:uniq] or not box.blocks.map(&:class).include? block.klass
+          arr = arr.insert position, block
+        end
+      end
+
+      arr
     end
   end
 
@@ -170,60 +191,76 @@ module BoxesHelper
       else
         "before-block-#{block.id}"
       end
-
-    content_tag('div', '&nbsp;', :id => id, :class => 'block-target' ) + drop_receiving_element(id, :url => { :action => 'move_block', :target => id }, :accept => box.acceptable_blocks, :hoverclass => 'block-target-hover')
+    if block.nil? or modifiable?(block)
+      content_tag('div', '&nbsp;', :id => id, :class => 'block-target' ) + drop_receiving_element(id, :url => { :action => 'move_block', :target => id }, :accept => box.acceptable_blocks, :hoverclass => 'block-target-hover')
+    else
+      ""
+    end
   end
 
   # makes the given block draggable so it can be moved away.
   def block_handle(block)
-    draggable_element("block-#{block.id}", :revert => true)
+    modifiable?(block) ? draggable_element("block-#{block.id}", :revert => true) : ""
   end
 
   def block_edit_buttons(block)
     buttons = []
     nowhere = 'javascript: return false;'
 
-    if block.first?
-      buttons << icon_button('up-disabled', _("Can't move up anymore."), nowhere)
-    else
-      buttons << icon_button('up', _('Move block up'), { :action => 'move_block_up', :id => block.id }, { :method => 'post' })
-    end
+    if modifiable?(block)
+      if block.first?
+        buttons << icon_button('up-disabled', _("Can't move up anymore."), nowhere)
+      else
+        buttons << icon_button('up', _('Move block up'), { :action => 'move_block_up', :id => block.id }, { :method => 'post' })
+      end
 
-    if block.last?
-      buttons << icon_button('down-disabled', _("Can't move down anymore."), nowhere)
-    else
-      buttons << icon_button(:down, _('Move block down'), { :action => 'move_block_down' ,:id => block.id }, { :method => 'post'})
-    end
+      if block.last?
+        buttons << icon_button('down-disabled', _("Can't move down anymore."), nowhere)
+      else
+        buttons << icon_button(:down, _('Move block down'), { :action => 'move_block_down' ,:id => block.id }, { :method => 'post'})
+      end
 
-    holder = block.owner
-    # move to opposite side
-    # FIXME too much hardcoded stuff
-    if holder.layout_template == 'default'
-      if block.box.position == 2 # area 2, left side => move to right side
-        buttons << icon_button('right', _('Move to the opposite side'), { :action => 'move_block', :target => 'end-of-box-' + holder.boxes[2].id.to_s, :id => block.id }, :method => 'post' )
-      elsif block.box.position == 3 # area 3, right side => move to left side
-        buttons << icon_button('left', _('Move to the opposite side'), { :action => 'move_block', :target => 'end-of-box-' + holder.boxes[1].id.to_s, :id => block.id }, :method => 'post' )
+      holder = block.owner
+      # move to opposite side
+      # FIXME too much hardcoded stuff
+      if holder.layout_template == 'default'
+        if block.box.position == 2 # area 2, left side => move to right side
+          buttons << icon_button('right', _('Move to the opposite side'), { :action => 'move_block', :target => 'end-of-box-' + holder.boxes[2].id.to_s, :id => block.id }, :method => 'post' )
+        elsif block.box.position == 3 # area 3, right side => move to left side
+          buttons << icon_button('left', _('Move to the opposite side'), { :action => 'move_block', :target => 'end-of-box-' + holder.boxes[1].id.to_s, :id => block.id }, :method => 'post' )
+        end
+      end
+
+      if block.editable?
+        buttons << modal_icon_button(:edit, _('Edit'), { :action => 'edit', :id => block.id })
+      end
+
+      if !block.main?
+        buttons << icon_button(:delete, _('Remove block'), { :action => 'remove', :id => block.id }, { :method => 'post', :confirm => _('Are you sure you want to remove this block?')})
+        buttons << icon_button(:clone, _('Clone'), { :action => 'clone_block', :id => block.id }, { :method => 'post' })
       end
     end
 
-    if block.editable?
-      buttons << colorbox_icon_button(:edit, _('Edit'), { :action => 'edit', :id => block.id })
-    end
-
-    if !block.main?
-      buttons << icon_button(:delete, _('Remove block'), { :action => 'remove', :id => block.id }, { :method => 'post', :confirm => _('Are you sure you want to remove this block?')})
-      buttons << icon_button(:clone, _('Clone'), { :action => 'clone', :id => block.id }, { :method => 'post' })
-    end
-
     if block.respond_to?(:help)
-      buttons << thickbox_inline_popup_icon(:help, _('Help on this block'), {}, "help-on-box-#{block.id}") << content_tag('div', content_tag('h2', _('Help')) + content_tag('div', block.help, :style => 'margin-bottom: 1em;') + thickbox_close_button(_('Close')), :style => 'display: none;', :id => "help-on-box-#{block.id}")
+      buttons << modal_inline_icon(:help, _('Help on this block'), {}, "#help-on-box-#{block.id}") << content_tag('div', content_tag('h2', _('Help')) + content_tag('div', block.help, :style => 'margin-bottom: 1em;') + modal_close_button(_('Close')), :style => 'display: none;', :id => "help-on-box-#{block.id}")
+    end
+
+    if block.embedable?
+      embed_code = block.embed_code
+      embed_code = instance_exec(&embed_code) if embed_code.respond_to?(:call)
+      html = content_tag('div',
+              content_tag('h2', _('Embed block code')) +
+              content_tag('div', _('Below, you''ll see a field containing embed code for the block. Just copy the code and paste it into your website or blogging software.'), :style => 'margin-bottom: 1em;') +
+              content_tag('textarea', embed_code, :style => 'margin-bottom: 1em; width:100%; height:40%;', :readonly => 'readonly') +
+              thickbox_close_button(_('Close')), :style => 'display: none;', :id => "embed-code-box-#{block.id}")
+      buttons << thickbox_inline_popup_icon(:embed, _('Embed code'), {}, "embed-code-box-#{block.id}") << html
     end
 
     content_tag('div', buttons.join("\n") + tag('br', :style => 'clear: left'), :class => 'button-bar')
   end
 
   def current_blocks
-    @controller.boxes_holder.boxes.map(&:blocks).inject([]){|ac, a| ac + a}
+    controller.boxes_holder.boxes.map(&:blocks).inject([]){|ac, a| ac + a}
   end
 
   # DEPRECATED. Do not use this.
@@ -237,5 +274,7 @@ module BoxesHelper
     classes
   end
 
-
+  def modifiable?(block)
+    return !block.fixed || environment.admins.include?(user)
+  end
 end

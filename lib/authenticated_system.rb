@@ -34,6 +34,7 @@ module AuthenticatedSystem
         session.delete(:user)
       else
         session[:user] = new_user.id
+        new_user.register_login
       end
       @current_user = User.current = new_user
     end
@@ -110,7 +111,7 @@ module AuthenticatedSystem
     # Store the URI of the current request in the session.
     #
     # We can return to this location by calling #redirect_back_or_default.
-    def store_location(location = request.request_uri)
+    def store_location(location = request.url)
       session[:return_to] = location
     end
 
@@ -121,10 +122,11 @@ module AuthenticatedSystem
       # break cache after login
       if uri.is_a? String
         uri = URI.parse uri
-        uri.query = [uri.query, "_=#{Time.now.to_i}"].compact.join('&')
+        new_query_ar = URI.decode_www_form(uri.query || '') << ["_", Time.now.to_i.to_s]
+        uri.query = URI.encode_www_form new_query_ar
         uri = uri.to_s
       elsif uri.is_a? Hash
-        uri.merge! :_ => Time.now.to_i
+        uri.merge! _: Time.now.to_i
       end
 
       redirect_to uri

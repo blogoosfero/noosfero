@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class MyNetworkBlockTest < ActiveSupport::TestCase
 
@@ -24,7 +24,7 @@ class MyNetworkBlockTest < ActiveSupport::TestCase
         :title => 'My network',
         :owner => owner
     })
-    instance_eval(& block.content)
+    instance_eval(&block.content)
   end
 
   should 'be able to update display setting' do

@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class PluginManagerTest < ActiveSupport::TestCase
 
@@ -26,6 +26,7 @@ class PluginManagerTest < ActiveSupport::TestCase
     class Plugin2 < Noosfero::Plugin; end;
     class Plugin3 < Noosfero::Plugin; end;
     class Plugin4 < Noosfero::Plugin; end;
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2', 'PluginManagerTest::Plugin3', 'PluginManagerTest::Plugin4'])
     environment.stubs(:enabled_plugins).returns([Plugin1.to_s, Plugin2.to_s, Plugin4.to_s])
     Noosfero::Plugin.stubs(:all).returns([Plugin1.to_s, Plugin3.to_s, Plugin4.to_s])
     results = plugins.enabled_plugins.map { |instance| instance.class.to_s }
@@ -51,6 +52,7 @@ class PluginManagerTest < ActiveSupport::TestCase
         'Plugin 2 action.'
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2'])
 
     environment.stubs(:enabled_plugins).returns([Plugin1.to_s, Plugin2.to_s])
 
@@ -83,6 +85,7 @@ class PluginManagerTest < ActiveSupport::TestCase
         'Plugin 3 action.'
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2', 'PluginManagerTest::Plugin3'])
 
     environment.stubs(:enabled_plugins).returns([Plugin1.to_s, Plugin2.to_s, Plugin3.to_s])
     p1 = Plugin1.new
@@ -107,6 +110,7 @@ class PluginManagerTest < ActiveSupport::TestCase
         'Plugin3'
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2', 'PluginManagerTest::Plugin3'])
 
     environment.enable_plugin(Plugin1.name)
     environment.enable_plugin(Plugin2.name)
@@ -114,7 +118,7 @@ class PluginManagerTest < ActiveSupport::TestCase
 
     Plugin3.any_instance.expects(:random_event).never
 
-    assert 'Plugin2', manager.first(:random_event)
+    assert 'Plugin2', manager.dispatch_first(:random_event)
   end
 
   should 'returns plugins that returns true to the event' do
@@ -134,6 +138,7 @@ class PluginManagerTest < ActiveSupport::TestCase
         true
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2', 'PluginManagerTest::Plugin3'])
 
     environment.enable_plugin(Plugin1.name)
     environment.enable_plugin(Plugin2.name)
@@ -162,6 +167,7 @@ class PluginManagerTest < ActiveSupport::TestCase
         true
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2', 'PluginManagerTest::Plugin3'])
 
     environment.enable_plugin(Plugin1.name)
     environment.enable_plugin(Plugin2.name)
@@ -172,12 +178,22 @@ class PluginManagerTest < ActiveSupport::TestCase
     assert_equal Plugin2, manager.fetch_first_plugin(:random_event)
   end
 
+  should 'return nil if missing method is called' do
+    class Plugin1 < Noosfero::Plugin
+    end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1'])
+    environment.enable_plugin(Plugin1)
+
+    assert_equal nil, @manager.result_for(Plugin1.new, :content_remove_new)
+  end
+
   should 'parse macro' do
     class Plugin1 < Noosfero::Plugin
       def macros
         [Macro1, Macro2]
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1'])
 
     class Plugin1::Macro1 < Noosfero::Plugin::Macro
       def convert(macro, source)
@@ -212,6 +228,7 @@ class PluginManagerTest < ActiveSupport::TestCase
         [v1 * v, v2 * v]
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2'])
 
     environment.enable_plugin(Plugin1)
     environment.enable_plugin(Plugin2)
@@ -231,6 +248,7 @@ class PluginManagerTest < ActiveSupport::TestCase
         value * 5
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2'])
 
     environment.enable_plugin(Plugin1)
     environment.enable_plugin(Plugin2)
@@ -252,6 +270,7 @@ class PluginManagerTest < ActiveSupport::TestCase
         [v1 * v, v2 * v, 666]
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2'])
 
     environment.enable_plugin(Plugin1)
     environment.enable_plugin(Plugin2)
@@ -273,11 +292,52 @@ class PluginManagerTest < ActiveSupport::TestCase
         numbers.reject {|n| n<=5}
       end
     end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2'])
 
     environment.enable_plugin(Plugin1)
     environment.enable_plugin(Plugin2)
 
     assert_equal [7,9], manager.filter(:invalid_numbers, [1,2,3,4,5,6,7,8,9,10])
+  end
+
+  should 'only call default if value is blank' do
+    class Plugin1 < Noosfero::Plugin
+      def find_by_contents asset, scope, query, paginate_options={}, options={}
+        {results: [1,2,3]}
+      end
+    end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1'])
+    environment.enable_plugin(Plugin1)
+
+    Noosfero::Plugin.any_instance.expects(:find_by_contents).never
+    @manager.dispatch_first :find_by_contents, :products, environment.products, 'product'
+  end
+
+  should 'not event if it is not defined by plugin' do
+    class Noosfero::Plugin
+      def never_call
+        nil
+      end
+    end
+    class Plugin1 < Noosfero::Plugin
+      def never_call
+        'defined'
+      end
+    end
+    class Plugin2 < Noosfero::Plugin
+    end
+    Noosfero::Plugin.stubs(:all).returns(['PluginManagerTest::Plugin1', 'PluginManagerTest::Plugin2'])
+    environment.enable_plugin(Plugin1)
+    environment.enable_plugin(Plugin2)
+    plugin1 = @manager.enabled_plugins.detect{ |p| p.is_a? Plugin1 }
+    plugin2 = @manager.enabled_plugins.detect{ |p| p.is_a? Plugin2 }
+
+    assert_equal Plugin1, Plugin1.new.method(:never_call).owner
+    assert_equal Noosfero::Plugin, Plugin2.new.method(:never_call).owner
+    # expects never can't be used as it defines the method
+    @manager.expects(:result_for).with(plugin1, :never_call).returns(Plugin1.new.never_call)
+    @manager.expects(:result_for).with(plugin2, :never_call).returns(nil)
+    @manager.dispatch :never_call
   end
 
 end

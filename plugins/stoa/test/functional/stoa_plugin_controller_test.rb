@@ -6,7 +6,7 @@ class StoaPluginController; def rescue_action(e) raise e end; end
 
 class StoaPluginControllerTest < ActionController::TestCase
 
-  SALT=YAML::load(File.open(StoaPlugin.root_path + '/config.yml'))['salt']
+  SALT=YAML::load(File.open(StoaPlugin.root_path + 'config.yml'))['salt']
 
   def setup
     @controller = StoaPluginController.new
@@ -18,28 +18,19 @@ class StoaPluginControllerTest < ActionController::TestCase
     env.enable('skip_new_user_email_confirmation')
     env.save!
     @user = create_user_full('real_user', {:password => '123456', :password_confirmation => '123456'}, {:usp_id => 9999999})
+    @user.activate
   end
 
   attr_accessor :user
 
   should 'not authenticate if method not post' do
-    @request.stubs(:ssl?).returns(true)
     get :authenticate, :login => user.login, :password => '123456'
 
     assert_not_nil json_response['error']
     assert_match /post method/,json_response['error']
   end
 
-  should 'not authenticate if request is not using ssl' do
-    @request.stubs(:ssl?).returns(false)
-    post :authenticate, :login => user.login, :password => '123456'
-
-    assert_not_nil json_response['error']
-    assert_match /SSL/,json_response['error']
-  end
-
   should 'not authenticate if method password is wrong' do
-    @request.stubs(:ssl?).returns(true)
     post :authenticate, :login => user.login, :password => 'wrong_password'
 
     assert_not_nil json_response['error']
@@ -47,7 +38,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'authenticate if everything is right' do
-    @request.stubs(:ssl?).returns(true)
     post :authenticate, :login => user.login, :password => '123456'
 
     assert_nil json_response['error']
@@ -55,7 +45,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'authenticate with usp_id' do
-    @request.stubs(:ssl?).returns(true)
     post :authenticate, :usp_id => user.person.usp_id.to_s, :password => '123456'
 
     assert_nil json_response['error']
@@ -63,7 +52,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'return no fields if fields requested was none' do
-    @request.stubs(:ssl?).returns(true)
     post :authenticate, :login => user.login, :password => '123456', :fields => 'none'
 
     expected_response = {'ok' => true}
@@ -73,7 +61,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'return only the essential fields if no fields requested' do
-    @request.stubs(:ssl?).returns(true)
     post :authenticate, :login => user.login, :password => '123456'
     response = json_response.clone
 
@@ -86,7 +73,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'return only selected fields' do
-    @request.stubs(:ssl?).returns(true)
     Person.any_instance.stubs(:f1).returns('field1')
     Person.any_instance.stubs(:f2).returns('field2')
     Person.any_instance.stubs(:f3).returns('field3')
@@ -103,7 +89,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'not return private fields' do
-    @request.stubs(:ssl?).returns(true)
     Person.any_instance.stubs(:f1).returns('field1')
     Person.any_instance.stubs(:f2).returns('field2')
     Person.any_instance.stubs(:f3).returns('field3')
@@ -120,7 +105,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'return essential fields even if they are private' do
-    @request.stubs(:ssl?).returns(true)
     person = user.person
     person.fields_privacy = {:email => 'private'}
     person.save!
@@ -131,7 +115,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'return only essential fields when profile is private' do
-    @request.stubs(:ssl?).returns(true)
     Person.any_instance.stubs(:f1).returns('field1')
     Person.any_instance.stubs(:f2).returns('field2')
     Person.any_instance.stubs(:f3).returns('field3')
@@ -152,7 +135,6 @@ class StoaPluginControllerTest < ActionController::TestCase
   end
 
   should 'not crash if usp_id is invalid' do
-    @request.stubs(:ssl?).returns(true)
     assert_nothing_raised do
       post :authenticate, :usp_id => 12321123, :password => '123456'
     end

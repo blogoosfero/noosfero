@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 require 'friends_controller'
 
 class FriendsController; def rescue_action(e) raise e end; end
@@ -18,19 +18,11 @@ class FriendsControllerTest < ActionController::TestCase
   end
   attr_accessor :profile, :friend
 
-  def test_local_files_reference
-    assert_local_files_reference
-  end
-  
-  def test_valid_xhtml
-    assert_valid_xhtml
-  end
-  
   should 'list friends' do
     get :index
     assert_response :success
     assert_template 'index'
-    assert_kind_of Array, assigns(:friends)
+    assert assigns(:friends)
   end
 
   should 'confirm removal of friend' do
@@ -44,12 +36,12 @@ class FriendsControllerTest < ActionController::TestCase
 
   should 'actually remove friend' do
     profile.add_friend(friend)
+    friend.add_friend(profile)
 
-    assert_difference Friendship, :count, -1 do
+    assert_difference 'Friendship.count', -2 do
       post :remove, :id => friend.id, :confirmation => '1'
       assert_redirected_to :action => 'index'
     end
-    assert_equal friend, Profile.find(friend.id)
   end
 
   should 'display find people button' do
@@ -68,6 +60,7 @@ class FriendsControllerTest < ActionController::TestCase
         false
       end
     end
+    Noosfero::Plugin.stubs(:all).returns([Plugin1.name, Plugin2.name])
 
     e = profile.environment
     e.enable_plugin(Plugin1.name)
@@ -75,6 +68,37 @@ class FriendsControllerTest < ActionController::TestCase
 
     get :index, :profile => 'testuser'
     assert_no_tag :tag => 'a', :attributes => { :href => "/profile/testuser/invite/friends" }
+  end
+
+  should 'not display list suggestions button if there is no suggestion' do
+    get :index, :profile => 'testuser'
+    assert_no_tag :tag => 'a', :content => 'Suggest friends', :attributes => { :href => "/myprofile/testuser/friends/suggest" }
+  end
+
+  should 'display people suggestions' do
+    profile.profile_suggestions.create(:suggestion => friend)
+    get :suggest, :profile => 'testuser'
+    assert_tag :tag => 'a', :content => "+ #{friend.name}", :attributes => { :href => "/profile/#{friend.identifier}/add" }
+  end
+
+  should 'display button to add friend suggestion' do
+    profile.profile_suggestions.create(:suggestion => friend)
+    get :suggest, :profile => 'testuser'
+    assert_tag :tag => 'a', :attributes => { :href => "/profile/#{friend.identifier}/add" }
+  end
+
+  should 'display button to remove people suggestion' do
+    profile.profile_suggestions.create(:suggestion => friend)
+    get :suggest, :profile => 'testuser'
+    assert_tag :tag => 'a', :attributes => { :href => /\/myprofile\/testuser\/friends\/remove_suggestion\/#{friend.identifier}/ }
+  end
+
+  should 'remove suggestion of friend' do
+    suggestion = profile.profile_suggestions.create(:suggestion => friend)
+    post :remove_suggestion, :profile => 'testuser', :id => friend.identifier
+
+    assert_response :success
+    assert_equal false, ProfileSuggestion.find(suggestion.id).enabled
   end
 
 end

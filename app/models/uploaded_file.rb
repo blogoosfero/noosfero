@@ -4,13 +4,13 @@
 # of the file itself is kept. (FIXME?)
 class UploadedFile < Article
 
+  attr_accessible :uploaded_data, :title
+
   def self.type_name
     _('File')
   end
 
   track_actions :upload_image, :after_create, :keep_params => ["view_url", "thumbnail_path", "parent.url", "parent.name"], :if => Proc.new { |a| a.published? && a.image? && !a.parent.nil? && a.parent.gallery? }, :custom_target => :parent
-
-  include ShortFilename
 
   def title
     if self.name.present? then self.name else self.filename end
@@ -26,7 +26,7 @@ class UploadedFile < Article
   end
 
   def thumbnail_path
-    self.image? ? self.full_filename(:display).gsub(File.join(RAILS_ROOT, 'public'), '') : nil
+    self.image? ? self.full_filename(:display).to_s.gsub(Rails.root.join('public').to_s, '') : nil
   end
 
   def first_paragraph
@@ -112,7 +112,7 @@ class UploadedFile < Article
   end
 
   def data
-    File.read(self.full_filename)
+    File.read(self.full_filename) rescue nil
   end
 
   def to_html(options = {})
@@ -125,14 +125,14 @@ class UploadedFile < Article
     puts warn if ENV['RAILS_ENV'] == 'development'
     article = self
     if image?
-      lambda do
+      proc do
         image_tag(article.public_filename(:display),
                   :class => article.css_class_name,
                   :style => 'max-width: 100%') +
         content_tag('div', article.abstract, :class => 'uploaded-file-description')
       end
     else
-      lambda do
+      proc do
         content_tag('div',
                     link_to(article.name, article.url),
                     :class => article.css_class_name) +
@@ -160,6 +160,10 @@ class UploadedFile < Article
   end
 
   def uploaded_file?
+    true
+  end
+
+  def notifiable?
     true
   end
 

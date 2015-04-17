@@ -1,14 +1,14 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class ExternalFeedTest < ActiveSupport::TestCase
 
   should 'require blog' do
     e = ExternalFeed.new
     e.valid?
-    assert e.errors[:blog_id]
+    assert e.errors[:blog_id].present?
     e.blog = create_blog
     e.valid?
-    assert !e.errors[:blog_id]
+    assert e.errors[:blog_id].blank?
   end
 
   should 'belong to blog' do
@@ -18,7 +18,8 @@ class ExternalFeedTest < ActiveSupport::TestCase
   end
 
   should 'not add same item twice' do
-    e = create(:external_feed)
+    blog = create_blog
+    e = create(:external_feed, blog: blog)
     assert e.add_item('Article title', 'http://orig.link.invalid', Time.now, 'Content for external post')
     assert !e.add_item('Article title', 'http://orig.link.invalid', Time.now, 'Content for external post')
     assert_equal 1, e.blog.posts.size
@@ -52,21 +53,22 @@ class ExternalFeedTest < ActiveSupport::TestCase
 
   should 'add items to blog as posts' do
     handler = FeedHandler.new
-    e = create(:external_feed)
+    blog = create_blog
+    e = create(:external_feed, blog: blog)
     handler.process(e)
     assert_equal ["Last POST", "Second POST", "First POST"], e.blog.posts.map{|i| i.title}
   end
 
   should 'require address if enabled' do
-    e = ExternalFeed.new(:enabled => true)
+    e = build(ExternalFeed, :enabled => true, :address => nil)
     assert !e.valid?
-    assert e.errors[:address]
+    assert e.errors[:address].present?
   end
 
   should 'not require address if disabled' do
-    e = ExternalFeed.new(:enabled => false, :address => nil)
+    e = build(ExternalFeed, :enabled => false, :address => nil)
     e.valid?
-    assert !e.errors[:address]
+    assert e.errors[:address].blank?
   end
 
   should 'list enabled external feeds' do
@@ -132,7 +134,7 @@ class ExternalFeedTest < ActiveSupport::TestCase
   end
 
   should 'have an update errors counter' do
-    assert_equal 3, ExternalFeed.new(:update_errors => 3).update_errors
+    assert_equal 3, build(ExternalFeed, :update_errors => 3).update_errors
   end
 
   should 'have 0 update errors by default' do
@@ -142,7 +144,7 @@ class ExternalFeedTest < ActiveSupport::TestCase
   should 'save hour when feed was fetched' do
     external_feed = create(:external_feed)
 
-    now = Time.parse('2009-01-23 09:35')
+    now = Time.zone.parse('2009-01-23 09:35')
     Time.stubs(:now).returns(now)
 
     external_feed.finish_fetch
@@ -161,9 +163,28 @@ class ExternalFeedTest < ActiveSupport::TestCase
 
     dd = []
     Article.where(['parent_id = ?', blog.id]).all.each do |a|
+      next if a.kind_of?(RssFeed)
       dd << a.body.to_s.strip.gsub(/\s+/, ' ')
     end
-    assert_equal '<img src="noosfero.png" /><p>Html content 1.</p><p>Html content 2.</p>', dd.sort.join
+    assert_equal '<img src="noosfero.png"><p>Html content 1.</p><p>Html content 2.</p>', dd.sort.join
+  end
+
+  should 'use feed title as author name' do
+    blog = create_blog
+    e = build(:external_feed, :blog => blog, :feed_title => 'The Source')
+    e.add_item('Article title', 'http://orig.link.invalid', Time.now, '<p style="color: red">Html content 1.</p>')
+
+    assert_equal "The Source", blog.posts.first.author_name
+
+  end
+
+  should 'allow mass assign attributes' do
+    p = create_user('testuser').person
+    blog = fast_create(Blog, :profile_id => p.id, :name => 'Blog test')
+
+    assert_difference 'ExternalFeed.count', 1 do
+      efeed = blog.create_external_feed(:address => 'http://invalid.url', :enabled => true, :only_once => 'false')
+    end
   end
 
 end

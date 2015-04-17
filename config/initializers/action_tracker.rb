@@ -2,30 +2,30 @@ require 'noosfero/i18n'
 
 # ActionTracker plugin stuff
 
-@reply_scrap_description = lambda { _('sent a message to %{receiver}: <br /> "%{message}"') % { :receiver => "{{link_to(ta.get_receiver_name, ta.get_receiver_url)}}", :message => "{{auto_link_urls(ta.get_content)}}" } }
+@reply_scrap_description = proc { _('sent a message to %{receiver}: <br /> "%{message}"') % { :receiver => "{{link_to(ta.get_receiver_name, ta.get_receiver_url)}}", :message => "{{auto_link_urls(ta.get_content)}}" } }
 
 ActionTrackerConfig.verbs = {
 
-  :create_article => { 
-    :description => lambda { _('published an article: %{title}') % { :title => '{{link_to(truncate(ta.get_name), ta.get_url)}}' } }
+  :create_article => {
+    :description => proc { _('published an article: %{title}') % { :title => '{{link_to(truncate(ta.get_name), ta.get_url)}}' } }
   },
 
-  :new_friendship => { 
-    :description => lambda { n_('has made 1 new friend:<br />%{name}', 'has made %{num} new friends:<br />%{name}', get_friend_name.size) % { :num => get_friend_name.size, :name => '{{ta.collect_group_with_index(:friend_name){ |n,i| link_to(image_tag(ta.get_friend_profile_custom_icon[i] || default_or_themed_icon("/images/icons-app/person-icon.png")), ta.get_friend_url[i], :title => n)}.join}}' } },
+  :new_friendship => {
+    :description => proc { n_('has made 1 new friend:<br />%{name}', 'has made %{num} new friends:<br />%{name}', get_friend_name.size) % { :num => get_friend_name.size, :name => '{{ta.collect_group_with_index(:friend_name){ |n,i| link_to(image_tag(ta.get_friend_profile_custom_icon[i] || default_or_themed_icon("/images/icons-app/person-icon.png")), ta.get_friend_url[i], :title => n)}.join}}' } },
     :type => :groupable
   },
 
-  :join_community => { 
-    :description => lambda { n_('has joined 1 community:<br />%{name}', 'has joined %{num} communities:<br />%{name}', get_resource_name.size) % { :num => get_resource_name.size, :name => '{{ta.collect_group_with_index(:resource_name){ |n,i| link_to(image_tag(ta.get_resource_profile_custom_icon[i] || default_or_themed_icon("/images/icons-app/community-icon.png")), ta.get_resource_url[i], :title => n)}.join}}' } },
+  :join_community => {
+    :description => proc { n_('has joined 1 community:<br />%{name}', 'has joined %{num} communities:<br />%{name}', get_resource_name.size) % { :num => get_resource_name.size, :name => '{{ta.collect_group_with_index(:resource_name){ |n,i| link_to(image_tag(ta.get_resource_profile_custom_icon[i] || default_or_themed_icon("/images/icons-app/community-icon.png")), ta.get_resource_url[i], :title => n)}.join}}' } },
     :type => :groupable
   },
 
-  :add_member_in_community => { 
-    :description => lambda { _('has joined the community.') },
+  :add_member_in_community => {
+    :description => proc { _('has joined the community.') },
   },
 
-  :upload_image => { 
-    :description => lambda do
+  :upload_image => {
+    :description => proc do
       total = get_view_url.size
       n_('uploaded 1 image', 'uploaded %d images', total) % total +
       '<br />{{'+
@@ -55,14 +55,41 @@ ActionTrackerConfig.verbs = {
   },
 
   :leave_scrap_to_self => {
-    :description => lambda { _('wrote: <br /> "%{text}"') % { :text => "{{auto_link_urls(ta.get_content)}}" } }
+    :description => proc { _('wrote: <br /> "%{text}"') % { :text => "{{auto_link_urls(ta.get_content)}}" } }
   },
 
   :reply_scrap_on_self => {
     :description => @reply_scrap_description
   },
+
+  favorite_enterprise: {
+    description: proc do
+      _('favorited enterprise %{title}') % { title: '{{ link_to(truncate(ta.get_enterprise_name),ta.get_enterprise_url) }}' }
+    end,
+  },
+
+  create_product: {
+    description: proc do
+      _('created the product %{title}') % { title: '{{ link_to(truncate(ta.get_name),ta.get_url) }}' }
+    end,
+  },
+
+  update_product: {
+    description: proc do
+      _('updated the product %{title}') % { title: '{{ link_to(truncate(ta.get_name),ta.get_url) }}' }
+    end,
+  },
+
+  remove_product: {
+    description: proc do
+      _('removed the product %{title}') % { title: '{{ truncate(ta.get_name) }}' }
+    end,
+  },
+
 }
 
-ActionTrackerConfig.current_user_method = :current_person
+ActionTrackerConfig.current_user = proc do
+  User.current.person rescue nil
+end
 
 ActionTrackerConfig.timeout = 24.hours

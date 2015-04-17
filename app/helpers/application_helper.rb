@@ -1,16 +1,18 @@
+# encoding: UTF-8
+
 require 'redcloth'
 
 # Methods added to this helper will be available to all templates in the
 # application.
 module ApplicationHelper
 
+  include UrlHelper
+
   include PermissionNameHelper
 
-  include LightboxHelper
+  include PaginationHelper
 
-  include ThickboxHelper
-
-  include ColorboxHelper
+  include ModalHelper
 
   include BoxesHelper
 
@@ -38,11 +40,15 @@ module ApplicationHelper
 
   include LayoutHelper
 
+  include PluginsHelper
+
   include Noosfero::Gravatar
+
+  include CatalogHelper
 
   include TokenHelper
 
-  include CatalogHelper
+  include CaptchaHelper
 
   include PluginsHelper
 
@@ -147,7 +153,9 @@ module ApplicationHelper
   end
 
   def link_to_homepage(text, profile = nil, options = {})
-    p = if profile
+    p = if profile.is_a?(Profile)
+          profile
+        elsif profile.is_a?(String)
           Profile[profile]
         else
           user
@@ -177,7 +185,7 @@ module ApplicationHelper
   # should be a current profile (i.e. while viewing some profile's pages, or the
   # profile info, etc), because if there is no profile an exception is thrown.
   def profile
-    @controller.send(:profile)
+    controller.send(:profile)
   end
 
   def category_color
@@ -235,8 +243,7 @@ module ApplicationHelper
   end
 
   def button_to_function(type, label, js_code, html_options = {}, &block)
-    html_options[:class] = "button with-text" unless html_options[:class]
-    html_options[:class] << " icon-#{type}"
+    html_options[:class] = "button with-text icon-#{type} #{html_options[:class]}"
     link_to_function(label, js_code, html_options, &block)
   end
 
@@ -279,10 +286,9 @@ module ApplicationHelper
     options[:class].nil? ?
       options[:class]='button-bar' :
       options[:class]+=' button-bar'
-    concat(content_tag('div', capture(&block) + tag('br', :style => 'clear: left;'), options))
+    concat(content_tag('div', capture(&block).to_s + tag('br', :style => 'clear: left;'), options))
   end
 
-  VIEW_EXTENSIONS = %w[.rhtml .html.erb]
 
   def partial_for_class_in_view_path(klass, view_path, prefix = nil, suffix = nil)
     return nil if klass.nil?
@@ -296,10 +302,8 @@ module ApplicationHelper
       search_name = "_" + search_name
     end
 
-    VIEW_EXTENSIONS.each do |ext|
-      path = defined?(params) && params[:controller] ? File.join(view_path, params[:controller], search_name+ext) : File.join(view_path, search_name+ext)
-      return name if File.exists?(File.join(path))
-    end
+    path = defined?(params) && params[:controller] ? File.join(view_path, params[:controller], search_name + '.html.erb') : File.join(view_path, search_name + '.html.erb')
+    return name if File.exists?(File.join(path))
 
     partial_for_class_in_view_path(klass.superclass, view_path, prefix, suffix)
   end
@@ -307,7 +311,7 @@ module ApplicationHelper
   def partial_for_class(klass, prefix=nil, suffix=nil)
     raise ArgumentError, 'No partial for object. Is there a partial for any class in the inheritance hierarchy?' if klass.nil?
     name = klass.name.underscore
-    @controller.view_paths.each do |view_path|
+    controller.view_paths.each do |view_path|
       partial = partial_for_class_in_view_path(klass, view_path, prefix, suffix)
       return partial if partial
     end
@@ -317,11 +321,15 @@ module ApplicationHelper
 
   def render_profile_actions klass
     name = klass.to_s.underscore
-    render "blocks/profile_info_actions/#{name}" rescue render_profile_actions klass.superclass
+    begin
+      render "blocks/profile_info_actions/#{name}"
+    rescue ActionView::MissingTemplate
+      render_profile_actions klass.superclass
+    end
   end
 
   def user
-    @controller.send(:user)
+    controller.send(:user)
   end
 
   # DEPRECATED. Do not use this.
@@ -333,7 +341,7 @@ module ApplicationHelper
       "\n" +
       sources.flatten.map do |source|
         filename = filename_for_stylesheet(source.to_s, themed_source)
-        if File.exists?(File.join(RAILS_ROOT, 'public', filename))
+        if File.exists?(Rails.root.join('public', filename[1..-1]))
           "@import url(#{filename});\n"
         else
           "/* Not included: url(#{filename}) */\n"
@@ -368,16 +376,16 @@ module ApplicationHelper
   def current_theme
     @current_theme ||=
       begin
-        if session[:theme]
+        if (session[:theme])
           session[:theme]
         else
           # utility for developers: set the theme to 'random' in development mode and
           # you will get a different theme every request. This is interesting for
           # testing
-          if ENV['RAILS_ENV'] == 'development' && environment.theme == 'random'
+          if Rails.env.development? && environment.theme == 'random'
             @random_theme ||= Dir.glob('public/designs/themes/*').map { |f| File.basename(f) }.rand
             @random_theme
-          elsif ENV['RAILS_ENV'] == 'development' && respond_to?(:params) && params[:theme] && File.exists?(File.join(Rails.root, 'public/designs/themes', params[:theme]))
+          elsif Rails.env.development? && respond_to?(:params) && params[:theme] && File.exists?(Rails.root.join('public/designs/themes', params[:theme]))
             params[:theme]
           else
             if profile && !profile.theme.nil?
@@ -400,10 +408,10 @@ module ApplicationHelper
   end
 
   def theme_view_file(template)
-    ['.rhtml', '.html.erb'].each do |ext|
-      file = (RAILS_ROOT + '/public' + theme_path + '/' + template + ext)
-      return file if File.exists?(file)
-    end
+    # Since we cannot control what people are doing in external themes, we
+    # will keep looking for the deprecated .rhtml extension here.
+    file = Rails.root.join('public', theme_path[1..-1], template + '.html.erb')
+    return file if File.exists?(file)
     nil
   end
 
@@ -419,7 +427,7 @@ module ApplicationHelper
 
   def theme_favicon
     return '/designs/themes/' + current_theme + '/favicon.ico' if profile.nil? || profile.theme.nil?
-    if File.exists?(File.join(RAILS_ROOT, 'public', theme_path, 'favicon.ico'))
+    if File.exists?(Rails.root.join('public', theme_path, 'favicon.ico'))
       '/designs/themes/' + profile.theme + '/favicon.ico'
     else
       favicon = profile.articles.find_by_path('favicon.ico')
@@ -432,23 +440,23 @@ module ApplicationHelper
   end
 
   def theme_site_title
-    theme_include('site_title')
+    @theme_site_title ||= theme_include 'site_title'
   end
 
   def theme_header
-    theme_include('header')
+    @theme_header ||= theme_include 'header'
   end
 
   def theme_footer
-    theme_include('footer')
+    @theme_footer ||= theme_include 'footer'
   end
 
   def theme_extra_navigation
-    theme_include('navigation')
+    @theme_extra_navigation ||= theme_include 'navigation'
   end
 
   def is_testing_theme
-    !@controller.session[:theme].nil?
+    !controller.session[:theme].nil?
   end
 
   def theme_owner
@@ -461,7 +469,6 @@ module ApplicationHelper
   def profile_image(profile, size=:portrait, opt={})
     return '' if profile.nil?
     opt[:alt]   ||= profile.name()
-    opt[:title] ||= ''
     opt[:class] ||= ''
     opt[:class] += ( profile.class == Person ? ' photo' : ' logo' )
     image_tag(profile_icon(profile, size), opt )
@@ -481,7 +488,12 @@ module ApplicationHelper
             '/images/icons-app/enterprise-'+ size.to_s() +'.png'
           end
         else
-          '/images/icons-app/person-'+ size.to_s() +'.png'
+          pixels = Image.attachment_options[:thumbnails][size].split('x').first
+          gravatar_profile_image_url(
+            profile.email,
+            :size => pixels,
+            :d => gravatar_default
+          )
         end
       filename = default_or_themed_icon(icon)
     end
@@ -489,7 +501,7 @@ module ApplicationHelper
   end
 
   def default_or_themed_icon(icon)
-    if File.exists?(File.join(Rails.root, 'public', theme_path, icon))
+    if File.exists?(Rails.root.join('public', theme_path, icon))
       theme_path + icon
     else
       icon
@@ -515,16 +527,14 @@ module ApplicationHelper
         category_title = filtered_category.split(/[-_\s,.;'"]+/).map(&:capitalize).join(' ')
         category_name = category_title.gsub(' ', '_' )
         category_icon = "/images/icons-cat/#{category_name}.png"
-        if ! File.exists? RAILS_ROOT.to_s() + '/public/' + category_icon
-          category_icon = '/images/icons-cat/undefined.png'
-        end
+        next unless File.exists?(Rails.root.join('public', category_icon))
         content_tag('span',
           content_tag( 'span', category_title ),
           :title => category_title,
           :class => 'product-cat-icon cat_icon_' + category_name,
           :style => "background-image:url(#{category_icon})"
         )
-      end.join("\n").html_safe
+      end.compact.join("\n").html_safe
       content_tag('div',
         content_tag( 'span', _('Principal Product Categories'), :class => 'header' ) +"\n"+ icons,
         :class => 'product-category-icons'
@@ -570,7 +580,7 @@ module ApplicationHelper
   # #profile_image) and its name below it.
   def profile_image_link( profile, size=:portrait, tag='li', extra_info = nil )
     if content = @plugins.dispatch_first(:profile_image_link, profile, size, tag, extra_info)
-      return instance_eval(&content)
+      return instance_exec(&content)
     end
     name = profile.short_name
     if profile.person?
@@ -588,11 +598,11 @@ module ApplicationHelper
     extra_info = extra_info.nil? ? '' : content_tag( 'span', extra_info, :class => 'extra_info' )
     links = links_for_balloon(profile)
     content_tag('div', content_tag(tag,
-                                   (environment.enabled?(:show_balloon_with_profile_links_when_clicked) ? link_to( content_tag( 'span', _('Profile links')), '#', :onclick => "toggleSubmenu(this, '#{profile.short_name}', #{links.to_json}); return false", :class => "menu-submenu-trigger #{trigger_class}", :url => url) : "") +
+                                   (environment.enabled?(:show_balloon_with_profile_links_when_clicked) ? popover_menu(_('Profile links'),profile.short_name,links,{:class => trigger_class, :url => url}) : "") +
     link_to(
       content_tag( 'span', profile_image( profile, size ), :class => 'profile-image' ) +
       content_tag( 'span', h(name), :class => ( profile.class == Person ? 'fn' : 'org' ) ) +
-      extra_info + profile_sex_icon( profile ) + profile_cat_icons( profile ),
+      extra_info + profile_sex_icon( profile ),# + profile_cat_icons( profile ),
       profile.url,
       :class => 'profile_link url',
       :help => _('Click on this icon to go to the <b>%s</b>\'s home page') % profile.name,
@@ -600,8 +610,16 @@ module ApplicationHelper
       :class => 'vcard'), :class => 'common-profile-list-block')
   end
 
+  def popover_menu(title,menu_title,links,html_options={})
+    html_options[:class] = "" unless html_options[:class]
+    html_options[:class] << " menu-submenu-trigger"
+    html_options[:onclick] = "toggleSubmenu(this, '#{menu_title}', #{CGI::escapeHTML(links.to_json)}); return false"
+
+    link_to(content_tag(:span, title), '#', html_options)
+  end
+
   def gravatar_default
-    (respond_to?(:theme_option) && theme_option.present? && theme_option['gravatar']) || NOOSFERO_CONF['gravatar']
+    (respond_to?(:theme_option) && theme_option.present? && theme_option['gravatar']) || NOOSFERO_CONF['gravatar'] || 'mm'
   end
 
   attr_reader :environment
@@ -613,21 +631,18 @@ module ApplicationHelper
     end
 
     @object = instance_variable_get("@#{object_name}")
-    @categories = environment.top_level_categories
+    @categories = environment.top_level_categories.alphabetical
 
-    @current_categories = environment.top_level_categories.select{|i| !i.children.empty?}
+    @current_categories = environment.top_level_categories.alphabetical.select{|i| !i.children.empty?}
     render :partial => 'shared/select_categories_top', :locals => {:object_name => object_name, :title => title, :title_size => title_size, :multiple => true, :categories_selected => @object.categories }, :layout => false
   end
 
+  def theme_options
+    @theme_options ||= YAML.load_file "#{Rails.root}/public#{theme_path}/theme.yml" rescue {}
+  end
+
   def theme_option(opt = nil)
-    conf = RAILS_ROOT.to_s() +
-           '/public' + theme_path +
-           '/theme.yml'
-    if File.exists?(conf)
-      opt ? YAML.load_file(conf)[opt.to_s()] : YAML.load_file(conf)
-    else
-      nil
-    end
+    if opt then theme_options[opt.to_s] else theme_options end
   end
 
   def theme_opt_menu_search
@@ -643,11 +658,11 @@ module ApplicationHelper
       ' onfocus="if(this.value==\''+s+'\'){this.value=\'\'} this.form.className=\'focus-in\'"'+
       ' onblur="if(/^\s*$/.test(this.value)){this.value=\''+s+'\'} this.form.className=\'focus-out\'">'+
       '</form>'
-    else #opt == 'lightbox_link' is default
-      lightbox_link_to '<span class="icon-menu-search"></span>'+ _('Search'), {
+    else
+      modal_link_to '<span class="icon-menu-search"></span>'+ _('Search'), {
                        :controller => 'search',
                        :action => 'popup',
-                       :category_path => (@category ? @category.explode_path : []) },
+                       :category_path => (@category ? @category.explode_path : nil)},
                        :id => 'open_search'
     end
   end
@@ -659,7 +674,7 @@ module ApplicationHelper
     option.each do |file|
       file = theme_path +
              '/javascript/'+ file +'.js'
-      if File.exists? RAILS_ROOT.to_s() +'/public'+ file
+      if File.exists? Rails.root.to_s() +'/public'+ file
         html << javascript_src_tag( file, {} )
       else
         html << '<!-- Not included: '+ file +' -->'
@@ -668,13 +683,14 @@ module ApplicationHelper
     html.join "\n"
   end
 
+  def theme_javascript_src
+    script = File.join theme_path, 'theme.js'
+    script if File.exists? File.join(Rails.root, 'public', script)
+  end
+
   def theme_javascript_ng
-    script = File.join(theme_path, 'theme.js')
-    if File.exists?(File.join(Rails.root, 'public', script))
-      javascript_include_tag script
-    else
-      nil
-    end
+    script = theme_javascript_src
+    javascript_include_tag script if script
   end
 
   def file_field_or_thumbnail(label, image, i)
@@ -713,7 +729,7 @@ module ApplicationHelper
   class NoosferoFormBuilder < ActionView::Helpers::FormBuilder
     extend ActionView::Helpers::TagHelper
 
-    def self.output_field(text, field_html, field_id = nil)
+    def self.output_field(text, field_html, field_id = nil, options = {})
       # try to guess an id if none given
       if field_id.nil?
         field_html =~ /id=['"]([^'"]*)['"]/
@@ -733,6 +749,10 @@ module ApplicationHelper
     (field_helpers - %w(hidden_field)).each do |selector|
       src = <<-END_SRC
         def #{selector}(field, *args, &proc)
+          begin
+            object ||= @template.instance_variable_get("@"+object_name.to_s)
+          rescue
+          end
           text = object.class.respond_to?(:human_attribute_name) && object.class.human_attribute_name(field.to_s) || field.to_s.humanize
           NoosferoFormBuilder::output_field(text, super)
         end
@@ -764,7 +784,7 @@ module ApplicationHelper
         end
       }
       html += "<br />\n".html_safe if line_size == 0 || ( values.size % line_size ) > 0
-      column = object.class.columns_hash[method.to_s]
+      column = object.class.columns_hash[method.to_s] if object
       text =
         ( column ?
           column.human_name :
@@ -800,9 +820,8 @@ module ApplicationHelper
     fields_for(name, object, { :builder => NoosferoFormBuilder }.merge(options), &proc)
   end
 
-  def labelled_form_for(name, object = nil, options = {}, &proc)
-    object ||= instance_variable_get("@#{name}")
-    form_for(name, object, { :builder => NoosferoFormBuilder }.merge(options), &proc)
+  def labelled_form_for(name, options = {}, &proc)
+    form_for(name, { :builder => NoosferoFormBuilder }.merge(options), &proc)
   end
 
   def optional_field(profile, name, field_html = nil, only_required = false, &block)
@@ -852,13 +871,15 @@ module ApplicationHelper
   end
 
   def base_url
-    environment.top_url
+    environment.top_url(request.scheme)
   end
+  alias :top_url :base_url
 
   def helper_for_article(article)
     article_helper = ActionView::Base.new
     article_helper.controller = controller
     article_helper.extend ArticleHelper
+    article_helper.extend Rails.application.routes.url_helpers
     begin
       class_name = article.class.name + 'Helper'
       klass = class_name.constantize
@@ -885,18 +906,21 @@ module ApplicationHelper
   end
 
   def page_title
-    (@page ? @page.title + ' - ' : '') +
-    (@topic ? @topic.title + ' - ' : '') +
-    (@section ? @section.title + ' - ' : '') +
-    (@toc ? _('Online Manual') + ' - ' : '') +
-    (@controller.controller_name == 'chat' ? _('Chat') + ' - ' : '') +
-    (profile ? profile.short_name : environment.name) +
-    (@category ? " - #{@category.full_name}" : '')
+    CGI.escapeHTML(
+      (@page ? @page.title + ' - ' : '') +
+      (@topic ? @topic.title + ' - ' : '') +
+      (@section ? @section.title + ' - ' : '') +
+      (@product ? @product.name + ' - ' : '') +
+      (@toc ? _('Online Manual') + ' - ' : '') +
+      (controller.controller_name == 'chat' ? _('Chat') + ' - ' : '') +
+      (profile ? profile.short_name : environment.name) +
+      (@category ? " - #{@category.full_name}" : '')
+    )
   end
 
   # DEPRECATED. Do not use this.
   def import_controller_stylesheets(options = {})
-    stylesheet_import( "controller_"+ @controller.controller_name(), options )
+    stylesheet_import( "controller_"+ controller.controller_name(), options )
   end
 
   def link_to_email(email)
@@ -910,7 +934,7 @@ module ApplicationHelper
   def article_to_html(article, options = {})
     options.merge!(:page => params[:npage])
     content = article.to_html(options)
-    content = content.kind_of?(Proc) ? self.instance_eval(&content).html_safe : content.html_safe
+    content = content.kind_of?(Proc) ? self.instance_exec(&content).html_safe : content.html_safe
     filter_html(content, article)
   end
 
@@ -920,9 +944,9 @@ module ApplicationHelper
   # from Article model for an ArticleBlock.
   def reference_to_article(text, article, anchor=nil)
     if article.profile.domains.empty?
-      href = "/#{article.url[:profile]}/"
+      href = "#{Noosfero.root}/#{article.url[:profile]}/"
     else
-      href = "http://#{article.profile.domains.first.name}/"
+      href = "http://#{article.profile.domains.first.name}#{Noosfero.root}/"
     end
     href += article.url[:page].join('/')
     href += '#' + anchor if anchor
@@ -932,8 +956,9 @@ module ApplicationHelper
   def display_short_format(article, options={})
     options[:comments_link] ||= true
     options[:read_more_link] ||= true
+    lead = if article.lead.respond_to?(:call) then instance_exec(&article.lead).to_s.html_safe else article.lead.to_s.html_safe end
     html = content_tag('div',
-             article.lead +
+             lead +
              content_tag('div',
                (options[:comments_link] ? link_to_comments(article) : '') +
                (options[:read_more_link] ? reference_to_article( _('Read more'), article) : ''),
@@ -942,14 +967,6 @@ module ApplicationHelper
              :class => 'short-post'
            )
     html
-  end
-
-  def colorpicker_field(object_name, method, options = {})
-    text_field(object_name, method, options.merge(:class => 'colorpicker_field'))
-  end
-
-  def colorpicker_field_tag(name, value = nil, options = {})
-    text_field_tag(name, value, options.merge(:class => 'colorpicker_field'))
   end
 
   def ui_icon(icon_class, extra_class = '')
@@ -965,7 +982,7 @@ module ApplicationHelper
   end
 
   def jquery_theme
-    theme_option(:jquery_theme) || 'smoothness_mod'
+    theme_option(:jquery_theme) || 'smoothness'
   end
 
   def ui_error(message)
@@ -976,8 +993,8 @@ module ApplicationHelper
     content_tag('div', ui_icon('ui-icon-info') + message, :class => 'alert fg-state-highlight ui-state-highlight')
   end
 
-  def float_to_currency(value)
-    number_to_currency(value, :unit => environment.currency_unit, :separator => environment.currency_separator, :delimiter => environment.currency_delimiter, :format => "%u %n")
+  def float_to_currency value, options = {unit: environment.currency_unit}
+    number_to_currency(value, unit: options[:unit], :separator => environment.currency_separator, :delimiter => environment.currency_delimiter, :format => "%u %n")
   end
 
   def collapsed_item_icon
@@ -993,17 +1010,26 @@ module ApplicationHelper
   def display_category_menu(block, categories, root = true)
     categories = categories.sort{|x,y| x.name <=> y.name}
     return "" if categories.blank?
-    content_tag(:ul,
+    content_tag(:ul) do
       categories.map do |category|
         category_path = category.kind_of?(ProductCategory) ? {:controller => 'search', :action => 'assets', :asset => 'products', :product_category => category.id} : { :controller => 'search', :action => 'category_index', :category_path => category.explode_path }
-        category.display_in_menu? ?
-        content_tag(:li,
-          ( !category.is_leaf_displayable_in_menu? ? content_tag(:a, collapsed_item_icon, :href => "#", :id => "block_#{block.id}_category_#{category.id}", :class => 'category-link-expand ' + (root ? 'category-root' : 'category-no-root'), :onclick => "expandCategory(#{block.id}, #{category.id}); return false", :style => 'display: none') : leaf_item_icon) +
-          link_to(content_tag(:span, category.name, :class => 'category-name'), category_path, :class => ("category-leaf" if category.is_leaf_displayable_in_menu?)) +
-          content_tag(:div, display_category_menu(block, category.children, false), :id => "block_#{block.id}_category_content_#{category.id}", :class => 'child-category')
-        ) : ''
-      end
-    ) +
+        if category.display_in_menu?
+          content_tag(:li) do
+            if !category.is_leaf_displayable_in_menu?
+              content_tag(:a, collapsed_item_icon, :href => "#", :id => "block_#{block.id}_category_#{category.id}", :class => "category-link-expand " + (root ? "category-root" : "category-no-root"), :onclick => "expandCategory(#{block.id}, #{category.id}); return false", :style => "display: none")
+            else
+              leaf_item_icon
+            end +
+            link_to(content_tag(:span, category.name, :class => "category-name"), category_path, :class => ("category-leaf" if category.is_leaf_displayable_in_menu?)) +
+            content_tag(:div, :id => "block_#{block.id}_category_content_#{category.id}", :class => 'child-category') do
+              display_category_menu(block, category.children, false)
+            end
+          end
+        else
+          ""
+        end
+      end.join.html_safe
+    end +
     content_tag(:p) +
     (root ? javascript_tag("
       jQuery('.child-category').hide();
@@ -1015,61 +1041,59 @@ module ApplicationHelper
   end
 
   def search_contents_menu
+    host = environment.default_hostname
     links = [
-      {s_('contents|More recent') => {:href => url_for({:controller => 'search', :action => 'contents', :filter => 'more_recent'})}},
-      {s_('contents|More viewed') => {:href => url_for({:controller => 'search', :action => 'contents', :filter => 'more_popular'})}},
-      {s_('contents|Most commented') => {:href => url_for({:controller => 'search', :action => 'contents', :filter => 'more_comments'})}}
+      {s_('contents|More recent') => {:href => url_for({host: host, :controller => 'search', :action => 'contents', :filter => 'more_recent'})}},
+      {s_('contents|More viewed') => {:href => url_for({host: host, :controller => 'search', :action => 'contents', :filter => 'more_popular'})}},
+      {s_('contents|Most commented') => {:href => url_for({host: host, :controller => 'search', :action => 'contents', :filter => 'more_comments'})}}
     ]
     if logged_in?
-      links.push(_('New content') => colorbox_options({:href => url_for({:controller => 'cms', :action => 'new', :profile => current_user.login, :cms => true})}))
+      links.push(_('New content') => modal_options({:href => url_for({:controller => 'cms', :action => 'new', :profile => current_user.login, :cms => true})}))
     end
 
-    link_to(content_tag(:span, _('Contents'), :class => 'icon-menu-articles'), {:controller => "search", :action => 'contents', :category_path => ''}, :id => 'submenu-contents') +
-    link_to(content_tag(:span, _('Contents menu')), '#', :onclick => "toggleSubmenu(this,'',#{links.to_json}); return false", :class => 'menu-submenu-trigger up', :id => 'submenu-contents-trigger')
+    link_to(content_tag(:span, _('Contents'), :class => 'icon-menu-articles'), {host: host, :controller => "search", :action => 'contents', :category_path => nil}, :id => 'submenu-contents') +
+    popover_menu(_('Contents menu'),'',links,:class => 'up', :id => 'submenu-contents-trigger')
   end
   alias :browse_contents_menu :search_contents_menu
 
   def search_people_menu
+    host = environment.default_hostname
      links = [
-       {s_('people|More recent') => {:href => url_for({:controller => 'search', :action => 'people', :filter => 'more_recent'})}},
-       {s_('people|More active') => {:href => url_for({:controller => 'search', :action => 'people', :filter => 'more_active'})}},
-       {s_('people|More popular') => {:href => url_for({:controller => 'search', :action => 'people', :filter => 'more_popular'})}}
+       {s_('people|More recent') => {:href => url_for({host: host, :controller => 'search', :action => 'people', :filter => 'more_recent'})}},
+       {s_('people|More active') => {:href => url_for({host: host, :controller => 'search', :action => 'people', :filter => 'more_active'})}},
+       {s_('people|More popular') => {:href => url_for({host: host, :controller => 'search', :action => 'people', :filter => 'more_popular'})}}
      ]
      if logged_in?
        links.push(_('My friends') => {:href => url_for({:profile => current_user.login, :controller => 'friends'})})
        links.push(_('Invite friends') => {:href => url_for({:profile => current_user.login, :controller => 'invite', :action => 'friends'})})
      end
 
-    link_to(content_tag(:span, _('People'), :class => 'icon-menu-people'), {:controller => "search", :action => 'people', :category_path => ''}, :id => 'submenu-people') +
-    link_to(content_tag(:span, _('People menu')), '#', :onclick => "toggleSubmenu(this,'',#{links.to_json}); return false", :class => 'menu-submenu-trigger up', :id => 'submenu-people-trigger')
+    link_to(content_tag(:span, _('People'), :class => 'icon-menu-people'), {host: host, :controller => "search", :action => 'people', :category_path => ''}, :id => 'submenu-people') +
+    popover_menu(_('People menu'),'',links,:class => 'up', :id => 'submenu-people-trigger')
   end
   alias :browse_people_menu :search_people_menu
 
   def search_communities_menu
+    host = environment.default_hostname
      links = [
-       {s_('communities|More recent') => {:href => url_for({:controller => 'search', :action => 'communities', :filter => 'more_recent'})}},
-       {s_('communities|More active') => {:href => url_for({:controller => 'search', :action => 'communities', :filter => 'more_active'})}},
-       {s_('communities|More popular') => {:href => url_for({:controller => 'search', :action => 'communities', :filter => 'more_popular'})}}
+       {s_('communities|More recent') => {:href => url_for({host: host, :controller => 'search', :action => 'communities', :filter => 'more_recent'})}},
+       {s_('communities|More active') => {:href => url_for({host: host, :controller => 'search', :action => 'communities', :filter => 'more_active'})}},
+       {s_('communities|More popular') => {:href => url_for({host: host, :controller => 'search', :action => 'communities', :filter => 'more_popular'})}}
      ]
      if logged_in?
        links.push(_('My communities') => {:href => url_for({:profile => current_user.login, :controller => 'memberships'})})
        links.push(_('New community') => {:href => url_for({:profile => current_user.login, :controller => 'memberships', :action => 'new_community'})})
      end
 
-    link_to(content_tag(:span, _('Communities'), :class => 'icon-menu-community'), {:controller => "search", :action => 'communities'}, :id => 'submenu-communities') +
-    link_to(content_tag(:span, _('Communities menu')), '#', :onclick => "toggleSubmenu(this,'',#{links.to_json}); return false", :class => 'menu-submenu-trigger up', :id => 'submenu-communities-trigger')
+    link_to(content_tag(:span, _('Communities'), :class => 'icon-menu-community'), {host: host, :controller => "search", :action => 'communities'}, :id => 'submenu-communities') +
+    popover_menu(_('Communities menu'),'',links,:class => 'up', :id => 'submenu-communities-trigger')
   end
   alias :browse_communities_menu :search_communities_menu
-
-  def pagination_links(collection, options={})
-    options = {:previous_label => '&laquo; ' + _('Previous'), :next_label => _('Next') + ' &raquo;'}.merge(options)
-    will_paginate(collection, options)
-  end
 
   def render_environment_features(folder)
     result = ''
     environment.enabled_features.keys.each do |feature|
-      file = File.join(@controller.view_paths.last, 'shared', folder.to_s, "#{feature}.rhtml")
+      file = Rails.root.join('app/views/shared', folder.to_s, "#{feature}.html.erb")
       if File.exists?(file)
         result << render(:file => file, :use_full_path => false)
       end
@@ -1082,10 +1106,10 @@ module ApplicationHelper
       link_to_all = nil
       if list.count > 5
         list = list.first(5)
-        link_to_all = link_to(content_tag('strong', _('See all')), :controller => 'memberships', :profile => current_user.login)
+        link_to_all = link_to(content_tag('strong', _('See all')), :controller => 'memberships', :profile => user.identifier)
       end
       link = list.map do |element|
-        link_to(content_tag('strong', [_('<span>Manage</span> %s') % element.short_name(25)]), @environment.top_url + "/myprofile/#{element.identifier}", :class => "icon-menu-"+element.class.identification.underscore, :title => [_('Manage %s') % element.short_name])
+        link_to(content_tag('strong', _('<span>Manage</span> %s') % element.short_name(25)), element.admin_url, :class => "icon-menu-"+element.class.identification.underscore, :title => _('Manage %s') % element.short_name)
       end
       if link_to_all
         link << link_to_all
@@ -1095,29 +1119,33 @@ module ApplicationHelper
   end
 
   def manage_enterprises
-    return unless user && user.environment.enabled?(:display_my_enterprises_on_user_menu)
-    manage_link(user.enterprises.visible, :enterprises, _('My enterprises'))
+    return '' unless user && user.environment.enabled?(:display_my_enterprises_on_user_menu)
+    manage_link(user.enterprises, :enterprises, _('My enterprises')).to_s
   end
 
   def manage_communities
-    return unless user && user.environment.enabled?(:display_my_communities_on_user_menu)
-    administered_communities = user.communities.visible.more_popular.select {|c| c.admins.include? user}
-    manage_link(administered_communities, :communities, _('My communities'))
+    return '' unless user && user.environment.enabled?(:display_my_communities_on_user_menu)
+    administered_communities = user.communities.more_popular.select {|c| c.admins.include? user}
+    manage_link(administered_communities, :communities, _('My communities')).to_s
+  end
+
+  def admin_link
+    user.is_admin?(environment) ? link_to('<i class="icon-menu-admin"></i><strong>' + _('Administration') + '</strong>', environment.admin_url, :title => _("Configure the environment"), :class => 'admin-link') : ''
   end
 
   def usermenu_logged_in
     pending_tasks_count = ''
     count = user ? Task.to(user).pending.count : -1
     if count > 0
-      pending_tasks_count = link_to(count.to_s, @environment.top_url + '/myprofile/{login}/tasks', :id => 'pending-tasks-count', :title => _("Manage your pending tasks"))
+      pending_tasks_count = link_to(count.to_s, user.tasks_url, :id => 'pending-tasks-count', :title => _("Manage your pending tasks"))
     end
 
-    (_("<span class='welcome'>Welcome,</span> %s") % link_to('<i style="background-image:url({avatar})"></i><strong>{login}</strong>', @environment.top_url + '/{login}', :id => "homepage-link", :title => _('Go to your homepage'))) +
+    (_("<span class='welcome'>Welcome,</span> %s") % link_to("<i style='background-image:url(#{user.profile_custom_icon(gravatar_default)})'></i><strong>#{user.identifier}</strong>", user.public_profile_url, :id => "homepage-link", :title => _('Go to your homepage'))) +
     render_environment_features(:usermenu) +
-    link_to('<i class="icon-menu-admin"></i><strong>' + _('Administration') + '</strong>', @environment.top_url + '/admin', :title => _("Configure the environment"), :class => 'admin-link', :style => 'display: none') +
-    manage_enterprises.to_s +
-    manage_communities.to_s +
-    link_to('<i class="icon-menu-ctrl-panel"></i><strong>' + _('Control panel') + '</strong>', @environment.top_url + '/myprofile/{login}', :class => 'ctrl-panel', :title => _("Configure your personal account and content")) +
+    admin_link +
+    manage_enterprises +
+    manage_communities +
+    link_to('<i class="icon-menu-ctrl-panel"></i><strong>' + _('Control panel') + '</strong>', user.admin_url, :class => 'ctrl-panel', :title => _("Configure your personal account and content")) +
     pending_tasks_count +
     link_to('<i class="icon-menu-logout"></i><strong>' + _('Logout') + '</strong>', { :controller => 'account', :action => 'logout'} , :id => "logout", :title => _("Leave the system"))
   end
@@ -1127,7 +1155,7 @@ module ApplicationHelper
       text_area(object_name, method, { :id => text_area_id, :onkeyup => "limited_text_area('#{text_area_id}', #{limit})" }.merge(options)),
       content_tag(:p, content_tag(:span, limit) + ' ' + _(' characters left'), :id => text_area_id + '_left'),
       content_tag(:p, _('Limit of characters reached'), :id => text_area_id + '_limit', :style => 'display: none')
-    ], :class => 'limited-text-area')
+    ].join, :class => 'limited-text-area')
   end
 
   def expandable_text_area(object_name, method, text_area_id, options = {})
@@ -1201,8 +1229,8 @@ module ApplicationHelper
   end
 
   def add_zoom_to_images
-    stylesheet_link_tag('fancybox') +
-    javascript_include_tag('jquery.fancybox-1.3.4.pack') +
+    stylesheet_link_tag('jquery.fancybox') +
+    javascript_include_tag('jquery.fancybox.pack') +
     javascript_tag("apply_zoom_to_images(#{_('Zoom in').to_json})")
   end
 
@@ -1218,7 +1246,7 @@ module ApplicationHelper
             :profile => profile.identifier }
     url.merge!({:content_type => content.class.name, :content_id => content.id}) if content
     text = content_tag('span', _('Report abuse'))
-    klass = 'report-abuse-action'
+    klass = 'report-abuse-action modal-toggle'
     already_reported_message = _('You already reported this profile.')
     report_profile_message = _('Report this profile for abusive behaviour')
 
@@ -1246,6 +1274,19 @@ module ApplicationHelper
     cache(key, { :expires_in => timeout }, &block)
   end
 
+  # Backport from rails 4
+  def cache_if condition, name = {}, options = nil, &block
+    if condition
+      cache name, options, &block
+    else
+      yield
+    end
+    nil
+  end
+  def cache_unless condition, name = {}, options = nil, &block
+    cache_if !condition, name, options, &block
+  end
+
   def is_cache_expired?(key)
     !cache_store.fetch(ActiveSupport::Cache.expand_cache_key(key, :controller))
   end
@@ -1258,11 +1299,13 @@ module ApplicationHelper
   end
 
   def delete_article_message(article)
-    if article.folder?
-      _("Are you sure that you want to remove the folder \"#{article.name}\"? Note that all the items inside it will also be removed!")
-    else
-      _("Are you sure that you want to remove the item \"#{article.name}\"?")
-    end
+    CGI.escapeHTML(
+      if article.folder?
+        _("Are you sure that you want to remove the folder \"%s\"? Note that all the items inside it will also be removed!") % article.name
+      else
+        _("Are you sure that you want to remove the item \"%s\"?") % article.name
+      end
+    )
   end
 
   def expirable_link_to(expired, content, url, options = {})
@@ -1274,8 +1317,19 @@ module ApplicationHelper
     end
   end
 
-  def remove_content_button(action)
-    @plugins.dispatch("content_remove_#{action.to_s}", @page).include?(true)
+  def content_remove_spread(content)
+    !content.public? || content.folder? || (profile == user && user.communities.blank? && !environment.portal_enabled)
+  end
+
+  def remove_content_button(action, content)
+    method_name = "content_remove_#{action.to_s}"
+    plugin_condition = @plugins.dispatch(method_name, content).include?(true)
+    begin
+      core_condition = self.send(method_name, content)
+    rescue NoMethodError
+      core_condition = false
+    end
+    core_condition || plugin_condition
   end
 
   def template_options(kind, field_name)
@@ -1283,10 +1337,8 @@ module ApplicationHelper
     return '' if templates.count == 0
     return hidden_field_tag("#{field_name}[template_id]", templates.first.id) if templates.count == 1
 
-    counter = 0
     radios = templates.map do |template|
-      counter += 1
-      content_tag('li', labelled_radio_button(link_to(template.name, template.url, :target => '_blank'), "#{field_name}[template_id]", template.id, counter==1))
+      content_tag('li', labelled_radio_button(link_to(template.name, template.url, :target => '_blank'), "#{field_name}[template_id]", template.id, environment.is_default_template?(template)))
     end.join("\n")
 
     content_tag('div', content_tag('label', _('Profile organization'), :for => 'template-options', :class => 'formlabel') +
@@ -1313,6 +1365,25 @@ module ApplicationHelper
     expirable_content_reference content, action, text, url, options
   end
 
+  def error_messages_for(*args)
+    options = args.pop if args.last.is_a?(Hash)
+    errors = []
+    args.each do |name|
+      object = instance_variable_get("@#{name}")
+      object.errors.full_messages.each do |msg|
+        errors << msg
+      end if object
+    end
+    return '' if errors.empty?
+
+    content_tag(:div, :class => 'errorExplanation', :id => 'errorExplanation') do
+      content_tag(:h2, _('Errors while saving')) +
+      content_tag(:ul) do
+        errors.map { |err| content_tag(:li, err) }.join
+      end
+    end
+  end
+
   def private_profile_partial_parameters
     if profile.person?
       @action = :add_friend
@@ -1331,20 +1402,20 @@ module ApplicationHelper
       #     are old things that do not support it we are keeping this hot spot.
       html = @plugins.pipeline(:parse_content, html, source).first
     end
-    html
+    html && html.html_safe
   end
 
   def convert_macro(html, source)
-    doc = Hpricot(html)
+    doc = Nokogiri::HTML.fragment html
     #TODO This way is more efficient but do not support macro inside of
     #     macro. You must parse them from the inside-out in order to enable
     #     that.
-    doc.search('.macro').each do |macro|
+    doc.css('.macro').each do |macro|
       macro_name = macro['data-macro']
       result = @plugins.parse_macro(macro_name, macro, source)
-      macro.inner_html = result.kind_of?(Proc) ? self.instance_eval(&result) : result
+      macro.inner_html = result.kind_of?(Proc) ? self.instance_exec(&result) : result
     end
-    doc.html
+    doc.to_html
   end
 
   def default_folder_for_image_upload(profile)
@@ -1359,6 +1430,53 @@ module ApplicationHelper
 
   def display_article_versions(article, version = nil)
     content_tag('ul', article.versions.map {|v| link_to("r#{v.version}", @page.url.merge(:version => v.version))})
+  end
+
+  def search_input_with_suggestions(name, asset, default, options = {})
+    text_field_tag name, default, options.merge({:class => 'search-input-with-suggestions', 'data-asset' => asset})
+  end
+
+  def profile_suggestion_profile_connections(suggestion)
+    profiles = suggestion.profile_connections.first(4).map do |profile|
+      link_to(profile_image(profile, :icon, :title => profile.name), profile.url, :class => 'profile-suggestion-connection-icon')
+    end
+
+    controller_target = suggestion.suggestion_type == 'Person' ? :friends : :memberships
+    profiles << link_to("<big> +#{suggestion.profile_connections.count - 4}</big>", :controller => controller_target, :action => :connections, :id => suggestion.suggestion_id) if suggestion.profile_connections.count > 4
+
+    if profiles.present?
+      content_tag(:div, profiles.join , :class => 'profile-connections')
+    else
+      ''
+    end
+  end
+
+  def profile_suggestion_tag_connections(suggestion)
+    tags = suggestion.tag_connections.first(4).map do |tag|
+      tag.name + ', '
+    end
+    last_tag = tags.pop
+    tags << last_tag.strip.chop if last_tag.present?
+    title = tags.join
+
+    controller_target = suggestion.suggestion_type == 'Person' ? :friends : :memberships
+    tags << ' ' + link_to('...', {:controller => controller_target, :action => :connections, :id => suggestion.suggestion_id}, :class => 'more-tag-connections', :title => _('See all connections')) if suggestion.tag_connections.count > 4
+
+    if tags.present?
+      content_tag(:div, tags.join, :class => 'tag-connections', :title => title)
+    else
+      ''
+    end
+  end
+
+  def labelled_colorpicker_field(human_name, object_name, method, options = {})
+    options[:id] ||= 'text-field-' + FormsHelper.next_id_number
+    content_tag('label', human_name, :for => options[:id], :class => 'formlabel') +
+    colorpicker_field(object_name, method, options.merge(:class => 'colorpicker_field'))
+  end
+
+  def colorpicker_field(object_name, method, options = {})
+    text_field(object_name, method, options.merge(:class => 'colorpicker_field'))
   end
 
 end

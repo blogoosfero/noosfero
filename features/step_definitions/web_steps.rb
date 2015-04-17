@@ -11,7 +11,14 @@ require File.expand_path(File.join(File.dirname(__FILE__), "..", "support", "pat
 
 module WithinHelpers
   def with_scope(locator)
-    locator ? within(locator) { yield } : yield
+    if locator
+      locator = first(locator) || locator
+      within(locator) do
+        yield
+      end
+    else
+      yield
+    end
   end
 end
 World(WithinHelpers)
@@ -26,19 +33,19 @@ end
 
 When /^(?:|I )press "([^"]*)"(?: within "([^"]*)")?$/ do |button, selector|
   with_scope(selector) do
-    click_button(button)
+    click_button(button, :match => :prefer_exact)
   end
 end
 
 When /^(?:|I )follow "([^"]*)"(?: within "([^"]*)")?$/ do |link, selector|
   with_scope(selector) do
-    click_link(link)
+    click_link(link, :match => :prefer_exact)
   end
 end
 
 When /^(?:|I )fill in "([^"]*)" with "([^"]*)"(?: within "([^"]*)")?$/ do |field, value, selector|
   with_scope(selector) do
-    fill_in(field, :with => value)
+    fill_in(field, :with => value, :match => :prefer_exact)
   end
 end
 
@@ -87,11 +94,12 @@ end
 
 When /^(?:|I )choose "([^"]*)"(?: within "([^"]*)")?$/ do |field, selector|
   with_scope(selector) do
-    choose(field)
+    choose(field, :match => :prefer_exact)
   end
 end
 
 When /^(?:|I )attach the file "([^"]*)" to "([^"]*)"(?: within "([^"]*)")?$/ do |path, field, selector|
+  path = File.expand_path(path).gsub('/', File::ALT_SEPARATOR || File::SEPARATOR)
   with_scope(selector) do
     attach_file(field, path)
   end
@@ -117,9 +125,9 @@ end
 
 Then /^(?:|I )should see "([^"]*)" within any "([^"]*)"?$/ do |text, selector|
   if page.respond_to? :should
-    page.should have_css(selector, :content => text)
+    page.should have_css(selector, :text => text)
   else
-    assert page.has_css?(selector, :content => text)
+    assert page.has_css?(selector, :text => text)
   end
 end
 
@@ -245,7 +253,7 @@ Then /^display "([^\"]*)"$/ do |element|
 end
 
 Then /^there should be a div with class "([^"]*)"$/ do |klass|
-  should have_selector('div', :class => klass)
+  should have_selector("div.#{klass}")
 end
 
 When /^(?:|I )follow exact "([^"]*)"(?: within "([^"]*)")?$/ do |link, selector|

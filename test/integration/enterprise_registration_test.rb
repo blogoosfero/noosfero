@@ -1,4 +1,4 @@
-require "#{File.dirname(__FILE__)}/../test_helper"
+require_relative "../test_helper"
 
 class EnterpriseRegistrationTest < ActionController::IntegrationTest
 
@@ -37,7 +37,7 @@ class EnterpriseRegistrationTest < ActionController::IntegrationTest
     assert_response :success
     assert_tag :tag => 'form', :attributes => { :action => '/enterprise_registration', :method => 'post' }, :descendant => { :tag => 'input', :attributes => { :type => 'radio', :name => 'create_enterprise[target_id]', :value => org.id } }
 
-    assert_difference CreateEnterprise, :count do
+    assert_difference 'CreateEnterprise.count' do
       post '/enterprise_registration', :create_enterprise => data.merge(:target_id => org.id)
     end
     

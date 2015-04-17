@@ -1,12 +1,14 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
+require 'boxes_helper'
 
-class BoxesHelperTest < ActiveSupport::TestCase
+class BoxesHelperTest < ActionView::TestCase
 
   include BoxesHelper
   include ActionView::Helpers::TagHelper
 
   def setup
     @controller = mock
+    @controller.stubs(:custom_design).returns({})
     @controller.stubs(:boxes_editor?).returns(false)
     @controller.stubs(:uses_design_blocks?).returns(true)
   end
@@ -35,7 +37,7 @@ class BoxesHelperTest < ActiveSupport::TestCase
 
   def create_user_with_blocks
     p = create_user('test_user').person
-    LinkListBlock.create!(:box => p.boxes.first)
+    create(LinkListBlock, :box => p.boxes.first)
     p
   end
 
@@ -54,6 +56,7 @@ class BoxesHelperTest < ActiveSupport::TestCase
     expects(:display_block).with(b, '')
     stubs(:request).returns(request)
     stubs(:block_target).returns('')
+    stubs(:user).returns(nil)
     expects(:locale).returns('en')
     with_box_decorator self do
       display_box_content(box, '')
@@ -73,6 +76,7 @@ class BoxesHelperTest < ActiveSupport::TestCase
     box.save!
     expects(:display_block).with(b, '').never
     stubs(:request).returns(request)
+    stubs(:user).returns(nil)
     stubs(:block_target).returns('')
     expects(:locale).returns('en')
     display_box_content(box, '')
@@ -101,19 +105,79 @@ class BoxesHelperTest < ActiveSupport::TestCase
   end
 
   should 'add invisible CSS class name for invisible blocks' do
-    assert !block_css_classes(Block.new(:display => 'always')).split.any? { |item| item == 'invisible-block'}
-    assert block_css_classes(Block.new(:display => 'never')).split.any? { |item| item == 'invisible-block'}
+    assert !block_css_classes(build(Block, :display => 'always')).split.any? { |item| item == 'invisible-block'}
+    assert block_css_classes(build(Block, :display => 'never')).split.any? { |item| item == 'invisible-block'}
   end
 
   should 'fill context with the article, request_path and locale' do
     request = mock()
-    box = Box.create!(:owner => fast_create(Profile))
+    box = create(Box, :owner => fast_create(Profile))
     request.expects(:path).returns('/')
     request.expects(:params).returns({})
     stubs(:request).returns(request)
+    stubs(:user).returns(nil)
     expects(:locale).returns('en')
-    box_decorator.expects(:select_blocks).with([], {:article => nil, :request_path => '/', :locale => 'en', :params => {}}).returns([])
+    box_decorator.expects(:select_blocks).with(box, [], {:article => nil, :request_path => '/', :locale => 'en', :params => {}, :user => nil, :controller => @controller}).returns([])
 
+    display_box_content(box, '')
+  end
+
+  should 'not show move options on block when block is fixed' do
+    p = create_user_with_blocks
+
+    b = p.blocks.select{|bk| !bk.kind_of?(MainBlock) }[0]
+    b.fixed = true
+    b.save!
+
+    stubs(:environment).returns(p.environment)
+    stubs(:user).returns(p)
+
+    assert_equal false, modifiable?(b)
+  end
+
+  should 'show move options on block when block is fixed and user is admin' do
+    p = create_user_with_blocks
+
+    b = p.blocks.select{|bk| !bk.kind_of?(MainBlock) }[0]
+    b.fixed = true
+    b.save!
+
+    p.environment.add_admin(p)
+
+    stubs(:environment).returns(p.environment)
+    stubs(:user).returns(p)
+
+    assert_equal true, modifiable?(b)
+  end
+
+  should 'consider boxes_limit without custom_design' do
+    holder = mock
+    holder.stubs(:boxes_limit).with(nil).returns(2)
+    assert_equal 2, boxes_limit(holder)
+  end
+
+  should 'consider boxes_limit with custom_design' do
+    holder = mock
+    @controller.expects(:custom_design).returns({boxes_limit: 1})
+
+    assert_equal 1, boxes_limit(holder)
+  end
+
+  should 'insert block using custom_design' do
+    request = mock
+    request.expects(:path).returns('/')
+    request.expects(:params).returns({})
+    stubs(:request).returns(request)
+    stubs(:user).returns(nil)
+    expects(:locale).returns('en')
+
+    box = create(Box, position: 1, owner: fast_create(Profile))
+    block = ProfileImageBlock
+    block.expects(:new).with(box: box)
+
+    @controller.expects(:custom_design).returns({insert: {position: 1, block: block, box: 1}})
+
+    stubs(:display_block)
     display_box_content(box, '')
   end
 

@@ -22,11 +22,35 @@ class CustomFormsPluginProfileControllerTest < ActionController::TestCase
     field1 = CustomFormsPlugin::TextField.create(:name => 'Name', :form => form, :mandatory => true)
     field2 = CustomFormsPlugin::TextField.create(:name => 'License', :form => form)
 
-    assert_difference CustomFormsPlugin::Submission, :count, 1 do
+    assert_difference 'CustomFormsPlugin::Submission.count', 1 do
       post :show, :profile => profile.identifier, :id => form.id, :submission => {field1.id.to_s => 'Noosfero', field2.id.to_s => 'GPL'}
     end
     assert !session[:notice].include?('not saved')
     assert_redirected_to :action => 'show'
+  end
+
+  should 'save submission if fields are ok and user is not logged in' do
+    logout
+    form = CustomFormsPlugin::Form.create!(:profile => profile, :name => 'Free Software')
+    field = CustomFormsPlugin::TextField.create(:name => 'Name', :form => form)
+
+    assert_difference 'CustomFormsPlugin::Submission.count', 1 do
+      post :show, :profile => profile.identifier, :id => form.id, :author_name => "john", :author_email => 'john@example.com', :submission => {field.id.to_s => 'Noosfero'}
+    end
+    assert_redirected_to :action => 'show'
+  end
+
+  should 'display errors if user is not logged in and author_name is not uniq' do
+    logout
+    form = CustomFormsPlugin::Form.create(:profile => profile, :name => 'Free Software')
+    field = CustomFormsPlugin::TextField.create(:name => 'Name', :form => form)
+    submission = CustomFormsPlugin::Submission.create(:form => form, :author_name => "john", :author_email => 'john@example.com')
+
+    assert_no_difference 'CustomFormsPlugin::Submission.count' do
+      post :show, :profile => profile.identifier, :id => form.id, :author_name => "john", :author_email => 'john@example.com', :submission => {field.id.to_s => 'Noosfero'}
+    end
+    assert_equal "Submission could not be saved", session[:notice]
+    assert_tag :tag => 'div', :attributes => { :class => 'errorExplanation', :id => 'errorExplanation' }
   end
 
   should 'disable fields if form expired' do

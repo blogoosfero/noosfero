@@ -6,13 +6,7 @@ class HomeController; def rescue_action(e) raise e end; end
 class HomeControllerTest < ActionController::TestCase
 
   def setup
-    @controller = HomeController.new
-    @request    = ActionController::TestRequest.new
-    @response   = ActionController::TestResponse.new
-
-    Environment.delete_all
-
-    @environment = Environment.create(:name => 'testenv', :is_default => true)
+    @environment = Environment.default
     @environment.enabled_plugins = ['StatisticsPlugin']
     @environment.save!
 
@@ -78,6 +72,24 @@ class HomeControllerTest < ActionController::TestCase
     get :index
 
     assert_no_tag :tag => 'div', :attributes => {:class => 'statistics-block-data'}, :descendant => { :tag => 'li', :attributes => {:class => 'enterprises'} }
+  end
+
+  should 'display products class in statistics-block-data block' do
+    @block.product_counter = true
+    @environment.enable('products_for_enterprises')
+    @block.save!
+    get :index
+
+    assert_tag :tag => 'div', :attributes => {:class => 'statistics-block-data'}, :descendant => { :tag => 'li', :attributes => {:class => 'products'} }
+  end
+
+  should 'not display products class in statistics-block-data block' do
+    @block.product_counter = true
+    @environment.disable('products_for_enterprises')
+    @block.save!
+    get :index
+
+    assert_no_tag :tag => 'div', :attributes => {:class => 'statistics-block-data'}, :descendant => { :tag => 'li', :attributes => {:class => 'products'} }
   end
 
   should 'display categories class in statistics-block-data block' do

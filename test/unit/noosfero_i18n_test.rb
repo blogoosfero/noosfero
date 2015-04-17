@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 
 class NoosferoI18nTest < ActiveSupport::TestCase
 
@@ -16,7 +16,7 @@ class NoosferoI18nTest < ActiveSupport::TestCase
 
     should('have locale file for %s' % locale) do
       locale_file = 'config/locales/%s.yml' % locale
-      assert File.exists?(File.join(Rails.root, locale_file)), "#{locale_file} not found"
+      assert File.exists?(Rails.root.join(locale_file)), "#{locale_file} not found"
     end
 
     should('be able to translate activerecord errors header to %s' % locale) do

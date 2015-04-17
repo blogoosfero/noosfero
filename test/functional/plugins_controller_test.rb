@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 require 'plugins_controller'
 
 # Re-raise errors caught by the controller.
@@ -15,14 +15,6 @@ class PluginsControllerTest < ActionController::TestCase
     login_as(create_admin_user(@environment))
   end
   attr_reader :environment
-
-  def test_local_files_reference
-    assert_local_files_reference
-  end
-
-  def test_valid_xhtml
-    assert_valid_xhtml
-  end
 
   should 'list system active plugins' do
     class Plugin1 < Noosfero::Plugin
@@ -47,7 +39,7 @@ class PluginsControllerTest < ActionController::TestCase
       end
     end
 
-    Noosfero::Plugin.stubs(:all).returns([Plugin1.to_s,Plugin2.to_s])
+    Noosfero::Plugin.stubs(:all).returns([Plugin1.to_s, Plugin2.to_s])
 
     get :index
 

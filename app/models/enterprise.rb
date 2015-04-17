@@ -2,7 +2,12 @@
 # only enterprises can offer products and services.
 class Enterprise < Organization
 
-  SEARCH_DISPLAYS += %w[map full]
+  attr_accessible :business_name, :address_reference, :district, :tag_list, :organization_website, :historic_and_current_context, :activities_short_description, :products_per_catalog_page
+
+  SEARCH_FILTERS = {
+    :order => %w[more_recent more_popular more_active],
+    :display => %w[compact full map]
+  }
 
   def self.type_name
     _('Enterprise')
@@ -10,21 +15,21 @@ class Enterprise < Organization
 
   N_('Enterprise')
 
-  has_many :products, :foreign_key => :profile_id, :dependent => :destroy, :order => 'name ASC'
+  acts_as_trackable after_add: proc{ |p, t| notify_activity t }
+
+  has_many :products, :foreign_key => :profile_id, :dependent => :destroy
+  has_many :product_categories, :through => :products
   has_many :inputs, :through => :products
   has_many :production_costs, :as => :owner
 
-  has_and_belongs_to_many :fans, :class_name => 'Person', :join_table => 'favorite_enteprises_people'
-
-  def product_categories
-    ProductCategory.by_enterprise(self)
-  end
+  has_many :favorite_enterprise_people
+  has_many :fans, source: :person, through: :favorite_enterprise_people
 
   N_('Organization website'); N_('Historic and current context'); N_('Activities short description'); N_('City'); N_('State'); N_('Country'); N_('ZIP code')
 
-  settings_items :organization_website, :historic_and_current_context, :activities_short_description, :zip_code, :city, :state, :country
+  settings_items :organization_website, :historic_and_current_context, :activities_short_description
 
-  settings_items :products_per_catalog_page, :type => :integer, :default => 6
+  settings_items :products_per_catalog_page, :type => :integer, :default => 18
   alias_method :products_per_catalog_page_before_type_cast, :products_per_catalog_page
   validates_numericality_of :products_per_catalog_page, :allow_nil => true, :greater_than => 0
 
@@ -55,15 +60,6 @@ class Enterprise < Organization
 
   def self.fields
     super + FIELDS
-  end
-
-  def validate
-    super
-    self.required_fields.each do |field|
-      if self.send(field).blank?
-        self.errors.add_on_blank(field)
-      end
-    end
   end
 
   def active_fields
@@ -104,14 +100,19 @@ class Enterprise < Organization
     self.tasks.where(:type => 'EnterpriseActivation').first
   end
 
-  def enable(owner)
+  def enable(owner = nil)
+    if owner.nil?
+      self.visible = true
+      return self.save
+    end
+
     return if enabled
     # must be set first for the following to work
     self.enabled = true
     self.affiliate owner, Profile::Roles.all_roles(self.environment.id) if owner
     self.apply_template template if self.environment.replace_enterprise_template_when_enable
     self.activation_task.update_attribute :status, Task::Status::FINISHED rescue nil
-    self.save_without_validation!
+    self.save(:validate => false)
   end
 
   def question
@@ -124,11 +125,13 @@ class Enterprise < Organization
     end
   end
 
-  after_create :create_activation_task
+  # Use to create an enterprise manually (via console) that is not enabled
   def create_activation_task
-    if !self.enabled
-      EnterpriseActivation.create!(:enterprise => self, :code_length => 7)
-    end
+    return if self.enabled
+    EnterpriseActivation.create! :enterprise => self, :code_length => 7
+  end
+  def activation_task
+    self.tasks.where(:type => 'EnterpriseActivation').first
   end
 
   def default_set_of_blocks
@@ -166,7 +169,7 @@ class Enterprise < Organization
   end
 
   def default_template
-    environment.enterprise_template
+    environment.enterprise_default_template
   end
 
   def template_with_inactive_enterprise
@@ -175,7 +178,7 @@ class Enterprise < Organization
   alias_method_chain :template, :inactive_enterprise
 
   def control_panel_settings_button
-    {:title => __('Enterprise Info and settings'), :icon => 'edit-profile-enterprise'}
+    {:title => _('Enterprise Info and settings'), :icon => 'edit-profile-enterprise'}
   end
 
   settings_items :enable_contact_us, :type => :boolean, :default => true
@@ -185,15 +188,11 @@ class Enterprise < Organization
   end
 
   def control_panel_settings_button
-    {:title => __('Enterprise Info and settings'), :icon => 'edit-profile-enterprise'}
+    {:title => _('Enterprise Info and settings'), :icon => 'edit-profile-enterprise'}
   end
 
   def create_product?
     true
-  end
-
-  def activities
-    Scrap.find_by_sql("SELECT id, updated_at, 'Scrap' AS klass FROM scraps WHERE scraps.receiver_id = #{self.id} AND scraps.scrap_id IS NULL UNION SELECT id, updated_at, 'ActionTracker::Record' AS klass FROM action_tracker WHERE action_tracker.target_id = #{self.id} UNION SELECT action_tracker.id, action_tracker.updated_at, 'ActionTracker::Record' AS klass FROM action_tracker INNER JOIN articles ON action_tracker.target_id = articles.id WHERE articles.profile_id = #{self.id} AND action_tracker.target_type = 'Article' ORDER BY updated_at DESC")
   end
 
   def catalog_url
@@ -203,5 +202,10 @@ class Enterprise < Organization
   def more_recent_label
     ''
   end
+
+  def followed_by? person
+    super or self.fans.where(id: person.id).count > 0
+  end
+
 
 end

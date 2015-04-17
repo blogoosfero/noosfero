@@ -5,24 +5,23 @@ module ActionTracker
   module ControllerMethods
 
     def self.included(base)
-      base.send :user_stamp, ActionTracker::Record
       base.send :extend, ClassMethods
     end
-  
+
     module ClassMethods
 
       def track_actions_after(verb, options = {}, &block)
         track_actions_by_time(verb, :after, options, &block)
       end
-  
+
       def track_actions_before(verb, options = {}, &block)
         track_actions_by_time(verb, :before, options, &block)
       end
-  
+
       def track_actions(verb, options = {}, &block)
         track_actions_by_time(verb, ActionTrackerConfig.default_filter_time, options, &block)
       end
-  
+
       def track_actions_by_time(verb, time, options = {}, &block)
         keep_params = options.delete(:keep_params) || options.delete('keep_params') || :all
         send("#{time}_filter", options) do |x|
@@ -32,7 +31,7 @@ module ActionTracker
         send :include, InstanceMethods
       end
     end
-  
+
     module InstanceMethods
       def save_action_for_verb(verb, keep_params = :all)
         if keep_params.is_a? Array
@@ -42,7 +41,7 @@ module ActionTracker
         elsif keep_params.to_s == 'all'
           stored_params = params
         end
-        user = send ActionTrackerConfig.current_user_method
+        user = send ActionTrackerConfig.current_user
         tracked_action = case ActionTrackerConfig.verb_type(verb)
           when :groupable
             Record.add_or_create :verb => verb, :user => user, :params => stored_params
@@ -62,7 +61,7 @@ module ActionTracker
     def self.included(base)
       base.send :extend, ClassMethods
     end
-  
+
     module ClassMethods
       def track_actions(verb, callback, options = {}, &block)
         keep_params = options.delete(:keep_params) || options.delete('keep_params') || :all
@@ -74,15 +73,15 @@ module ActionTracker
       end
 
       def acts_as_trackable(options = {})
-        has_many :tracked_actions, { :class_name => "ActionTracker::Record", :order => "updated_at DESC", :foreign_key => :user_id }.merge(options)
+        has_many :tracked_actions, { :class_name => "ActionTracker::Record", :order => "updated_at DESC", :foreign_key => :user_id, :dependent => :destroy }.merge(options)
         send :include, InstanceMethods
       end
     end
-  
+
     module InstanceMethods
       def time_spent_doing(verb, conditions = {})
         time = 0
-        tracked_actions.all(:conditions => conditions.merge({ :verb => verb.to_s })).each do |t| 
+        tracked_actions.all(:conditions => conditions.merge({ :verb => verb.to_s })).each do |t|
           time += t.updated_at - t.created_at
         end
         time.to_f
@@ -90,7 +89,7 @@ module ActionTracker
 
       def save_action_for_verb(verb, keep_params = :all, post_proc = Proc.new{}, custom_user = nil, custom_target = nil)
         user = self.send(custom_user) unless custom_user.blank?
-        user ||= ActionTracker::Record.current_user_from_model
+        user ||= ActionTracker::Record.current_user
         target = self.send(custom_target) unless custom_target.blank?
         return nil if user.nil?
         if keep_params.is_a? Array
@@ -115,7 +114,7 @@ module ActionTracker
         end
         tracked_action.target = target || self
         user.tracked_actions << tracked_action
-        post_proc.call tracked_action.reload
+        post_proc.call tracked_action
       end
 
     end
@@ -124,7 +123,7 @@ module ActionTracker
 
   module ViewHelper
     def describe(ta)
-      returning "" do |result|
+      "".tap do |result|
         if ta.is_a?(ActionTracker::Record)
           result << ta.description.gsub(/\{\{(.*?)\}\}/) { eval $1 }
         else

@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 require 'role_controller'
 
 # Re-raise errors caught by the controller.
@@ -15,14 +15,6 @@ class RoleControllerTest < ActionController::TestCase
     login_as(:ze)
   end
 
-  def test_local_files_reference
-    assert_local_files_reference
-  end
-  
-  def test_valid_xhtml
-    assert_valid_xhtml
-  end
-  
   def test_index_should_get_roles
     get 'index'
     assert_response :success
@@ -66,14 +58,14 @@ class RoleControllerTest < ActionController::TestCase
   end
 
   def test_should_create_new_role
-    assert_difference Role, :count do
+    assert_difference 'Role.count' do
       post 'create', :role => { :name => 'Test Role', :permissions => ["test"] }
     end
     assert_redirected_to :action => 'show', :id => Role.last.id
   end
 
   def test_should_not_create_new_role
-    assert_no_difference Role, :count do
+    assert_no_difference 'Role.count' do
       post 'create', :role => { }
     end
     assert_template :new
@@ -86,4 +78,24 @@ class RoleControllerTest < ActionController::TestCase
       get :edit, :id => role.id
     end
   end
+
+  should 'display permissions for both environment and profile when editing a environment role' do
+    role = Role.create!(:name => 'environment_role', :key => 'environment_role', :environment => Environment.default)
+    get :edit, :id => role.id
+    ['Environment', 'Profile'].each do |key|
+      ActiveRecord::Base::PERMISSIONS[key].each do |permission, value|
+        assert_select ".permissions.#{key.downcase} input##{permission}"
+      end
+    end
+  end
+
+  should 'display permissions only for profile when editing a profile role' do
+    role = Role.create!(:name => 'profile_role', :key => 'profile_role', :environment => Environment.default)
+    get :edit, :id => role.id
+    ActiveRecord::Base::PERMISSIONS['Profile'].each do |permission, value|
+      assert_select "input##{permission}"
+    end
+    assert_select ".permissions.environment", false
+  end
+
 end

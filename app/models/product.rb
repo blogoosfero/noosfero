@@ -1,27 +1,30 @@
 class Product < ActiveRecord::Base
 
   SEARCHABLE_FIELDS = {
-    :name => 10,
-    :description => 1,
+    :name => {:label => _('Name'), :weight => 10},
+    :description => {:label => _('Description'), :weight => 1},
   }
 
-  SEARCH_FILTERS = %w[
-    more_recent
-  ]
+  SEARCH_FILTERS = {
+    :order => %w[more_recent],
+    :display => %w[full map]
+  }
 
-  SEARCH_DISPLAYS = %w[map full]
+  attr_accessible :name, :product_category, :profile, :profile_id, :enterprise,
+    :highlighted, :price, :image_builder, :description, :available, :qualifiers, :unit_id, :unit, :discount, :inputs, :qualifiers_list
 
   def self.default_search_display
     'full'
   end
 
-  belongs_to :enterprise, :foreign_key => :profile_id, :class_name => 'Profile'
   belongs_to :profile
+  # backwards compatibility
+  belongs_to :enterprise, :foreign_key => :profile_id, :class_name => 'Profile'
   alias_method :enterprise=, :profile=
   alias_method :enterprise, :profile
 
-  has_one :region, :through => :enterprise
-  validates_presence_of :enterprise
+  has_one :region, :through => :profile
+  validates_presence_of :profile
 
   belongs_to :product_category
 
@@ -35,27 +38,35 @@ class Product < ActiveRecord::Base
 
   acts_as_having_settings :field => :data
 
+  track_actions :create_product, :after_create, :keep_params => [:name, :url ], :if => Proc.new { |a| a.is_trackable? }, :custom_user => :action_tracker_user
+  track_actions :update_product, :before_update, :keep_params => [:name, :url], :if => Proc.new { |a| a.is_trackable? }, :custom_user => :action_tracker_user
+  track_actions :remove_product, :before_destroy, :keep_params => [:name], :if => Proc.new { |a| a.is_trackable? }, :custom_user => :action_tracker_user
+
   validates_uniqueness_of :name, :scope => :profile_id, :allow_nil => true, :if => :validate_uniqueness_of_column_name?
 
-  validates_presence_of :product_category_id
+  validates_presence_of :product_category
   validates_associated :product_category
 
   validates_numericality_of :price, :allow_nil => true
   validates_numericality_of :discount, :allow_nil => true
 
-  named_scope :more_recent, :order => "created_at DESC"
+  scope :enabled, :conditions => ['profiles.enabled = ?', true]
+  scope :visible, :conditions => ['profiles.visible = ?', true]
+  scope :public, :conditions => ['profiles.visible = ? AND profiles.public_profile = ?', true, true]
 
-  named_scope :from_category, lambda { |category|
+  scope :more_recent, :order => "created_at DESC"
+
+  scope :from_category, lambda { |category|
     {:joins => :product_category, :conditions => ['categories.path LIKE ?', "%#{category.slug}%"]} if category
   }
 
   after_update :save_image
 
   def lat
-    self.enterprise.lat
+    self.profile.lat
   end
   def lng
-    self.enterprise.lng
+    self.profile.lng
   end
 
   xss_terminate :only => [ :name ], :on => 'validation'
@@ -66,7 +77,11 @@ class Product < ActiveRecord::Base
   include FloatHelper
 
   include WhiteListFilter
-  filter_iframes :description, :whitelist => lambda { enterprise && enterprise.environment && enterprise.environment.trusted_sites_for_iframe }
+  filter_iframes :description
+
+  def iframe_whitelist
+    self.profile && self.profile.environment && self.profile.environment.trusted_sites_for_iframe
+  end
 
   def name
     self[:name].blank? ? category_name : self[:name]
@@ -85,7 +100,7 @@ class Product < ActiveRecord::Base
   end
 
   def default_image(size='thumb')
-    image ? image.public_filename(size) : '/images/icons-app/product-default-pic-%s.png' % size
+      image ? image.public_filename(size) : '/images/icons-app/product-default-pic-%s.png' % (size || 'big')
   end
 
   acts_as_having_image
@@ -103,16 +118,16 @@ class Product < ActiveRecord::Base
   end
 
   def url
-    enterprise.public_profile_url.merge(:controller => 'manage_products', :action => 'show', :id => id)
+    self.profile.public_profile_url.merge(:controller => 'manage_products', :action => 'show', :id => id)
   end
 
   def public?
-    enterprise.public?
+    self.profile.public?
   end
 
   def formatted_value(method)
     value = self[method] || self.send(method)
-    ("%.2f" % value).to_s.gsub('.', enterprise.environment.currency_separator) if value
+    ("%.2f" % value).to_s.gsub('.', self.profile.environment.currency_separator) if value
   end
 
   def price_with_discount
@@ -161,13 +176,20 @@ class Product < ActiveRecord::Base
   def qualifiers_list=(qualifiers)
     self.product_qualifiers.destroy_all
     qualifiers.each do |qualifier_id, certifier_id|
-      self.product_qualifiers.create(:qualifier_id => qualifier_id, :certifier_id => certifier_id) if qualifier_id != 'nil'
+      next if qualifier_id == 'nil'
+      product_qualifier = self.product_qualifiers.build
+      product_qualifier.product = self
+      product_qualifier.qualifier_id = qualifier_id
+      product_qualifier.certifier_id = certifier_id
+      product_qualifier.save!
     end
   end
 
   def order_inputs!(order = [])
     order.each_with_index do |input_id, array_index|
-      self.inputs.find(input_id).update_attributes(:position => array_index + 1)
+      input = self.inputs.find(input_id)
+      input.position = array_index + 1
+      input.save!
     end
   end
 
@@ -181,11 +203,11 @@ class Product < ActiveRecord::Base
 
   def inputs_cost
     return 0 if inputs.empty?
-    inputs.relevant_to_price.map(&:cost).inject { |sum,price| sum + price }
+    inputs.relevant_to_price.map(&:cost).inject(0) { |sum,price| sum + price }
   end
 
   def total_production_cost
-    return inputs_cost if price_details.empty?
+    return inputs_cost || 0 if price_details.empty?
     inputs_cost + price_details.map(&:price).inject(0){ |sum,price| sum + price }
   end
 
@@ -209,21 +231,21 @@ class Product < ActiveRecord::Base
   end
 
   def available_production_costs
-    self.enterprise.environment.production_costs + self.enterprise.production_costs
+    self.profile.environment.production_costs + self.profile.production_costs
   end
 
-  include ActionController::UrlWriter
+  include Rails.application.routes.url_helpers
   def price_composition_bar_display_url
-    url_for({:host => enterprise.default_hostname, :controller => 'manage_products', :action => 'display_price_composition_bar', :profile => enterprise.identifier, :id => self.id }.merge(Noosfero.url_options))
+    url_for({:host => self.profile.default_hostname, :controller => 'manage_products', :action => 'display_price_composition_bar', :profile => self.profile.identifier, :id => self.id }.merge(Noosfero.url_options))
   end
 
   def inputs_cost_update_url
-    url_for({:host => enterprise.default_hostname, :controller => 'manage_products', :action => 'display_inputs_cost', :profile => enterprise.identifier, :id => self.id }.merge(Noosfero.url_options))
+    url_for({:host => self.profile.default_hostname, :controller => 'manage_products', :action => 'display_inputs_cost', :profile => self.profile.identifier, :id => self.id }.merge(Noosfero.url_options))
   end
 
   def percentage_from_solidarity_economy
     se_i = t_i = 0
-    self.inputs(true).each{ |i| t_i += 1; se_i += 1 if i.is_from_solidarity_economy }
+    self.inputs.each{ |i| t_i += 1; se_i += 1 if i.is_from_solidarity_economy }
     t_i = 1 if t_i == 0 # avoid division by 0
     p = case (se_i.to_f/t_i)*100
         when 0 then [0, '']
@@ -235,12 +257,21 @@ class Product < ActiveRecord::Base
         end
   end
 
-  delegate :enabled, :region, :region_id, :environment, :environment_id, :to => :enterprise
+  delegate :enabled, :region, :region_id, :environment, :environment_id, :to => :profile, allow_nil: true
 
   protected
 
   def validate_uniqueness_of_column_name?
     true
+  end
+
+  def is_trackable?
+    # shopping_cart create products without profile
+    self.profile.present?
+  end
+
+  def action_tracker_user
+    self.profile
   end
 
 end

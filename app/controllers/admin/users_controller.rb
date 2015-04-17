@@ -18,7 +18,7 @@ class UsersController < AdminController
     end
     scope = scope.order('name ASC')
     @q = params[:q]
-    @collection = find_by_contents(:people, scope, @q, {:per_page => per_page, :page => params[:npage]})[:results]
+    @collection = find_by_contents(:people, environment, scope, @q, {:per_page => per_page, :page => params[:npage]})[:results]
   end
 
   def set_admin_role
@@ -79,7 +79,7 @@ class UsersController < AdminController
         users = User.connection.execute(command)
         csv_content = "name;email\n"
         users.each { |u|
-          CSV.generate_row([u['name'], u['email']], 2, csv_content, fs=';')
+          csv_content << CSV.generate_line([u['name'], u['email']], {:col_sep => ';'})
         }
         render :text => csv_content, :content_type => 'text/csv', :layout => false
       end

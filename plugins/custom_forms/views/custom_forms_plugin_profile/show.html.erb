@@ -12,7 +12,7 @@
 
   <%= error_messages_for :submission %>
 
-  <% form_for :submission, @submission do |f| %>
+  <%= form_for :submission do |f| %>
     <% if !user %>
       <%= required labelled_form_field _('Author name'), text_field_tag(:author_name, @submission.author_name) %>
       <%= required labelled_form_field _('Author email'), text_field_tag(:author_email, @submission.author_email) %>
@@ -22,15 +22,16 @@
 
     <% button_bar do %>
       <% if @form.expired? %>
-        <%= submit_button :save, _('Save'), :disabled => '', :class => 'disabled', :cancel => {:controller => :profile, :profile => profile.identifier} %>
+        <%= submit_button :save, c_('Save'), :disabled => '', :class => 'disabled', :cancel => {:controller => :profile, :profile => profile.identifier} %>
       <% else %>
-        <%= submit_button :save, _('Save'), :cancel => {:controller => :profile, :profile => profile.identifier} %>
+        <%= submit_button :save, c_('Save'), :cancel => {:controller => :profile, :profile => profile.identifier} %>
       <% end %>
     <% end %>
 
   <% end %>
 <% else %>
-  <% fields_for :submission, @submission do |f| %>
+  <%= fields_for :submission, @submission do |f| %>
     <%= render :partial => 'shared/form_submission', :locals => {:f => f} %>
   <% end %>
 <% end %>
+

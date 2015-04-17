@@ -1,4 +1,8 @@
+require 'noosfero/multi_tenancy'
+
 class Domain < ActiveRecord::Base
+
+  attr_accessible :name, :owner, :is_default
 
   # relationships
   ###############
@@ -15,7 +19,9 @@ class Domain < ActiveRecord::Base
   # checks validations that could not be expressed using Rails' predefined
   # validations. In particular:
   # * <tt>name</tt> must not start with 'www.'
-  def validate
+  validate :no_www
+
+  def no_www
     if self.name =~ /^www\./
       self.errors.add(:name, _('{fn} must not start with www.').fix_i18n)
     end
@@ -65,6 +71,10 @@ class Domain < ActiveRecord::Base
 
   @hosting = {}
 
+  def protocol
+    self.ssl ? 'https' : 'http'
+  end
+
   # Tells whether the given domain name is hosting a profile or not.
   #
   # Since this is going to be called a lot, The queries are cached so the
@@ -84,6 +94,13 @@ class Domain < ActiveRecord::Base
   # clears the cache of hosted domains. Used for testing.
   def self.clear_cache
     @hosting = {}
+  end
+
+  # Detects a domain's custom text domain chain if available based on a domain
+  # served on multitenancy configuration or a registered domain.
+  def self.custom_locale(domainname)
+    domain = Noosfero::MultiTenancy.mapping[domainname] || domainname[/(.*?)\./,1]
+    FastGettext.translation_repositories.keys.include?(domain) ? domain : FastGettext.default_text_domain
   end
 
 end

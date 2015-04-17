@@ -1,8 +1,8 @@
 class NationalRegion < ActiveRecord::Base
 
   SEARCHABLE_FIELDS = {
-    :name => 1,
-    :national_region_code => 1,
+    :name => {:label => _('Name'), :weight => 1},
+    :national_region_code => {:label => _('Region Code'), :weight => 1},
   }
 
   def self.search_city(city_name, like = false, state = nil)
@@ -12,7 +12,7 @@ class NationalRegion < ActiveRecord::Base
     adtional_contions = "";
 
     if like
-     operator  = "like"
+     operator  = "ilike"
      find_return = :all
     end
 
@@ -41,7 +41,7 @@ class NationalRegion < ActiveRecord::Base
     find_return = :first
 
     if like
-     operator  = "like"
+     operator  = "ilike"
      find_return = :all
     end
 

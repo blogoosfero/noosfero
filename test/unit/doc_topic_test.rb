@@ -1,4 +1,5 @@
-require File.dirname(__FILE__) + '/../test_helper'
+# encoding: UTF-8
+require_relative "../test_helper"
 
 class DocTopicTest < ActiveSupport::TestCase
   should 'be a DocItem' do
@@ -6,7 +7,7 @@ class DocTopicTest < ActiveSupport::TestCase
   end
 
   should 'load topic data from file' do
-    doc = DocTopic.loadfile(RAILS_ROOT + '/' + 'test/fixtures/files/doctest.en.xhtml')
+    doc = DocTopic.loadfile(Rails.root.join('test', 'fixtures', 'files', 'doctest.en.xhtml'))
     assert_equal 'en', doc.language
     assert_equal 'Documentation test', doc.title
     assert_match(/Documentation test/, doc.text)
@@ -14,7 +15,7 @@ class DocTopicTest < ActiveSupport::TestCase
   end
 
   should 'load translated topic from file' do
-    doc = DocTopic.loadfile(RAILS_ROOT + '/' + 'test/fixtures/files/doctest.pt.xhtml')
+    doc = DocTopic.loadfile(Rails.root.join('test', 'fixtures', 'files', 'doctest.pt.xhtml'))
     assert_equal 'pt', doc.language
     assert_equal 'Teste da documentação', doc.title
   end

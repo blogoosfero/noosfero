@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative "../test_helper"
 require 'environment_design_controller'
 
 # Re-raise errors caught by the controller.
@@ -6,23 +6,13 @@ class EnvironmentDesignController; def rescue_action(e) raise e end; end
 
 class EnvironmentDesignControllerTest < ActionController::TestCase
 
-  # TODO EnvironmentStatisticsBlock is DEPRECATED and will be removed from
-  #      the Noosfero core soon, see ActionItem3045
-  ALL_BLOCKS = [ArticleBlock, LoginBlock, EnvironmentStatisticsBlock, RecentDocumentsBlock, EnterprisesBlock, CommunitiesBlock, PeopleBlock, SellersSearchBlock, LinkListBlock, FeedReaderBlock, SlideshowBlock, HighlightsBlock, FeaturedProductsBlock, CategoriesBlock, RawHTMLBlock, TagsBlock ]
+  ALL_BLOCKS = [ArticleBlock, LoginBlock, RecentDocumentsBlock, EnterprisesBlock, CommunitiesBlock, SellersSearchBlock, LinkListBlock, FeedReaderBlock, SlideshowBlock, HighlightsBlock, FeaturedProductsBlock, CategoriesBlock, RawHTMLBlock, TagsBlock ]
 
   def setup
     @controller = EnvironmentDesignController.new
     @request    = ActionController::TestRequest.new
     @response   = ActionController::TestResponse.new
     Noosfero::Plugin::Manager.any_instance.stubs(:enabled_plugins).returns([])
-  end
-
-  def test_local_files_reference
-    assert_local_files_reference
-  end
-
-  def test_valid_xhtml
-    assert_valid_xhtml
   end
 
   should 'indicate only actual blocks as such' do
@@ -85,31 +75,9 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     assert_tag :tag => 'p', :attributes => { :id => 'no_portal_community' }
   end
 
-  # TODO EnvironmentStatisticsBlock is DEPRECATED and will be removed from
-  #      the Noosfero core soon, see ActionItem3045
-  should 'be able to edit EnvironmentStatisticsBlock' do
-    login_as(create_admin_user(Environment.default))
-    b = EnvironmentStatisticsBlock.create!
-    e = Environment.default
-    e.boxes.create!
-    e.boxes.first.blocks << b
-    get :edit, :id => b.id
-    assert_tag :tag => 'input', :attributes => { :id => 'block_title' }
-  end
-
   should 'be able to edit EnterprisesBlock' do
     login_as(create_admin_user(Environment.default))
     b = EnterprisesBlock.create!
-    e = Environment.default
-    e.boxes.create!
-    e.boxes.first.blocks << b
-    get :edit, :id => b.id
-    assert_tag :tag => 'input', :attributes => { :id => 'block_limit' }
-  end
-
-  should 'be able to edit PeopleBlock' do
-    login_as(create_admin_user(Environment.default))
-    b = PeopleBlock.create!
     e = Environment.default
     e.boxes.create!
     e.boxes.first.blocks << b
@@ -209,7 +177,7 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     class CustomBlock1 < Block; end;
 
     class TestBlockPlugin < Noosfero::Plugin
-      def self.extra_blocks
+      def extra_blocks
         {
           CustomBlock1 => {:type => Environment},
         }
@@ -227,7 +195,7 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     class CustomBlock4 < Block; end;
 
     class TestBlockPlugin < Noosfero::Plugin
-      def self.extra_blocks
+      def extra_blocks
         {
           CustomBlock1 => {:type => Environment},
           CustomBlock2 => {:type => Enterprise},
@@ -256,7 +224,7 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     class CustomBlock9 < Block; end;
 
     class TestBlockPlugin < Noosfero::Plugin
-      def self.extra_blocks
+      def extra_blocks
         {
           CustomBlock1 => {:type => Environment, :position => [1]},
           CustomBlock2 => {:type => Environment, :position => 1},
@@ -299,7 +267,7 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     class CustomBlock9 < Block; end;
 
     class TestBlockPlugin < Noosfero::Plugin
-      def self.extra_blocks
+      def extra_blocks
         {
           CustomBlock1 => {:type => Environment, :position => [1]},
           CustomBlock2 => {:type => Environment, :position => 1},
@@ -341,7 +309,7 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     class CustomBlock8 < Block; end;
 
     class TestBlockPlugin < Noosfero::Plugin
-      def self.extra_blocks
+      def extra_blocks
         {
           CustomBlock1 => {:type => Person, :position => 1},
           CustomBlock2 => {:type => Community, :position => 1},
@@ -368,6 +336,49 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock6)
     assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock7)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock8)
+  end
+
+  should 'clone a block' do
+    login_as(create_admin_user(Environment.default))
+    block = TagsBlock.create!
+    assert_difference 'TagsBlock.count', 1 do
+      post :clone_block, :id => block.id
+      assert_response :redirect
+    end
+  end
+
+  should 'return a list of paths from portal related to the words used in the query search' do
+    env = Environment.default
+    login_as(create_admin_user(env))
+    community = fast_create(Community, :environment_id => env)
+    env.portal_community = community
+    env.enable('use_portal_community')
+    env.save
+    @controller.stubs(:boxes_holder).returns(env)
+    article1 = fast_create(Article, :profile_id => community.id, :name => "Some thing")
+    article2 = fast_create(Article, :profile_id => community.id, :name => "Some article")
+    article3 = fast_create(Article, :profile_id => community.id, :name => "Not an article")
+
+    xhr :get, :search_autocomplete, :query => 'Some'
+
+    json_response = ActiveSupport::JSON.decode(@response.body)
+
+    assert_response :success
+    assert_equal json_response.include?("/{portal}/"+article1.path), true
+    assert_equal json_response.include?("/{portal}/"+article2.path), true
+    assert_equal json_response.include?("/{portal}/"+article3.path), false
+  end
+
+  should 'return empty if portal not configured' do
+    env = Environment.default
+    login_as(create_admin_user(env))
+
+    xhr :get, :search_autocomplete, :query => 'Some'
+
+    json_response = ActiveSupport::JSON.decode(@response.body)
+
+    assert_response :success
+    assert_equal json_response, []
   end
 
 end

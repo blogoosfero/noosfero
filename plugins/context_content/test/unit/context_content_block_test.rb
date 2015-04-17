@@ -51,18 +51,18 @@ class ContextContentBlockTest < ActiveSupport::TestCase
   should 'show contents for next page' do
     @block.limit = 2
     folder = fast_create(Folder)
-    article1 = fast_create(TinyMceArticle, :parent_id => folder.id)
-    article2 = fast_create(TinyMceArticle, :parent_id => folder.id)
-    article3 = fast_create(TinyMceArticle, :parent_id => folder.id)
+    article1 = fast_create(TinyMceArticle, :name => 'article 1', :parent_id => folder.id)
+    article2 = fast_create(TinyMceArticle, :name => 'article 2', :parent_id => folder.id)
+    article3 = fast_create(TinyMceArticle, :name => 'article 3', :parent_id => folder.id)
     assert_equal [article3], @block.contents(folder, 2)
   end
 
   should 'show parent contents for next page' do
     @block.limit = 2
     folder = fast_create(Folder)
-    article1 = fast_create(TinyMceArticle, :parent_id => folder.id)
-    article2 = fast_create(TinyMceArticle, :parent_id => folder.id)
-    article3 = fast_create(TinyMceArticle, :parent_id => folder.id)
+    article1 = fast_create(TinyMceArticle, :name => 'article 1', :parent_id => folder.id)
+    article2 = fast_create(TinyMceArticle, :name => 'article 2', :parent_id => folder.id)
+    article3 = fast_create(TinyMceArticle, :name => 'article 3', :parent_id => folder.id)
     assert_equal [article3], @block.contents(article1, 2)
   end
 
@@ -163,14 +163,14 @@ class ContextContentBlockTest < ActiveSupport::TestCase
     article2 = fast_create(TinyMceArticle, :parent_id => @page.id)
     article3 = fast_create(TinyMceArticle, :parent_id => @page.id)
     expects(:content_tag).once
-    expects(:render).with(:partial => 'blocks/more', :locals => {:block => @block, :contents => [article1, article2], :article_id => @page.id}).once
+    expects(:render).with(has_entry(:partial => 'blocks/more'))
     instance_eval(&@block.footer)
   end
 
   should 'return box owner on profile method call' do
     profile = fast_create(Community)
-    box = Box.create(:owner_type => 'Profile', :owner_id => profile.id)
-    block = ContextContentPlugin::ContextContentBlock.create!(:box => box)
+    box = Box.create!(:owner => profile)
+    block = ContextContentPlugin::ContextContentBlock.create!(:box_id => box.id)
     assert_equal profile, block.profile
   end
 

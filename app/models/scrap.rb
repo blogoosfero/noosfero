@@ -1,6 +1,9 @@
 class Scrap < ActiveRecord::Base
+
+  attr_accessible :content, :sender_id, :receiver_id, :scrap_id
+
   SEARCHABLE_FIELDS = {
-    :content => 1,
+    :content => {:label => _('Content'), :weight => 1},
   }
   validates_presence_of :content
   validates_presence_of :sender_id, :receiver_id
@@ -10,9 +13,14 @@ class Scrap < ActiveRecord::Base
   has_many :replies, :class_name => 'Scrap', :foreign_key => 'scrap_id', :dependent => :destroy
   belongs_to :root, :class_name => 'Scrap', :foreign_key => 'scrap_id'
 
-  named_scope :all_scraps, lambda {|profile| {:conditions => ["receiver_id = ? OR sender_id = ?", profile, profile], :limit => 30}}
+  has_many :profile_activities, foreign_key: :activity_id, conditions: {profile_activities: {activity_type: 'Scrap'}}, dependent: :destroy
 
-  named_scope :not_replies, :conditions => {:scrap_id => nil}
+  after_create :create_activity
+  after_update :update_activity
+
+  scope :all_scraps, lambda {|profile| {:conditions => ["receiver_id = ? OR sender_id = ?", profile, profile], :limit => 30}}
+
+  scope :not_replies, :conditions => {:scrap_id => nil}
 
   track_actions :leave_scrap, :after_create, :keep_params => ['sender.name', 'content', 'receiver.name', 'receiver.url'], :if => Proc.new{|s| s.sender != s.receiver && s.sender != s.top_root.receiver}, :custom_target => :action_tracker_target
 
@@ -20,10 +28,7 @@ class Scrap < ActiveRecord::Base
 
   track_actions :reply_scrap_on_self, :after_create, :keep_params => ['sender.name', 'content'], :if => Proc.new{|s| s.sender != s.receiver && s.sender == s.top_root.receiver}
 
-  after_create do |scrap|
-    scrap.root.update_attribute('updated_at', DateTime.now) unless scrap.root.nil?
-    Scrap::Notifier.deliver_mail(scrap) if scrap.send_notification?
-  end
+  after_create :send_notification
 
   before_validation :strip_all_html_tags
 
@@ -54,21 +59,21 @@ class Scrap < ActiveRecord::Base
     sender != receiver && (is_root? ? root.receiver.receives_scrap_notification? : receiver.receives_scrap_notification?)
   end
 
-  class Notifier < ActionMailer::Base
-    def mail(scrap)
-      sender, receiver = scrap.sender, scrap.receiver
-      recipients receiver.email
+  protected
 
-      from "#{sender.environment.name} <#{sender.environment.noreply_email}>"
-      subject _("[%s] You received a scrap!") % [sender.environment.name]
-      body :recipient => receiver.name,
-        :sender => sender.name,
-        :sender_link => sender.url,
-        :scrap_content => scrap.content,
-        :wall_url => scrap.scrap_wall_url,
-        :environment => sender.environment.name,
-        :url => sender.environment.top_url
-    end
+  def create_activity
+    # do not scrap replies (when scrap_id is not nil)
+    return if self.scrap_id.present?
+    ProfileActivity.create! profile_id: self.receiver_id, activity: self
+  end
+
+  def update_activity
+    ProfileActivity.update_activity self
+  end
+
+  def send_notification
+    self.root.update_attribute('updated_at', DateTime.now) unless self.root.nil?
+    ScrapNotifier.notification(self).deliver if self.send_notification?
   end
 
 end
