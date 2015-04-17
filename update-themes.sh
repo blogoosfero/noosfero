@@ -1,6 +1,6 @@
 #!/bin/bash
 
-cd public/designs/themes/cirandas-themes
+cd public/designs/themes/blogoosfero-themes
 git checkout master
 git pull --rebase
 
