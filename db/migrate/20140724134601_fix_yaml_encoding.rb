@@ -19,7 +19,7 @@ class FixYamlEncoding < ActiveRecord::Migration
 
   def self.fix_encoding(model, param)
     puts "Fixing #{model.count} rows of #{model} (#{param})"
-    model.find_each batch_size: 100 do |r|
+    model.find_each do |r|
       begin
         yaml = r.send(param)
         # if deserialization failed then a string is returned
