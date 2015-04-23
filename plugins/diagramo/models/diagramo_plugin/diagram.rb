@@ -28,7 +28,7 @@ class DiagramoPlugin::Diagram < Article
   def to_html options = {}
     article = self
     lambda do
-      render 'content_viewer/diagramo_plugin/diagram', article: article
+      render 'content_viewer/diagramo_plugin/diagram', :article => article
     end
   end
 
@@ -61,7 +61,7 @@ class DiagramoPlugin::Diagram < Article
     self.environment.diagramo_settings.admin_email
   end
   def admin_password
-    Digest::MD5.hexdigest self.environment.diagramo_settings.admin_password
+    self.environment.diagramo_settings.admin_password
   end
 
   def diagramo_url
@@ -81,10 +81,10 @@ class DiagramoPlugin::Diagram < Article
   end
 
   def diagramo_login
-    self.mech.post self.diagramo_controller_url, action: 'loginExe', email: diagramo_email, password: diagramo_password
+    self.mech.post self.diagramo_controller_url, :action => 'loginExe', :email => diagramo_email, :password => diagramo_password
   end
   def diagramo_logout
-    self.mech.post self.diagramo_controller_url, action: 'logoutExe'
+    self.mech.post self.diagramo_controller_url, :action => 'logoutExe'
   end
 
   def diagramo_user_exists?
@@ -98,8 +98,8 @@ class DiagramoPlugin::Diagram < Article
   end
 
   def diagramo_create_user
-    page = self.mech.post self.diagramo_controller_url, action: 'loginExe', email: self.admin_email, password: self.admin_password
-    page = self.mech.post self.diagramo_controller_url, action: 'addUserExe', email: diagramo_email, password: diagramo_password
+    page = self.mech.post self.diagramo_controller_url, :action => 'loginExe', :email => self.admin_email, :password => self.admin_password
+    page = self.mech.post self.diagramo_controller_url, :action => 'addUserExe', :email => diagramo_email, :password => diagramo_password
     # logout admin
     self.diagramo_logout
     self.diagramo_login
@@ -109,7 +109,7 @@ class DiagramoPlugin::Diagram < Article
     return if self.diagramo_id.present?
 
     self.diagramo_create_user unless self.diagramo_user_exists?
-    page = self.mech.post self.diagramo_controller_url, action: 'firstSaveExe', public: 'true', title: self.title, description: self.description
+    page = self.mech.post self.diagramo_controller_url, :action => 'firstSaveExe', :public => 'true', :title => self.title, :description => self.description
     page.uri.to_s =~ /diagramId=(.*)$/
     self.diagramo_id = $1
   end
@@ -119,16 +119,16 @@ class DiagramoPlugin::Diagram < Article
 
     # FIXME: can't save diagram with action save
     #self.diagramo_login
-    #self.mech.post self.diagramo_controller_url, action: 'save', diagramId: self.diagramo_id, title: self.title, description: self.description
+    #self.mech.post self.diagramo_controller_url, :action => 'save', :diagramId => self.diagramo_id, :title => self.title, :description => self.description
   end
 
   def diagramo_destroy
     self.diagramo_login
-    self.mech.post self.diagramo_controller_url, action: 'deleteDiagramExe', diagramId: self.diagramo_id
+    self.mech.post self.diagramo_controller_url, :action => 'deleteDiagramExe', :diagramId => self.diagramo_id
   end
 
   def diagramo_cookie
-    biscuit = PHP.serialize({email: diagramo_email, password: Digest::MD5.hexdigest(diagramo_password)})
+    biscuit = PHP.serialize({:email => diagramo_email, :password => Digest::MD5.hexdigest(diagramo_password)})
     biscuit = strict_encode64 biscuit
     biscuit = biscuit.reverse
     biscuit = uuencode biscuit
