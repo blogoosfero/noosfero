@@ -3497,5 +3497,11 @@ div.with_media_panel .formfield input[type="checkbox"] {
   padding: 0px 0px 0px 10px;
 }
 
-/*PROVISORY!*/
+/*Corrections due to incompatibilities with responsive design and solr. They must be removed when blogoosfero becomes responsive*/
 #product-owner { display:none; }
+#facets-column { display:none; }
+.hidden, .hidden-lg, .hidden-md { display: none; }
+.search-field .formfield, .search-field .formfield input { width: 800px; }
+.controller-search .search-field .formfield { width: 100%; }
+
+
