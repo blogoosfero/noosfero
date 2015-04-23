@@ -3101,7 +3101,7 @@ table#recaptcha_table tr:hover td {
 .vote-actions {
     position: relative;
     right: 0px;
-    top: 0px;
+    top: 8px;
 }
 .action .like:before {
   content: url('imgs/positive-hand.png');
