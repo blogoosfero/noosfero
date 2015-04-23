@@ -3,7 +3,7 @@
 %>
 
 <% button_bar do %>
-  <%= button :back, 'Voltar a %{parent}' % {:parent => back_to.name}, back_to.url %>
+  <%= button :back, 'Voltar a %{parent}' % {parent: back_to.name}, back_to.url %>
 <% end %>
 
 <iframe id="diagramo" src="<%= article.diagramo_uri %>" width="100%" height="500px"></iframe>

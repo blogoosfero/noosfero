@@ -1,6 +1,6 @@
 
-<% form_for :environment, environment, :url => {:controller => :diagramo_plugin_admin, :action => :index} do |f| %>
-  <% f.fields_for :diagramo_settings, environment.diagramo_settings do |ff| %>
+<%= form_for environment, as: :environment, url: {controller: :diagramo_plugin_admin, action: :index} do |f| %>
+  <%= f.fields_for :diagramo_settings, environment.diagramo_settings do |ff| %>
 
     <%= ff.label :url, 'Endereço do diagramo' %>
     <%= ff.text_field :url %>
@@ -16,7 +16,7 @@
   <div>
     <% button_bar do %>
       <%= submit_button('save', _('Save changes')) %>
-      <%= button :back, _('Back to plugins administration panel'), :controller => 'plugins' %>
+      <%= button :back, _('Back to plugins administration panel'), controller: 'plugins' %>
     <% end %>
   </div>
 

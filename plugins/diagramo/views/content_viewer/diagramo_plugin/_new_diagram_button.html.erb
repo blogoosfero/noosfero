@@ -1,7 +1,7 @@
 <% if user and user.is_admin? environment  %>
 
 <% if @page.allow_create?(user) %>
-  <%= button :diagramo, _('Enviar diagrama'), :profile => profile.identifier, :controller => :cms, :action => :new, :type => 'DiagramoPlugin::Diagram', :parent_id => article.id %>
+  <%= button :diagramo, _('Enviar diagrama'), profile: profile.identifier, controller: :cms, action: :new, type: 'DiagramoPlugin::Diagram', parent_id: article.id %>
 <% end %>
 
 <% end %>
