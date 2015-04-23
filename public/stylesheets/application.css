@@ -2666,6 +2666,7 @@ div#activation_enterprise label, div#activation_enterprise input, div#activation
   display: block;
   padding: 2px 0px;
 }
+/* We will provisorily hide this for blogoosfero
 .formfield input, .formfield textarea {
   background: transparent url("../images/input-bg.gif") no-repeat top left;
   border: 1px solid #999;
@@ -2673,7 +2674,7 @@ div#activation_enterprise label, div#activation_enterprise input, div#activation
   border-left: none;
   color: #585858;
   font-size: 11px;
-}
+}*/
 .colorpicker_field {
   display: none;
 }
