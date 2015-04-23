@@ -381,7 +381,7 @@ body, th, td, input {
 }
 
 .controller-cms .show-media-panel .with_media_panel {
-  width: 600px;
+  width: 480px;
 }
 
 div.no_media_panel {
@@ -3101,7 +3101,7 @@ table#recaptcha_table tr:hover td {
 .vote-actions {
     position: relative;
     right: 0px;
-    top: 0px;
+    top: 8px;
 }
 .action .like:before {
   content: url('imgs/positive-hand.png');
@@ -3428,11 +3428,6 @@ body.noosfero .join-leave-button a.button.with-text:visited {
 
 
 /* Text editors sidebar */
-
-.controller-cms div.with_media_panel {
-    float: left;
-    width: 500px;
-}
 div.with_media_panel .formfield input {
     width: 100%;
 }
@@ -3443,9 +3438,9 @@ div.with_media_panel .formfield input[type="checkbox"] {
 
 .text-editor-sidebar {
     position: absolute;
-    width: 380px;
+    width: 400px;
     right: 20px;
-    top: 70px;
+    top: 30px;
 }
 
 #product-name h2 {
