@@ -1,7 +1,7 @@
 source "https://rubygems.org"
 gem 'rails',                    '~> 3.2.21'
 gem 'minitest',                 '~> 3.2.0'
-gem 'fast_gettext',             '~> 0.6.8'
+gem 'fast_gettext'
 gem 'acts-as-taggable-on',      '~> 3.4.2'
 gem 'rails_autolink',           '~> 1.1.5'
 gem 'RedCloth',                 '~> 4.2.9'
@@ -19,6 +19,7 @@ gem 'i18n',                     '~> 0.6.0'
 gem 'will-paginate-i18n'
 gem 'utf8-cleaner'
 gem 'premailer-rails'
+gem 'slim'
 
 platform :ruby do
   gem 'pg'
@@ -47,7 +48,6 @@ end
 
 group :assets do
   gem 'assets_live_compile'
-  gem 'therubyracer', platforms: :ruby
   gem 'uglifier', '>= 1.0.3'
   gem 'coffee-rails'
   gem 'sass'

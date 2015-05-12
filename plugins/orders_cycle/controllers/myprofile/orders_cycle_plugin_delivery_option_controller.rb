@@ -1,7 +1,4 @@
-# workaround: necessary to load extensions
-require_dependency 'delivery_plugin'
-
-class OrdersCyclePluginDeliveryOptionController < DeliveryPluginOptionController
+class OrdersCyclePluginDeliveryOptionController < DeliveryPlugin::AdminOptionsController
 
   no_design_blocks
 
@@ -14,7 +11,7 @@ class OrdersCyclePluginDeliveryOptionController < DeliveryPluginOptionController
 
   protected
 
-  extend ControllerInheritance::ClassMethods
+  extend HMVC::ClassMethods
   hmvc OrdersCyclePlugin, orders_context: OrdersCyclePlugin
 
 end

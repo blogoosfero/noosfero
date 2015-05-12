@@ -1,8 +1,8 @@
 @import 'base';
 
-//use with sass nested import
+// DEPRECATED use bootstrap instead
 
-$input-height: 3*$height;
+//use with sass nested import
 
 .field-title {
   text-transform: uppercase;
@@ -29,6 +29,10 @@ $input-height: 3*$height;
     clear: both;
     margin-bottom: $half-margin;
     font-size: 10px;
+  }
+
+  .form-control {
+    display: inline-block;
   }
 }
 
@@ -65,7 +69,6 @@ $input-height: 3*$height;
     .field-unit {
       float: left;
       width: $intercolumn;
-      line-height: $input-height;
     }
   }
 }
@@ -94,12 +97,10 @@ textarea {
 
 select,
 input[type=text], input[type=password] {
-  height: $input-height;
 }
 
 select {
   background-color: #fff;
-  border: $border solid black;
   padding-left: $half-padding;
 }
 
@@ -110,7 +111,6 @@ input {
   }
 
   &[type=text] {
-    border: $border solid black;
     padding: $half-padding;
     margin: 0;
   }

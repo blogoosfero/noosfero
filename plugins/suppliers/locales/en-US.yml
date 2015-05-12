@@ -141,10 +141,10 @@
         month: "Month"
         year: "Year"
       actions: &suppliers_plugin_actions
-        all: "all"
-        none: "none"
-        select: "select"
-        with_selection: "with selected"
+        all: "All"
+        none: "None"
+        select: "Select"
+        with_selection: "with itens selected"
         with_filter: "with search"
         activate: "activate"
         deactivate: "deactivate"
@@ -313,33 +313,6 @@
           no_consumers: "This profile isn't a suppliers of the network."
           save: "Save"
 
-  delivery_plugin:
-    lib:
-      plugin:
-        name: "Delivery"
-        description: "Management of delivery's methods and options"
-    views:
-      delivery_option: 
-        _method_edit: 
-          add: Add
-          cancel: cancel
-          instructions: Instructions
-          instructions_help: "Give the consumer instructions for the delivery, include the address and any recommendations you find useful. This text will be available on the page of the order, and by confirming the order the person will receive a copy of the order."
-          name: Name
-          save: Save
-        _select_content: 
-          add: Add
-          add_new: "add new"
-          are_you_sure_you_want: "Are you sure you want to delete this method?"
-          cancel: cancel
-          choose_a_delivery_met: "Choose a delivery method from the list"
-          edit_this: "edit this"
-          remove_method: "remove method"
-        _show: 
-          x: X
-        select: 
-          add_a_delivery_method: "Add a delivery method to the Orders' Cycle"
-
   orders_plugin:
     terms:
       <<: *suppliers_terms
@@ -458,6 +431,7 @@
           city: "City" 
           state: "State"
           postal_code: "Postal code"
+          zip_code: "ZIP code"
         payment_data:
           method: "Method"
           change: "Change"
@@ -468,6 +442,7 @@
     views:
       filter:
         <<: *suppliers_plugin_filter
+        delivery: 'Delivery or pickup'
       actions: 
         <<: *suppliers_plugin_actions
 
@@ -498,6 +473,28 @@
           quantity: "qty"
           price_total: "value (%{currency})"
           status: "status"
+
+      message: 
+        _fields: 
+          message: Message
+          subject: Subject
+        new_to_admins: 
+          cancel: cancel
+          message_to_managers_o: "Message to managers of \"%{profile}\""
+          send: Send
+        new_to_consumer: 
+          cancel: cancel
+          message_to_member_con: "Message to consumer \"%{consumer}\""
+          send: Send
+        new_to_consumer_for_order: 
+          cancel: cancel
+          include_reference_to_: "Include reference to the order made"
+          message_to_member_con: "Message to consumer \"%{consumer}\""
+          send: Send
+        new_to_supplier: 
+          cancel: cancel
+          message_to_supplier_s: "Message to supplier \"%{supplier}\""
+          send: Send
       order:
         _show: 
           open: "Open"
@@ -515,8 +512,9 @@
           supplier_heading: "Data %{terms.supplier.from_article.singular}"
       admin:
         reports:
-          products_spreadsheet: "Products' spreadsheet"
-          orders_spreadsheet: "Orders' spreadsheet"
+          generate_spreadsheets: "Generate spreadsheets"
+          products_spreadsheet: "Products"
+          orders_spreadsheet: "Orders"
         index: 
           no_orders_to_show: "No orders to show."
           code: "code"
@@ -541,6 +539,25 @@
           warn_member_of_the_ch: "Warn consumer of the changes in his/her order"
 
       mailer:
+        message_to_admins: 
+          a_service_of_s: "A service of %{environment}."
+          hello_managers_of_nam: "Hello managers of %{name},"
+          the_member_member_sen: "The consumer %{member} sent a messsage to you"
+        message_to_consumer: 
+          a_service_of_s: "A service of %{environment}."
+          hello_name: "Hello %{name},"
+          the_collective_profile_s: "%{profile} sent a messsage to you"
+        message_to_consumer_for_order: 
+          a_service_of_s: "A service of %{environment}."
+          hello_name: "Hello %{name}!"
+          order: order
+          quantity_unit_of_prod: "%{quantity} %{unit} of %{product}"
+          the_collective_profile_s: "%{profile} sent a messsage to you regarding your %{order}"
+          the_products_in_the_o: "The products in the order"
+        message_to_supplier: 
+          a_service_of_s: "A service of %{environment}."
+          hello_administrators_: "Hello administrators of %{name},"
+          the_collective_profile_s: "%{profile} sent a messsage to you"
         order_confirmation: 
           attention_to_the_foll: "Attention to the following delivery instructions:"
           dear_name: "Dear %{name},"
@@ -619,51 +636,11 @@
         cycles: 
           all_cycles: "all cycles"
       mailer: 
-        message_to_admins: 
-          a_service_of_s: "A service of %{environment}."
-          hello_managers_of_nam: "Hello managers of %{name},"
-          the_member_member_sen: "The consumer %{member} sent a messsage to you"
-        message_to_consumer: 
-          a_service_of_s: "A service of %{environment}."
-          hello_name: "Hello %{name},"
-          the_collective_profile_s: "%{terms.profile.article.singular.capitalize} %{profile} sent a messsage to you"
-        message_to_consumer_for_order: 
-          a_service_of_s: "A service of %{environment}."
-          hello_name: "Hello %{name}!"
-          order: order
-          quantity_unit_of_prod: "%{quantity} %{unit} of %{product}"
-          the_collective_profile_s: "%{terms.profile.article.singular.capitalize} %{profile} sent a messsage to you regarding your %{order}"
-          the_products_in_the_o: "The products in the order"
-        message_to_supplier: 
-          a_service_of_s: "A service of %{environment}."
-          hello_administrators_: "Hello administrators of %{name},"
-          the_collective_profile_s: "%{terms.profile.article.singular.capitalize} %{profile} sent a messsage to you"
         open_cycle: 
           a_new_cycle_is_open_c: "A new cycle is open called "
           hello_member_of_name: "Hello consumer of %{name},"
           the_administrator_let: "The administrator let a message about this cycle"
           the_cycle_description: "The cycle description is.."
-      message: 
-        _fields: 
-          message: Message
-          subject: Subject
-        new_to_admins: 
-          cancel: cancel
-          message_to_managers_o: "Message to managers of \"%{profile}\""
-          send: Send
-        new_to_consumer: 
-          cancel: cancel
-          message_to_member_con: "Message to consumer \"%{consumer}\""
-          send: Send
-        new_to_consumer_for_order: 
-          cancel: cancel
-          include_reference_to_: "Include reference to the order made"
-          message_to_member_con: "Message to consumer \"%{consumer}\""
-          send: Send
-        new_to_supplier: 
-          cancel: cancel
-          message_to_supplier_s: "Message %{terms.supplier.to_article.singular} \"%{supplier}\""
-          send: Send
       profile: 
       order: 
         _consumer_orders: 
@@ -682,6 +659,7 @@
           sign_up: "sign up"
           this_cycle_is_already: "This cycle is already closed."
           this_cycle_is_not_ope: "This cycle is not open yet."
+          the_time_for_orders_is: "The orders' period for this cycle is from %{start} to %{finish}"
           to_place_an_order_you: "To place an order you need to be logged in and registered %{terms.profile.at_article.singular}. Please %{login} or %{signup}."
           you_haven_t_placed_an: "You haven't placed any order on this cycle yet."
           you_still_can: "You still can:"
@@ -863,6 +841,7 @@
       layout_helper: 
         orders: Orders
         start: Start
+        products: Products
         administration: Administration
         volunteering: Volunteering
     terms:

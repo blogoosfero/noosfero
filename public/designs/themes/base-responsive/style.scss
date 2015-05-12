@@ -1,4 +1,5 @@
 @import 'stylesheets/chat';
+// bootstrap not included here, see noosfero-responsive
 
 /* ==> button.css <== */
 
@@ -647,12 +648,13 @@ div#notice {
 .tag_cloud {
   text-align: center;
 }
-
 .tag_cloud a {
   text-decoration: none;
   white-space: nowrap;
 }
-
+#content .tags-block .tag_cloud a {
+  white-space: initial;
+}
 .tag_cloud a small {
   opacity: 0.5;
   filter:alpha(opacity=50);
@@ -903,25 +905,24 @@ div#notice {
 .msie .search-results-box {
   width: 48%;
 }
-
 #content .no-boxes h1 {
   font-variant: small-caps;
   color: #555753;
   text-align: left;
   border-bottom: 2px solid #2e3436; /*8C0*/
 }
-
 .query {
   display: none;
 }
-
 .controller-search #content .search_form h3 {
   display: none;
 }
-
 .controller-search #content .search_form h4 {
   background: #DDD;
   color: #777;
+}
+.search-hint {
+  padding: 0;
 }
 .controller-search .search-options {
   border: 1px solid #777;
@@ -931,7 +932,6 @@ div#notice {
 .controller-search .search-options ul li {
   position: relative;
 }
-
 .controller-search .search-within select {
   display: block;
   margin-bottom: 5px;
@@ -946,17 +946,11 @@ div#notice {
   position: relative;
   top: 5px;
 }
-
-/*.controller-search a {
-  color: #555753;
-}*/
-
 #search-results h3 {
   color: #555753; /*6A0*/
   font-variant: small-caps;
   margin: 0px;
 }
-
 .search-results-innerbox {
   border: 1px solid #CCC;
   border-top: 2px solid #2e3436;
@@ -987,6 +981,28 @@ ul#assets-menu {
 .controller-search .search-field .formfield {
     width: auto;
     display: table;
+}
+@media (max-width: 500px) {
+  ul#assets-menu {
+    display: none;
+  }
+  #search-filters {
+    margin-top: 0;
+    float: none;
+  }
+}
+@media (min-width: 501px) and (max-width: 767px) {
+  ul#assets-menu {
+    display: none;
+  }
+  #search-filters {
+    margin-top: -40px;
+  }
+}
+@media (min-width: 768px) and (max-width: 991px) {
+  #search-filters {
+    margin-top: -80px;
+  }
 }
 
 /* ==> article.css <== */
@@ -1541,11 +1557,14 @@ div.tooltip-inner {
 .search-results-type-article ul {
   overflow: hidden;
 }
+.controller-search #search-results {
+  margin: 0;
+}
 .controller-search #search-column-left {
   overflow: hidden;
 }
 .controller-search #content .search-results-type-article li {
-  padding: 10px;
+  padding: 0 10px 10px 10px;
 }
 .search-product-item-first-column,
 .search-content-first-column {
@@ -1562,8 +1581,9 @@ div.tooltip-inner {
   margin: 0;
 }
 .search-product-item .search-result-title {
-  font-size: 15px;
+  font-size: 24px;
   display: block;
+  color: #333;
 }
 @media (max-width: 767px) {
   .search-no-image {
@@ -1599,7 +1619,7 @@ div.tooltip-inner {
   }
   .controller-search #content .search-results-type-product li {
     font-size: 13px;
-    padding: 10px;
+    padding: 0 10px 10px 10px;
   }
   .search-content-first-column [class*='icon-'] {
     font-size: 64px;
@@ -1988,6 +2008,10 @@ input.ui-autocomplete-input {
 }
 
 /* CMS management */
+#new-folder-button {
+  margin: -10px 0 15px 0;
+}
+
 .article-controls .btn,
 table.cms-articles a.icon,
 table.cms-articles a.icon-parent-folder,
@@ -2029,4 +2053,69 @@ table.cms-articles .article-name {
 
 .required-field {
   color: #E75252;
+  font-weight: bold;
 }
+
+@media screen and (min-width: 768px) {
+  .block, .no-boxes {
+    border: none !important;
+  }
+
+  #wrap-1 {
+    background-color: white !important;
+    box-shadow: 0 0 10px black;
+    -ms-box-shadow: 0 0 10px black;
+    -moz-box-shadow: 0 0 10px black;
+    -webkit-box-shadow: 0 0 10px black;
+  }
+}
+
+@media screen and (max-width: 767px) {
+  .block, .no-boxes {
+    box-shadow: 0 0 10px black;
+    -ms-box-shadow: 0 0 10px black;
+    -moz-box-shadow: 0 0 10px black;
+    -webkit-box-shadow: 0 0 10px black;
+  }
+}
+
+#theme-footer #language-chooser {
+  text-align: left;
+}
+
+/* armengue */
+/* didn't find why .no-boxes has bigger width than its parent */
+.no-boxes {
+  width: 96%;
+}
+
+@media screen and (min-width:1200px) {
+  #top-bar a.icon-help {
+    font-size: 0;
+  }
+
+  #top-bar a.icon-help:before {
+    font-size:15px;
+  }
+}
+
+/* Default color for buttons */
+a.btn, .block a.btn, a.btn:visited, .block a.btn:visited, a.btn:hover, .block a.btn:hover {
+  color: #fff;
+}
+
+/* Adjustments for no-boxes */
+#content .no-boxes {
+  padding-left: 30px;
+  padding-right: 30px;
+}
+
+.modal {
+  background-color: rgba(0,0,0,0.5);
+}
+
+/* Products */
+#product-list .expand-box > span {
+  font-size: 0.6em;
+}
+

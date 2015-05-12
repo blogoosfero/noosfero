@@ -4,6 +4,7 @@ class SearchController < PublicController
   include SearchHelper
   include ActionView::Helpers::NumberHelper
 
+  before_filter :redirect_to_environment_domain
   before_filter :redirect_asset_param, :except => [:assets, :suggestions]
   before_filter :load_category, :except => :suggestions
   before_filter :load_search_assets, :except => :suggestions
@@ -62,8 +63,8 @@ class SearchController < PublicController
 
   def articles
     @scope = @environment.articles.public.includes(
-      :last_changed_by, :parent, :tags, {:profile => [:domains]}
-    ).paginate(paginate_options)
+      :last_changed_by, :parent, :tags, {profile: [:domains]}
+    )
     full_text_search
   end
 
@@ -77,12 +78,12 @@ class SearchController < PublicController
   end
 
   def products
-    @scope = @environment.products.includes(
+    @scope = @environment.products.enabled.public.includes(
       :product_category, :unit, :region, :image, {inputs: [:product_category]},
       {product_qualifiers: [:qualifier, :certifier]},
       {price_details: [:production_cost]},
       {profile: [:domains]},
-    ).paginate(paginate_options)
+    )
     full_text_search
   end
 
@@ -161,6 +162,11 @@ class SearchController < PublicController
 
   #######################################################
   protected
+
+  def redirect_to_environment_domain
+    return unless Rails.env.production?
+    redirect_to params.merge host: environment.default_hostname if request.host != environment.default_hostname
+  end
 
   def load_query
     @asset = (params[:asset] || params[:action]).to_sym
@@ -246,7 +252,7 @@ class SearchController < PublicController
   def visible_profiles(klass, *extra_relations)
     relations = [:image, :domains, :environment, :preferred_domain]
     relations += extra_relations
-    @environment.send(klass.name.underscore.pluralize).visible.includes(relations).paginate(paginate_options)
+    @environment.send(klass.name.underscore.pluralize).visible.includes(relations)
   end
 
   def per_page

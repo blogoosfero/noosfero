@@ -67,8 +67,8 @@
         this:
           singular: "esta organização"
       consumer: 
-        singular: "consumidor"
-        plural: "consumidores"
+        singular: "consumidor(a)"
+        plural: "consumidores(as)"
         to_article:
           singular: "ao(à) consumidor(a)"
           plural: "aos(às) consumidores(as)"
@@ -138,7 +138,7 @@
         unit: unidade
         units: unidades
       profile: 
-        consumer: Consumidor
+        consumer: Consumidor(a)
     views:
       filter: &suppliers_plugin_filter
         filter: Filtro
@@ -149,11 +149,11 @@
         month: "Mês"
         year: "Ano"
       actions: &suppliers_plugin_actions
-        all: "todos"
-        none: "nenhum"
-        select: "selecionar"
-        with_selection: "com selecionados"
-        with_filter: "com a busca"
+        all: "Todos"
+        none: "Nenhum"
+        select: "Selecionar"
+        with_selection: "com itens selecionados"
+        with_filter: "com a busca:"
         activate: "ativar"
         deactivate: "desativar"
 
@@ -338,33 +338,6 @@
           no_consumers: "Este perfil não é um fornecedor da rede."
           save: "Salvar"
 
-  delivery_plugin:
-    lib:
-      plugin:
-        name: "Entrega"
-        description: "Gestão de métodos e opções de entrega"
-    views:
-      delivery_option: 
-        _method_edit: 
-          add: Adicionar
-          cancel: Cancelar
-          instructions: Instruções
-          instructions_help: "Dê instruções aos(às) consumidores(as) para a entrega. Inclua o endereço e quaisquer recomendações que você achar úteis. Este texto estará disponível na página do pedido e, ao confirmar uma compra, a pessoa receberá uma cópia dela."
-          name: Nome
-          save: Salvar
-        _select_content: 
-          add: Adicionar
-          add_new: "adicionar novo"
-          are_you_sure_you_want: "Tem certeza de que quer remover este método?"
-          cancel: Cancelar
-          choose_a_delivery_met: "Escolha um método de entrega da lista"
-          edit_this: Editar
-          remove_method: "Remover método"
-        _show: 
-          x: X
-        select: 
-          add_a_delivery_method: "Adicionar um método de entrega ao ciclo de pedidos"
-
   orders_plugin:
     terms:
       <<: *suppliers_terms
@@ -411,7 +384,7 @@
       report: 
         closed_orders: "Pedidos fechados"
         created: criado
-        member_name: "Nome do Membro"
+        member_name: "Nome do(a) consumidor(a)"
         order_code: "Código do Pedido"
         min_stock: "estoque mín."
         mm_dd_yy_hh_mm_am_pm: "DD/MM/YY"
@@ -483,7 +456,8 @@
           district: "Bairro"
           city: "Cidade" 
           state: "Estado"
-          postal_code: "Código postal"
+          postal_code: "CEP"
+          zip_code: "Código postal"
         payment_data:
           method: "Método"
           change: "Troco"
@@ -494,6 +468,7 @@
     views:
       filter:
         <<: *suppliers_plugin_filter
+        delivery: 'Forma de entrega ou retirada'
       actions: 
         <<: *suppliers_plugin_actions
 
@@ -524,6 +499,29 @@
           quantity: "qtd"
           price_total: "valor (%{currency})"
           status: "etapa"
+
+      message:
+        _fields: 
+          message: Mensagem
+          subject: Assunto
+        new_to_admins: 
+          cancel: Cancelar
+          message_to_managers_o: "Mensagem para o(a) consumidor(a) \"%{profile}\""
+          send: Enviar
+        new_to_consumer: 
+          cancel: Cancelar
+          message_to_member_con: "Mensagem para o(a) consumidor(a) \"%{consumer}\""
+          send: Enviar
+        new_to_consumer_for_order: 
+          cancel: Cancelar
+          include_reference_to_: "Inclua uma referência ao pedido feito"
+          message_to_member_con: "Mensagem para o(a) consumidor(a) \"%{consumer}\""
+          send: Enviar
+        new_to_supplier: 
+          cancel: Cancelar
+          message_to_supplier_s: "Mensagem para o(a) fornecedor(a) \"%{supplier}\""
+          send: Enviar
+
       order:
         _show:
           open: "Abrir"
@@ -541,8 +539,9 @@
           supplier_heading: "Dados %{terms.supplier.from_article.singular}"
       admin:
         reports:
-          products_spreadsheet: "Planilha de produtos"
-          orders_spreadsheet: "Planilha de pedidos"
+          generate: "Gerar planilhas"
+          products_spreadsheet: "Produtos"
+          orders_spreadsheet: "Pedidos"
         index: 
           no_orders_to_show: "Nenhum pedido para visualizar."
           code: "código"
@@ -565,6 +564,25 @@
           the_collective_member: "O(a) consumidor(a) %{terms.profile.from_article.singular} receberá um email que discrimina todas as mudanças feitas em seu pedido."
           warn_member_of_the_ch: "Avise o(a) consumidor(a) das mudanças em seu pedido"
       mailer:
+        message_to_admins: 
+          a_service_of_s: "Um serviço de %{environment}."
+          hello_managers_of_nam: "Olá gestoras/es de %{name}!"
+          the_member_member_sen: "O membro %{member} mandou uma mensagem para você"
+        message_to_consumer: 
+          a_service_of_s: "Um serviço de %{environment}."
+          hello_name: "Olá %{name}!,"
+          the_collective_profile_s: "O(a) %{profile} mandou uma mensagem para você"
+        message_to_consumer_for_order: 
+          a_service_of_s: "Um serviço de %{environment}."
+          hello_name: "Olá %{name}!,"
+          order: Pedido
+          quantity_unit_of_prod: "%{quantity} %{unit} do %{product}"
+          the_collective_profile_s: "O(a) %{profile} mandou uma mensagem para voce relacionado a seu %{order}"
+          the_products_in_the_o: "Os produtos no pedido"
+        message_to_supplier: 
+          a_service_of_s: "Um serviço de %{environment}."
+          hello_administrators_: "Olá administradores de %{name}!"
+          the_collective_profile_s: "O(a) %{profile} mandou uma mensagem para você"
         order_confirmation: 
           attention_to_the_foll: "Atenção às instruções de entrega a seguir:"
           dear_name: "Olá %{name},"
@@ -643,51 +661,11 @@
         cycles: 
           all_cycles: "todos ciclos"
       mailer: 
-        message_to_admins: 
-          a_service_of_s: "Um serviço de %{environment}."
-          hello_managers_of_nam: "Olá gestoras/es de %{name}!"
-          the_member_member_sen: "O membro %{member} mandou uma mensagem para você"
-        message_to_consumer: 
-          a_service_of_s: "Um serviço de %{environment}."
-          hello_name: "Olá %{name}!,"
-          the_collective_profile_s: "%{terms.profile.article.singular.capitalize} %{profile} mandou uma mensagem para você"
-        message_to_consumer_for_order: 
-          a_service_of_s: "Um serviço de %{environment}."
-          hello_name: "Olá %{name}!,"
-          order: Pedido
-          quantity_unit_of_prod: "%{quantity} %{unit} do %{product}"
-          the_collective_profile_s: "%{terms.profile.article.singular.capitalize} %{profile} mandou uma mensagem para voce relacionado a seu %{order}"
-          the_products_in_the_o: "Os produtos no pedido"
-        message_to_supplier: 
-          a_service_of_s: "Um serviço de %{environment}."
-          hello_administrators_: "Olá administradores de %{name}!"
-          the_collective_profile_s: "%{terms.profile.article.singular.capitalize} %{profile} mandou uma mensagem para você"
         open_cycle: 
           a_new_cycle_is_open_c: "Um novo ciclo de pedidos está aberto chamado "
           hello_member_of_name: "Olá membros da comunidade %{name}!"
           the_administrator_let: "A/O administrador(a) deixou uma mensagem sobre este ciclo"
           the_cycle_description: "A descrição do ciclo é.."
-      message: 
-        _fields: 
-          message: Mensagem
-          subject: Assunto
-        new_to_admins: 
-          cancel: Cancelar
-          message_to_managers_o: "Mensagem para o(a) consumidor(a) \"%{profile}\""
-          send: Enviar
-        new_to_consumer: 
-          cancel: Cancelar
-          message_to_member_con: "Mensagem para o(a) consumidor(a) \"%{consumer}\""
-          send: Enviar
-        new_to_consumer_for_order: 
-          cancel: Cancelar
-          include_reference_to_: "Inclua uma referência ao pedido feito"
-          message_to_member_con: "Mensagem para o(a) consumidor(a) \"%{consumer}\""
-          send: Enviar
-        new_to_supplier: 
-          cancel: Cancelar
-          message_to_supplier_s: "Mensagem %{terms.supplier.to_article.singular} \"%{supplier}\""
-          send: Enviar
       order: 
         _consumer_orders: 
           caution: "<strong>Cuidado</strong>, voce está editando os pedidos de \"%{consumer}\". É preferível fazer pequenas edições pela administração do ciclo. Desta forma, a pessoa será propriamente avisada das mudanças. Nós recomendamos que esta página seja usada somente se você está fazendo o pedido para outra pessoa."
@@ -704,7 +682,8 @@
           send_message_to_the_m: "Enviar mensagem para gestores"
           sign_up: registre-se
           this_cycle_is_already: "Este ciclo já foi fechado."
-          this_cycle_is_not_ope: "Este ciclo não está aberto."
+          this_cycle_is_not_ope: "Este ciclo ainda não está aberto."
+          the_time_for_orders_is: "O período de pedidos para esse ciclo é de %{start} até %{finish}"
           to_place_an_order_you: "Para fazer um pedido você precisa estar logado e registrado %{terms.profile.at_article.singular}. Por favor faça %{login} ou %{signup}."
           you_haven_t_placed_an: "Você ainda não fez pedidos neste ciclo."
           you_still_can: "Você ainda pode:"
@@ -886,6 +865,7 @@
       layout_helper: 
         start: Início
         orders: Pedidos
+        products: Produtos
         administration: Administração
         volunteering: Voluntariado
     terms: 

@@ -1,6 +1,6 @@
 class OrdersPlugin::Item < ActiveRecord::Base
 
-  attr_accessible :price, :name, :order, :product
+  attr_accessible :price, :name, :order, :product, :product_id
 
   # flag used by items to compare them with products
   attr_accessor :product_diff
@@ -94,13 +94,20 @@ class OrdersPlugin::Item < ActiveRecord::Base
     self['name'] || (self.product.name rescue nil)
   end
   def price
-    self['price'] || (self.product.price rescue nil)
+    self['price'] || (self.product.price_with_discount || 0 rescue nil)
   end
   def unit
     self.product.unit
   end
   def supplier
     self.product.supplier rescue self.order.profile.self_supplier
+  end
+
+  # fallback to price * quantity
+  def price_consumer_ordered
+    v = self[:price_consumer_ordered]
+    v = self.price * self.quantity_consumer_ordered if (v.blank? or v.zero?) and (self.price.present? and not self.price.zero?)
+    v
   end
 
   def status
@@ -168,9 +175,8 @@ class OrdersPlugin::Item < ActiveRecord::Base
 
     # Set flags according to past/future data
     # Present flags are used as classes
-    statuses_data.each_with_index do |(status, status_data), i|
+    statuses_data.each.with_index do |(status, status_data), i|
       prev_status_data = statuses_data[statuses[i-1]] unless i.zero?
-      next_status_data = statuses_data[statuses[i+1]]
 
       if prev_status_data
         if status_data[:quantity] == prev_status_data[:quantity]
@@ -184,8 +190,13 @@ class OrdersPlugin::Item < ActiveRecord::Base
         end
       end
 
-      if next_status_data
-        if next_status_data[:flags][:filled] and status_data[:quantity] != next_status_data[:quantity]
+    end
+
+    # reverse_each is necessary to set overwritten with intermediate not_modified
+    statuses_data.reverse_each.with_index do |(status, status_data), i|
+      prev_status_data = statuses_data[statuses[-i-1]]
+      if prev_status_data
+        if prev_status_data[:flags][:filled] and (status_data[:quantity] != prev_status_data[:quantity] or status_data[:not_modified])
           status_data[:flags][:overwritten] = true
         end
       end
