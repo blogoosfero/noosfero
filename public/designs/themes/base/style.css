@@ -3482,4 +3482,11 @@ div.with_media_panel .formfield input[type="checkbox"] {
 .search-field .formfield, .search-field .formfield input { width: 800px; }
 .controller-search .search-field .formfield { width: 100%; }
 
-
+/* suggestions */
+#content .profiles-suggestions .profile-list li .profile-link {
+    height: 60px;
+}
+.profiles-suggestions .profile-list .remove-suggestion, .box-1 .profiles-suggestions .profile-list li > a {
+    height: 34px;
+    display: block;
+}
