@@ -138,13 +138,12 @@
         status: "Status"
         code: "Code"
         all: "All"
-        month: "Month"
-        year: "Year"
+        period: "Period"
       actions: &suppliers_plugin_actions
-        all: "all"
-        none: "none"
-        select: "select"
-        with_selection: "with selected"
+        all: "All"
+        none: "None"
+        select: "Select"
+        with_selection: "with itens selected"
         with_filter: "with search"
         activate: "activate"
         deactivate: "deactivate"
@@ -358,10 +357,13 @@
       report: 
         closed_orders: "Closed Orders"
         created: created
+        modified: modified
+        payment_method: payment method
+        delivery_option: delivery or pickup option
+
         member_name: "Consumer name"
         min_stock: "min. stock"
         mm_dd_yy_hh_mm_am_pm: "MM/DD/YY HH:MM AM/PM"
-        modified: modified
         order_code: "Order code"
         parcelled_total: "Parcelled total"
         price_un: price/un.
@@ -431,6 +433,7 @@
           city: "City" 
           state: "State"
           postal_code: "Postal code"
+          zip_code: "ZIP code"
         payment_data:
           method: "Method"
           change: "Change"
@@ -441,6 +444,7 @@
     views:
       filter:
         <<: *suppliers_plugin_filter
+        delivery: 'Delivery or pickup'
       actions: 
         <<: *suppliers_plugin_actions
 
@@ -510,8 +514,9 @@
           supplier_heading: "Data %{terms.supplier.from_article.singular}"
       admin:
         reports:
-          products_spreadsheet: "Products' spreadsheet"
-          orders_spreadsheet: "Orders' spreadsheet"
+          generate_spreadsheets: "Generate spreadsheets"
+          products_spreadsheet: "Products"
+          orders_spreadsheet: "Orders"
         index: 
           no_orders_to_show: "No orders to show."
           code: "code"

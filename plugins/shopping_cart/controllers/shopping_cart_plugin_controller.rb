@@ -111,36 +111,30 @@ class ShoppingCartPluginController < OrdersPluginController
   end
 
   def buy
+    @no_design_blocks = true
     @customer = user || Person.new
-    if validate_cart_presence
-      @cart = cart
-      @profile = cart_profile
-      @settings = cart_profile.shopping_cart_settings
-      render :layout => false
-    end
+    return redirect_to request.referer || environment.top_url if self.cart.nil?
+    @cart = cart
+    @profile = cart_profile
+    @order = profile.sales.build consumer: @consumer
+    @order.supplier_delivery = profile.delivery_methods.find session[:cart][:last_delivery_option_id] rescue nil
+    @settings = cart_profile.shopping_cart_settings
   end
 
   def send_request
-    register_order(params[:customer], self.cart[:items])
+    order = register_order(params[:customer], self.cart[:items])
     begin
-      profile = cart_profile
-      supplier_delivery = profile.delivery_methods.find params[:supplier_delivery_id]
-      ShoppingCartPlugin::Mailer.customer_notification(params[:customer], profile, self.cart[:items], supplier_delivery).deliver
-      ShoppingCartPlugin::Mailer.supplier_notification(params[:customer], profile, self.cart[:items], supplier_delivery).deliver
+      ShoppingCartPlugin::Mailer.customer_notification(order, self.cart[:items]).deliver
+      ShoppingCartPlugin::Mailer.supplier_notification(order, self.cart[:items]).deliver
+      session[:notice] = _('Your order has been sent successfully! You will receive a confirmation e-mail shortly.')
+      @success = true
+      @profile = cart_profile
+      session[:cart] ||= {}
+      session[:cart][:last_delivery_option_id] = order.supplier_delivery_id
       self.cart = nil
-      render :text => {
-        :ok => true,
-        :message => _('Your order has been sent successfully! You will receive a confirmation e-mail shortly.'),
-        :error => {:code => 0}
-      }.to_json
-    rescue ActiveRecord::ActiveRecordError
-      render :text => {
-        :ok => false,
-        :error => {
-          :code => 6,
-          :message => exception.message
-        }
-      }.to_json
+    rescue ActiveRecord::ActiveRecordError => exception
+      @success = false
+      @error = exception.message
     end
   end
 
@@ -187,22 +181,25 @@ class ShoppingCartPluginController < OrdersPluginController
   end
 
   def update_supplier_delivery
-    profile = cart_profile
-    supplier_delivery = profile.delivery_methods.find params[:supplier_delivery_id]
+    @profile = cart_profile
+    supplier_delivery = @profile.delivery_methods.find params[:order][:supplier_delivery_id]
     order = build_order self.cart[:items], supplier_delivery
     total_price = order.total_price
-    render :text => {
-      :ok => true,
-      :delivery_price => float_to_currency_cart(supplier_delivery.cost(total_price), environment, unit: ''),
-      :total_price => float_to_currency_cart(total_price, environment, unit: ''),
-      :message => _('Delivery option updated.'),
-      :error => {:code => 0}
-    }.to_json
+    render json: {
+      ok: true,
+      delivery_price: float_to_currency_cart(supplier_delivery.cost(total_price), environment, unit: ''),
+      total_price: float_to_currency_cart(total_price, environment, unit: ''),
+      message: _('Delivery option updated.'),
+      error: {code: 0}
+    }
+  end
+
+  # must be public
+  def profile
+    cart_profile
   end
 
   protected
-
-  private
 
   def validate_same_profile(product)
     if self.cart && self.cart[:profile_id] && product.profile_id != self.cart[:profile_id]
@@ -285,38 +282,19 @@ class ShoppingCartPluginController < OrdersPluginController
 
     order = OrdersPlugin::Sale.new
     order.profile = environment.profiles.find(cart[:profile_id])
-    order.supplier_delivery = profile.delivery_methods.find params[:supplier_delivery_id]
+    order.supplier_delivery = profile.delivery_methods.find params[:order][:supplier_delivery_id]
     order.session_id = session_id unless user
     order.consumer = user
     order.source = 'shopping_cart_plugin'
     order.status = 'ordered'
     order.products_list = products_list
-    order.consumer_data = {
-      :name => params[:customer][:name], :email => params[:customer][:email], :contact_phone => params[:customer][:contact_phone],
-    }
-    order.payment_data = {
-      :method => params[:customer][:payment], :change => params[:customer][:change],
-    }
-    order.consumer_delivery_data = {
-      :name => order.supplier_delivery.name,
-      :description => order.supplier_delivery.name,
-      :address_line1 => params[:customer][:address],
-      :address_line2 => params[:customer][:address_line2],
-      :reference => params[:customer][:address_reference],
-      :district => params[:customer][:district],
-      :city => params[:customer][:city],
-      :state => params[:customer][:state],
-      :postal_code => params[:customer][:zip_code],
-    }
+    order.consumer_data = params[:order][:consumer_data]
+    order.payment_data = params[:order][:payment_data]
+    order.consumer_delivery_data = params[:order][:consumer_delivery_data]
     order.save!
-  end
 
-  # must be public
-  def profile
-    cart_profile
+    order
   end
-
-  protected
 
   def cart
     @cart ||=

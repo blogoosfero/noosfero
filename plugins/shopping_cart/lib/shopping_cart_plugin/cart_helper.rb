@@ -1,16 +1,11 @@
-require 'pp'
+require_dependency 'delivery_plugin/display_helper'
 
 module ShoppingCartPlugin::CartHelper
 
   include ActionView::Helpers::NumberHelper
   include ActionView::Helpers::TagHelper
 
-  PaymentMethods = {
-    money: proc{ _("Money") },
-    check: proc{ s_('shopping_cart|Check') },
-    credit_card: proc{ _('Credit card') },
-    bank_transfer: proc{ _('Bank transfer') },
-  }
+  include DeliveryPlugin::DisplayHelper
 
   def add_to_cart_button item, options = {}
   	label = if options[:with_text].nil? or options[:with_text] then _('Add to basket') else '' end
@@ -56,7 +51,7 @@ module ShoppingCartPlugin::CartHelper
   end
 
   def build_order items, delivery_method = nil
-    @order = profile.sales.build
+    @order = @profile.sales.build
     items.each do |product_id, quantity|
       @order.items.build product_id: product_id, quantity_consumer_ordered: quantity
     end
@@ -75,19 +70,8 @@ module ShoppingCartPlugin::CartHelper
     number_to_currency value, options
   end
 
-  def supplier_delivery_options selected=nil
-    options = profile.delivery_methods.map do |method|
-      [method.id, method.name, float_to_currency_cart(method.fixed_cost, environment), method == selected]
-    end
-    options << [nil, _('Delivery'), float_to_currency_cart(0, environment), true] if options.empty?
-
-    options.map do |id, name, cost, selected|
-      content_tag :option, "#{name} (#{cost})", value: id, data: {label: name}, selected: if selected then 'selected' else nil end
-    end.join
-  end
-
   def options_for_payment
-    options_for_select PaymentMethods.map{ |key, text| [text.call, key] }
+    options_for_select OrdersPlugin::Order::PaymentMethods.map{ |key, text| [text.call, key] }
   end
 
 end

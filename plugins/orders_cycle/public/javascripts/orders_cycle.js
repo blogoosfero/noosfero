@@ -3,10 +3,15 @@ orders_cycle = {
 
   cycle: {
 
-    edit: function () {
-      options = {isoTime: true};
-      jQuery('#cycle_start_date, #cycle_start_time, #cycle_finish_date, #cycle_finish_time').calendricalDateTimeRange(options);
-      jQuery('#cycle_delivery_start_date, #cycle_delivery_start_time, #cycle_delivery_finish_date, #cycle_delivery_finish_time').calendricalDateTimeRange(options);
+    edit: {
+      openingMessage: {
+        onKeyup: function(textArea) {
+          textArea = $(textArea)
+          var checked = textArea.val() ? true : false;
+          var checkBox = textArea.parents('#cycle-new-mail').find('input[type=checkbox]')
+          checkBox.prop('checked', checked)
+        },
+      },
     },
 
     products: {

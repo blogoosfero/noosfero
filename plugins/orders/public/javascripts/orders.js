@@ -27,19 +27,6 @@ orders = {
       return false
     },
 
-    delivery: {
-
-      select: function(element, url) {
-        element = $(element)
-        params = {order: {supplier_delivery_id: element.val()}}
-        deliveryBox = element.parents('.delivery-box')
-        $.get(url, params, function(data) {
-          deliveryBox.replaceWith(data)
-        })
-      }
-
-    },
-
   },
 
   item: {
@@ -64,6 +51,32 @@ orders = {
         event.preventDefault();
         return false;
       }
+    },
+
+    admin_add: {
+      search_url: null,
+      add_url: null,
+      source: null,
+
+      load: function (id) {
+        var self = this
+        var input = $('#order-row-'+id+' .order-product-add .add-input')
+        this.source = new Bloodhound({
+          datumTokenizer: Bloodhound.tokenizers.obj.whitespace('value'),
+          queryTokenizer: Bloodhound.tokenizers.whitespace,
+          remote: this.search_url+'&query=%QUERY',
+        })
+        this.source.initialize()
+
+        input.typeahead({
+          minLength: 2, highlight: true,
+        }, {
+          displayKey: 'label',
+          source: this.source.ttAdapter(),
+        }).on('typeahead:selected', function(e, item) {
+          $.post(self.add_url, {product_id: item.value})
+        })
+      },
     },
 
     admin_remove: function(context, url) {
@@ -139,8 +152,30 @@ orders = {
     ordersH -= jQuery('#order-column .order-message-actions').outerHeight()
     ordersH -= jQuery('#order-column .actions').outerHeight()
     jQuery('.order-items-container .order-items-scroll').css('max-height', ordersH);
-  }
+  },
 
+  daterangepicker: {
+
+    init: function(rangeSelector, _options) {
+      var options = $.extend({}, orders.daterangepicker.defaultOptions, _options);
+      var rangeField = $(rangeSelector)
+      var container = rangeField.parents('.daterangepicker-field-container')
+      var startField = container.find('input[data-field=start]')
+      var endField = container.find('input[data-field=end]')
+
+      var startDate = moment(startField.val(), moment.ISO_8601).format(options.format)
+      var endDate = moment(endField.val(), moment.ISO_8601).format(options.format)
+      var rangeValue = startDate+options.separator+endDate
+      rangeField.val(rangeValue)
+
+      rangeField.daterangepicker(options)
+      .on('apply.daterangepicker change', function(ev, picker) {
+        picker = rangeField.data('daterangepicker')
+        startField.val(picker.startDate.toDate().toISOString())
+        endField.val(picker.endDate.toDate().toISOString())
+      });
+    },
+  },
 };
 
 jQuery(document).ready(orders.set_orders_container_max_height);

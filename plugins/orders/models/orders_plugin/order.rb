@@ -7,6 +7,14 @@ class OrdersPlugin::Order < ActiveRecord::Base
     StatusText[status] = "orders_plugin.models.order.statuses.#{status}"
   end
 
+  # oh, we need a payments plugin!
+  PaymentMethods = {
+    money: proc{ _("Money") },
+    check: proc{ s_('shopping_cart|Check') },
+    credit_card: proc{ _('Credit card') },
+    bank_transfer: proc{ _('Bank transfer') },
+  }
+
   # remember to translate on changes
   ActorData = [
     :name, :email, :contact_phone,
@@ -15,7 +23,7 @@ class OrdersPlugin::Order < ActiveRecord::Base
     :name, :description,
     :address_line1, :address_line2, :reference,
     :district, :city, :state,
-    :postal_code,
+    :postal_code, :zip_code,
   ]
   PaymentData = [
     :method, :change,
@@ -78,18 +86,21 @@ class OrdersPlugin::Order < ActiveRecord::Base
   scope :months, select: 'DISTINCT(EXTRACT(months FROM orders_plugin_orders.created_at)) as month', order: 'month DESC'
   scope :years, select: 'DISTINCT(EXTRACT(YEAR FROM orders_plugin_orders.created_at)) as year', order: 'year DESC'
 
-  scope :by_month, lambda { |month| {
-    conditions: [ 'EXTRACT(month FROM orders_plugin_orders.created_at) <= :month AND EXTRACT(month FROM orders_plugin_orders.created_at) >= :month', { month: month } ]}
+  scope :by_month, lambda { |month|
+    where 'EXTRACT(month FROM orders_plugin_orders.created_at) <= :month AND EXTRACT(month FROM orders_plugin_orders.created_at) >= :month',{ month: month }
   }
-  scope :by_year, lambda { |year| {
-    conditions: [ 'EXTRACT(year FROM orders_plugin_orders.created_at) <= :year AND EXTRACT(year FROM orders_plugin_orders.created_at) >= :year', { year: year } ]}
+  scope :by_year, lambda { |year|
+    where 'EXTRACT(year FROM orders_plugin_orders.created_at) <= :year AND EXTRACT(year FROM orders_plugin_orders.created_at) >= :year', { year: year }
+  }
+  scope :by_range, lambda { |start_time, end_time|
+    where 'orders_plugin_orders.created_at >= :start AND orders_plugin_orders.created_at <= :end', { start: start_time, end: end_time }
   }
 
   scope :with_status, lambda { |status|
-    {conditions: {status: status}}
+    where status: status
   }
   scope :with_code, lambda { |code|
-    {conditions: {code: code}}
+    where code: code
   }
 
   validates_presence_of :profile
@@ -124,8 +135,8 @@ class OrdersPlugin::Order < ActiveRecord::Base
     scope = scope.for_consumer_id params[:consumer_id] if params[:consumer_id].present?
     scope = scope.for_profile_id params[:supplier_id] if params[:supplier_id].present?
     scope = scope.with_code params[:code] if params[:code].present?
-    scope = scope.by_month params[:date][:month] if params[:date][:month].present? rescue nil
-    scope = scope.by_year params[:date][:year] if params[:date][:year].present? rescue nil
+    scope = scope.by_range params[:start_time], params[:end_time] if params[:start_time].present?
+    scope = scope.where supplier_delivery_id: params[:delivery_method_id] if params[:delivery_method_id].present?
     scope
   end
 
@@ -184,18 +195,34 @@ class OrdersPlugin::Order < ActiveRecord::Base
   end
 
   def actor_data actor_name
-    data = self.send("#{actor_name}_data").select do |k,v|
-      OrdersPlugin::Order::ActorData.include? k and v.present?
-    end rescue {}
-    data = Hash[data]
+    data = {}; self.send("#{actor_name}_data").each do |k, v|
+      data[k] = v if OrdersPlugin::Order::ActorData.include? k and v.present?
+    end
     data = {} if data.size == 1 and data[:name].present?
     data
   end
 
-  def delivery_data actor_name
-    self.send("#{actor_name}_delivery_data").select do |k,v|
-      OrdersPlugin::Order::DeliveryData.include? k and v.present?
-    end rescue {}
+  def actor_delivery_data actor_name
+    data = {}; self.send("#{actor_name}_delivery_data").each do |k, v|
+      data[k] = v if OrdersPlugin::Order::DeliveryData.include? k and v.present?
+    end
+    data
+  end
+
+  def delivery_data actor_name=nil
+    return actor_delivery_data actor_name if actor_name
+
+    supplier_data = actor_delivery_data :supplier
+    case self.supplier_delivery_data[:delivery_type]
+    when 'delivery'
+      consumer_data = actor_delivery_data :consumer
+      data = consumer_data.dup
+      data[:name] = supplier_data[:name]
+      data[:description] = supplier_data[:description]
+    when 'pickup'
+      data = supplier_data.dup
+    end
+    data
   end
 
   # All products from the order profile?
@@ -357,6 +384,7 @@ class OrdersPlugin::Order < ActiveRecord::Base
     self.status = 'ordered' if self.status == 'confirmed'
 
     self.fill_items_data self.status_was, self.status, true
+    # something may have changed
     self.sync_serialized_data if self.status_changed?
 
     if self.status_on? 'ordered'
@@ -377,7 +405,7 @@ class OrdersPlugin::Order < ActiveRecord::Base
     # ignore when status is being rewinded
     return if (Statuses.index(self.status) <= Statuses.index(self.status_was) rescue false)
     # dummy suppliers don't notify
-    return unless self.profile.visible
+    return unless self.profile and self.profile.visible
 
     if self.status == 'ordered' and self.status_was != 'ordered'
       OrdersPlugin::Mailer.order_confirmation(self).deliver

@@ -19,6 +19,7 @@ gem 'i18n',                     '~> 0.6.0'
 gem 'will-paginate-i18n'
 gem 'utf8-cleaner'
 gem 'premailer-rails'
+gem 'slim'
 
 platform :ruby do
   gem 'pg'
@@ -47,7 +48,6 @@ end
 
 group :assets do
   gem 'assets_live_compile'
-  gem 'therubyracer', platforms: :ruby
   gem 'uglifier', '>= 1.0.3'
   gem 'coffee-rails'
   gem 'sass'

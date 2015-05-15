@@ -1,6 +1,35 @@
 
 delivery = {
 
+  order: {
+    select: {
+
+      onChange: function(input) {
+        var input = jQuery(input)
+        var deliverySelect = input.parents('.order-delivery-select')
+
+        var option = input.find('option:selected')
+        var typeData = option.attr('data-type')
+        var isPickup = typeData == 'pickup'
+        var instructionsData = option.attr('data-instructions')
+        var labelData = option.attr('data-label')
+
+        var instructions = deliverySelect.find('.instructions')
+        instructions.html(instructionsData)
+        var consumerData = deliverySelect.find('.consumer-delivery-data')
+        if (isPickup) {
+          consumerData.slideUp('fast')
+        } else {
+          consumerData.slideDown('fast')
+        }
+      },
+
+    },
+  },
+
+  option: {
+  },
+
   method: {
 
     view: {
@@ -62,6 +91,13 @@ delivery = {
       })
     },
 
+  },
+
+  option: {
+
+    add: function(newUrl) {
+      $.getScript(newUrl)
+    },
   },
 
 };

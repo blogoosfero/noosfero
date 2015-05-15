@@ -205,3 +205,13 @@
   margin-top: 30px;
   float: right;
 }
+
+#order-page.cycle-view {
+  // for sticky to work
+  padding-bottom: 200px;
+}
+
+.action-orders_cycle_plugin_order-edit .purechat {
+  left: 40px;
+  right: none;
+}
