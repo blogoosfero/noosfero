@@ -3480,6 +3480,7 @@ div.with_media_panel .formfield input[type="checkbox"] {
 #facets-column { display:none; }
 .hidden, .hidden-lg, .hidden-md { display: none; }
 .search-field .formfield, .search-field .formfield input { width: 800px; }
+#public-profile-search .search-field .formfield input { width: 100%; }
 .controller-search .search-field .formfield { width: 100%; }
 
 /* suggestions */
