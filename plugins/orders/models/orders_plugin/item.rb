@@ -28,9 +28,9 @@ class OrdersPlugin::Item < ActiveRecord::Base
 
   serialize :data
 
-  belongs_to :order, class_name: 'OrdersPlugin::Order', touch: true
-  belongs_to :sale, class_name: 'OrdersPlugin::Sale', foreign_key: :order_id
-  belongs_to :purchase, class_name: 'OrdersPlugin::Purchase', foreign_key: :order_id
+  belongs_to :order, class_name: 'OrdersPlugin::Order', foreign_key: :order_id, touch: true
+  belongs_to :sale, class_name: 'OrdersPlugin::Sale', foreign_key: :order_id, touch: true
+  belongs_to :purchase, class_name: 'OrdersPlugin::Purchase', foreign_key: :order_id, touch: true
 
   belongs_to :product
   has_one :supplier, through: :product
@@ -150,8 +150,7 @@ class OrdersPlugin::Item < ActiveRecord::Base
     price = "price_#{data}".to_sym
 
     define_method "calculated_#{price}" do
-      p = self[price] || self.price
-      p * self.send(quantity) rescue nil
+      self.price * self.send(quantity) rescue nil
     end
 
     define_method price do
