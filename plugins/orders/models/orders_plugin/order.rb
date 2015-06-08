@@ -57,6 +57,10 @@ class OrdersPlugin::Order < ActiveRecord::Base
   belongs_to :supplier_delivery, class_name: 'DeliveryPlugin::Method'
   belongs_to :consumer_delivery, class_name: 'DeliveryPlugin::Method'
 
+  scope :alphabetical, -> { joins(:consumer).order 'profiles.name ASC' }
+  scope :latest, -> { order 'code ASC' }
+  scope :default_order, -> { order 'code DESC' }
+
   scope :of_session, -> session_id { where session_id: session_id }
   scope :of_user, -> session_id, consumer_id=nil do
     orders = OrdersPlugin::Order.arel_table
@@ -146,6 +150,7 @@ class OrdersPlugin::Order < ActiveRecord::Base
     scope = scope.with_code params[:code] if params[:code].present?
     scope = scope.by_range params[:start_time], params[:end_time] if params[:start_time].present?
     scope = scope.where supplier_delivery_id: params[:delivery_method_id] if params[:delivery_method_id].present?
+    scope = scope.default_order
     scope
   end
 
@@ -318,7 +323,7 @@ class OrdersPlugin::Order < ActiveRecord::Base
 
   # cache is done independent of user as model cache is per request
   def may_edit? user, admin_action = false
-    @may_edit ||= (admin_action and self.profile.admins.include?(user)) or (self.open? and self.consumer == user and self.profile.members.include? user)
+    @may_edit ||= (admin_action and user.in? self.profile.admins) or (self.open? and self.consumer == user and user.in? self.profile.members) rescue false
   end
 
   def verify_actor? profile, actor_name

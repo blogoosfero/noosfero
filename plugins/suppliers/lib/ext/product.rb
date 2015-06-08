@@ -26,6 +26,12 @@ class Product
     ProductCategory.find products.collect(&:product_category_id).compact.select{ |id| not id.zero? }
   end
 
+  attr_accessible :external_id
+  settings_items :external_id, type: String, default: nil
+
+  # should be on core, used by SuppliersPlugin::Import
+  attr_accessible :price_details
+
 end
 
 class Product
@@ -103,9 +109,11 @@ class Product
     self.supplier ? self.supplier.dummy? : self.profile.dummy?
   end
 
-  def distribute_to_consumer consumer
+  def distribute_to_consumer consumer, attrs = {}
     distributed_product = consumer.distributed_products.where(profile_id: consumer.id, from_products_products: {id: self.id}).first
     distributed_product ||= SuppliersPlugin::DistributedProduct.create! profile: consumer, from_products: [self]
+    distributed_product.update_attributes! attrs if attrs.present?
+    distributed_product
   end
 
   def destroy_dependent
