@@ -518,6 +518,11 @@ div#notice {
   text-decoration: none;
   padding-right: 15px;
 }
+#content .profile-list-block .block-footer-content .more-suggestions a,
+#content .enterprises-block .block-footer-content .more-suggestions a,
+#content .communities-block .block-footer-content .more-suggestions a {
+    position: static;
+}
 #content .tags-block .block-footer-content a,
 #content .profile-list-block .block-footer-content a,
 #content .enterprises-block .block-footer-content a,
