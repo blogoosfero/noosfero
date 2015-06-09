@@ -1,5 +1,7 @@
-<% button_bar do %>
-  <%= button :back, 'Voltar a %{parent}' % {parent: back_to.name}, back_to.url %>
+<% if defined? back_to and back_to %>
+  <% button_bar do %>
+    <%= button :back, 'Voltar a %{parent}' % {parent: back_to.name}, back_to.url %>
+  <% end %>
 <% end %>
 
 <iframe id="diagramo" src="<%= article.diagramo_uri %>" width="100%" height="500px"></iframe>
