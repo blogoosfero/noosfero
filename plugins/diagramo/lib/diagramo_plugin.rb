@@ -17,6 +17,9 @@ class DiagramoPlugin < Noosfero::Plugin
   end
 
   def article_toolbar_actions article
+    user = context.user
+    return unless user and user.is_admin? environment
+    return unless article.folder?
     lambda do
       render 'content_viewer/diagramo_plugin/new_diagram_button', :article => article
     end
