@@ -2,7 +2,7 @@
 // This file is automatically included by javascript_include_tag :defaults
 /*
 * third party libraries
-*= require lodash.compat.min.js
+*= require lodash.js
 *= require jquery-2.1.1.min.js
 *= require jquery-migrate-1.2.1.js
 *= require jquery.colorbox-min.js
@@ -20,7 +20,6 @@
 *= require inputosaurus.js
 *= require reflection.js
 *= require select-or-die/_src/selectordie
-*= require typeahead.bundle.js
 *= require rails.js
 *= require rails-extended.js
 *= require jrails.js

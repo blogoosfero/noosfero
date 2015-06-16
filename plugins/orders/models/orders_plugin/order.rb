@@ -9,10 +9,11 @@ class OrdersPlugin::Order < ActiveRecord::Base
 
   # oh, we need a payments plugin!
   PaymentMethods = {
-    money: proc{ _("Money") },
-    check: proc{ s_('shopping_cart|Check') },
-    credit_card: proc{ _('Credit card') },
-    bank_transfer: proc{ _('Bank transfer') },
+    money: proc{ _'Money' },
+    check: proc{ _'shopping_cart|Check' },
+    credit_card: proc{ _'Credit card' },
+    bank_transfer: proc{ _'Bank transfer' },
+    boleto: proc{ _'Boleto' },
   }
 
   # remember to translate on changes
@@ -42,7 +43,8 @@ class OrdersPlugin::Order < ActiveRecord::Base
   self.table_name = :orders_plugin_orders
   self.abstract_class = true
 
-  attr_accessible :status, :consumer, :profile, :supplier_delivery_id, :consumer_delivery_id
+  attr_accessible :status, :consumer, :profile,
+    :supplier_delivery_id, :consumer_delivery_id, :supplier_delivery_data, :consumer_delivery_data
 
   belongs_to :profile
   # may be override by subclasses
@@ -180,20 +182,20 @@ class OrdersPlugin::Order < ActiveRecord::Base
           sp = source_sp.from_product
           supplier = source_sp.supplier
 
-          # if it's not yet defined, define it and sum the quantity from aggregated product/product * quantity ordered
           products_by_supplier[supplier] ||= Set.new
           products_by_supplier[supplier] << sp
           sp.quantity_ordered ||= 0
-          sp.quantity_ordered += item.quantity_consumer_ordered * source_sp.quantity
+          sp.quantity_ordered += item.status_quantity * source_sp.quantity
         end
       else
+        # the case where cycles and offered products are not involved, so item is linked directly to a Product
         sp = item.product
         supplier = item.order.profile.self_supplier
 
         products_by_supplier[supplier] ||= Set.new
         products_by_supplier[supplier] << sp
         sp.quantity_ordered ||= 0
-        sp.quantity_ordered += item.quantity_consumer_ordered
+        sp.quantity_ordered += item.status_quantity
       end
     end
 
@@ -405,8 +407,6 @@ class OrdersPlugin::Order < ActiveRecord::Base
     self.status = 'ordered' if self.status == 'confirmed'
 
     self.fill_items_data self.status_was, self.status, true
-    # something may have changed
-    self.sync_serialized_data if self.status_changed?
 
     if self.status_on? 'ordered'
       Statuses.each do |status|
@@ -425,8 +425,6 @@ class OrdersPlugin::Order < ActiveRecord::Base
     return if source == 'shopping_cart_plugin'
     # ignore when status is being rewinded
     return if (Statuses.index(self.status) <= Statuses.index(self.status_was) rescue false)
-    # dummy suppliers don't notify
-    return unless self.profile and self.profile.visible
 
     if self.status == 'ordered' and self.status_was != 'ordered'
       OrdersPlugin::Mailer.order_confirmation(self).deliver
