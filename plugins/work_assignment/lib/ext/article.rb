@@ -17,4 +17,5 @@ class Article
       self.published = self.parent.published
     end
   end
+
 end

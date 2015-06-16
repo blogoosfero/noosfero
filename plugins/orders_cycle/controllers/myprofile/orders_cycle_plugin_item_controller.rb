@@ -17,8 +17,8 @@ class OrdersCyclePluginItemController < OrdersPluginItemController
 
     if params[:order_id] == 'new'
       @cycle = @offered_product.cycle
-      raise 'Cycle closed for orders' unless @cycle.orders? and not profile.has_admin? user
-      @order = OrdersCyclePlugin::Sale.create! cycle: @cycle, consumer: consumer
+      raise 'Cycle closed for orders' unless @cycle.may_order? @consumer
+      @order = OrdersCyclePlugin::Sale.create! cycle: @cycle, profile: profile, consumer: @consumer
     else
       @order = OrdersCyclePlugin::Sale.find params[:order_id]
       @cycle = @order.cycle
@@ -61,7 +61,7 @@ class OrdersCyclePluginItemController < OrdersPluginItemController
 
   protected
 
-  extend ControllerInheritance::ClassMethods
+  extend HMVC::ClassMethods
   hmvc OrdersCyclePlugin, orders_context: OrdersCyclePlugin
 
 end

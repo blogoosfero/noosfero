@@ -1,3 +1,6 @@
+shopping_cart = {
+}
+
 function Cart(config) {
   var $ = jQuery;
   config.minimized = Cart.minimized;
@@ -217,7 +220,7 @@ function Cart(config) {
   Cart.prototype.repeatCheckout = function(event, button) {
     var order_id = jQuery(button).attr('data-order-id')
     this.repeat(order_id, function(data) {
-      $('.cart-buy').click();
+      window.location.href = '/plugin/shopping_cart/buy'
     })
     event.stopPropagation()
     return false;
@@ -342,21 +345,8 @@ function Cart(config) {
       type: 'POST',
       url: '/plugin/shopping_cart/send_request',
       data: params,
-      dataType: 'json',
-      success: function(data, status, ajax){
-        if ( !data.ok ) display_notice(data.error.message);
-        else {
-          me.clean();
-          display_notice(data.message);
-        }
-      },
+      dataType: 'script',
       cache: false,
-      error: function(ajax, status, errorThrown) {
-        log.error('Send request - HTTP '+status, errorThrown);
-      },
-      complete: function() {
-        noosfero.modal.close();
-      }
     });
   }
 

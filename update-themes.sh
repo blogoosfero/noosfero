@@ -1,18 +1,18 @@
 #!/bin/bash
 
-cd public/designs/themes/cirandas-themes
+cd public/designs/themes/blogoosfero-themes
 git checkout master
-git pull --rebase;
+git pull --rebase
 
-# update colivre themes
-cd colivre-themes
-git checkout master
-git pull --rebase;
+# update theme's submodules
+#cd colivre-themes
+#git checkout master
+#git pull --rebase;
+#cd ..
+#git commit colivre-themes -m "Update colivre"
 
-cd ..
-git commit colivre-themes -m "Update colivre"
 cd ../../../..
-git commit public/designs -m 'Update themes'
+git commit public/designs/themes -m 'Update themes'
 
 # push all
 git push --recurse-submodules=on-demand

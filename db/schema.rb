@@ -11,7 +11,7 @@
 #
 # It's strongly recommended to check this file into your version control system.
 
-ActiveRecord::Schema.define(:version => 20141122010504) do
+ActiveRecord::Schema.define(:version => 20150506220607) do
 
   create_table "abuse_reports", :force => true do |t|
     t.integer  "reporter_id"
@@ -205,6 +205,36 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
     t.string   "client_name"
     t.string   "client_type"
     t.string   "business_type"
+    t.string   "state"
+    t.string   "city"
+    t.integer  "status",              :default => 0
+    t.integer  "number_of_producers", :default => 0
+    t.datetime "supply_start"
+    t.datetime "supply_end"
+    t.text     "annotations"
+    t.integer  "bsc_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  create_table "bsc_plugin_contracts_enterprises", :id => false, :force => true do |t|
+    t.integer "contract_id"
+    t.integer "enterprise_id"
+  end
+
+  create_table "bsc_plugin_sales", :force => true do |t|
+    t.integer  "product_id",  :null => false
+    t.integer  "contract_id", :null => false
+    t.integer  "quantity",    :null => false
+    t.decimal  "price"
+    t.datetime "created_at"
+    t.datetime "updated_at"
+  end
+
+  create_table "bsc_plugin_contracts", :force => true do |t|
+    t.string   "client_name"
+    t.integer  "client_type"
+    t.integer  "business_type"
     t.string   "state"
     t.string   "city"
     t.integer  "status",              :default => 0
@@ -464,9 +494,11 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
   add_index "external_feeds", ["enabled"], :name => "index_external_feeds_on_enabled"
   add_index "external_feeds", ["fetched_at"], :name => "index_external_feeds_on_fetched_at"
 
-  create_table "favorite_enteprises_people", :id => false, :force => true do |t|
-    t.integer "person_id"
-    t.integer "enterprise_id"
+  create_table "favorite_enterprise_people", :force => true do |t|
+    t.integer  "person_id"
+    t.integer  "enterprise_id"
+    t.datetime "created_at"
+    t.datetime "updated_at"
   end
 
   create_table "foo_plugin_bars", :force => true do |t|
@@ -628,11 +660,13 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
     t.string   "type"
     t.text     "data"
     t.boolean  "archived",            :default => false
+    t.boolean  "visible",             :default => true
   end
 
   add_index "products", ["created_at"], :name => "index_products_on_created_at"
   add_index "products", ["product_category_id"], :name => "index_products_on_product_category_id"
-  add_index "products", ["profile_id"], :name => "index_products_on_profile_id"
+  add_index "products", ["profile_id"], :name => "index_products_on_enterprise_id"
+  add_index "products", ["visible"], :name => "index_products_on_visible"
 
   create_table "profile_activities", :force => true do |t|
     t.integer  "profile_id"
@@ -941,6 +975,32 @@ ActiveRecord::Schema.define(:version => 20141122010504) do
     t.text    "restrictions"
     t.integer "organization_id"
   end
+
+  create_table "volunteers_plugin_assignments", :force => true do |t|
+    t.integer  "profile_id"
+    t.integer  "period_id"
+    t.datetime "created_at", :null => false
+    t.datetime "updated_at", :null => false
+  end
+
+  add_index "volunteers_plugin_assignments", ["period_id"], :name => "index_volunteers_plugin_assignments_on_period_id"
+  add_index "volunteers_plugin_assignments", ["profile_id", "period_id"], :name => "index_volunteers_plugin_assignments_on_profile_id_and_period_id"
+  add_index "volunteers_plugin_assignments", ["profile_id"], :name => "index_volunteers_plugin_assignments_on_profile_id"
+
+  create_table "volunteers_plugin_periods", :force => true do |t|
+    t.integer  "owner_id"
+    t.string   "owner_type"
+    t.text     "name"
+    t.datetime "start"
+    t.datetime "end"
+    t.integer  "minimum_assigments"
+    t.integer  "maximum_assigments"
+    t.datetime "created_at",         :null => false
+    t.datetime "updated_at",         :null => false
+  end
+
+  add_index "volunteers_plugin_periods", ["owner_id", "owner_type"], :name => "index_volunteers_plugin_periods_on_owner_id_and_owner_type"
+  add_index "volunteers_plugin_periods", ["owner_type"], :name => "index_volunteers_plugin_periods_on_owner_type"
 
   create_table "votes", :force => true do |t|
     t.integer  "vote",          :null => false

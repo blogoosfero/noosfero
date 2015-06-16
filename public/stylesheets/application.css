@@ -1,7 +1,6 @@
 /*
  * thidparty libraries
  *= require colorbox
- *= require typeahead
  *= require selectordie
  *= require inputosaurus
  *= require token-input
@@ -2666,6 +2665,7 @@ div#activation_enterprise label, div#activation_enterprise input, div#activation
   display: block;
   padding: 2px 0px;
 }
+/* We will provisorily hide this for blogoosfero
 .formfield input, .formfield textarea {
   background: transparent url("../images/input-bg.gif") no-repeat top left;
   border: 1px solid #999;
@@ -2673,7 +2673,7 @@ div#activation_enterprise label, div#activation_enterprise input, div#activation
   border-left: none;
   color: #585858;
   font-size: 11px;
-}
+}*/
 .colorpicker_field {
   display: none;
 }
@@ -2934,7 +2934,7 @@ div#activation_enterprise label, div#activation_enterprise input, div#activation
   display: block;
   text-align: left;
   line-height: 20px;
-  margin: 0px;
+  margin: 0px -15px;
   padding: 0px;
   list-style: none;
 }
@@ -3283,7 +3283,7 @@ body.template-2leftbars #product-info .field-name, body.template-2leftbars #prod
   float: left;
   border: 1px solid #AAA;
 }
-.product-pic {
+#display-product-image .product-pic {
   width: 450px;
 }
 body.template-default #product-image, body.template-2leftbars #product-image {

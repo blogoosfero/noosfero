@@ -21,7 +21,7 @@ class OrdersPluginItemController < MyProfileController
       raise 'You are not the owner of this order' if @consumer != @order.consumer
     end
 
-    if set_quantity_consumer_ordered params[:item][:quantity_consumer_ordered]
+    if params[:item].present? and set_quantity_consumer_ordered params[:item][:quantity_consumer_ordered]
       params[:item][:quantity_consumer_ordered] = @quantity_consumer_ordered
       @item.update_attributes! params[:item]
     end
@@ -64,7 +64,7 @@ class OrdersPluginItemController < MyProfileController
     @actor_name = :consumer
   end
 
-  extend ControllerInheritance::ClassMethods
+  extend HMVC::ClassMethods
   hmvc OrdersPlugin, orders_context: OrdersPlugin
 
 end

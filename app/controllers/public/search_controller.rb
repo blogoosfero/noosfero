@@ -4,6 +4,7 @@ class SearchController < PublicController
   include SearchHelper
   include ActionView::Helpers::NumberHelper
 
+  before_filter :redirect_to_environment_domain
   before_filter :redirect_asset_param, :except => [:assets, :suggestions]
   before_filter :load_category, :except => :suggestions
   before_filter :load_search_assets, :except => :suggestions
@@ -62,7 +63,7 @@ class SearchController < PublicController
 
   def articles
     @scope = @environment.articles.public.includes(
-      :last_changed_by, :parent, :tags, {:profile => [:domains]}
+      :last_changed_by, :parent, :tags, {profile: [:domains]}
     )
     full_text_search
   end
@@ -162,6 +163,11 @@ class SearchController < PublicController
   #######################################################
   protected
 
+  def redirect_to_environment_domain
+    return unless Rails.env.production?
+    redirect_to params.merge host: environment.default_hostname if request.host != environment.default_hostname
+  end
+
   def load_query
     @asset = (params[:asset] || params[:action]).to_sym
     @assets ||= [@asset]
@@ -213,7 +219,9 @@ class SearchController < PublicController
   def load_order
     @order = 'more_recent'
     if AVAILABLE_SEARCHES.keys.include?(@asset.to_sym)
-      available_orders = asset_class(@asset)::SEARCH_FILTERS[:order]
+      klass = asset_class @asset
+      available_orders = klass::SEARCH_FILTERS[:order]
+      @order = available_orders.first
       @order = params[:order] if available_orders.include?(params[:order])
     end
   end

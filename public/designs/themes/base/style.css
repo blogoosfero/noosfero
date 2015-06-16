@@ -381,7 +381,7 @@ body, th, td, input {
 }
 
 .controller-cms .show-media-panel .with_media_panel {
-  width: 600px;
+  width: 480px;
 }
 
 div.no_media_panel {
@@ -517,6 +517,11 @@ div#notice {
   color: #000;
   text-decoration: none;
   padding-right: 15px;
+}
+#content .profile-list-block .block-footer-content .more-suggestions a,
+#content .enterprises-block .block-footer-content .more-suggestions a,
+#content .communities-block .block-footer-content .more-suggestions a {
+    position: static;
 }
 #content .tags-block .block-footer-content a,
 #content .profile-list-block .block-footer-content a,
@@ -707,12 +712,13 @@ div#notice {
 .tag_cloud {
   text-align: center;
 }
-
 .tag_cloud a {
   text-decoration: none;
   white-space: nowrap;
 }
-
+#content .tags-block .tag_cloud a {
+  white-space: initial;
+}
 .tag_cloud a small {
   opacity: 0.5;
   filter:alpha(opacity=50);
@@ -2368,24 +2374,6 @@ div#notice {
   clear: left;
 }
 
-/****************************** Tags *********************************/
-
-/* the style here is not only for #content .tags-block .tag_cloud */
-
-.tag_cloud {
-  text-align: center;
-}
-
-.tag_cloud a {
-  text-decoration: none;
-  white-space: nowrap;
-}
-
-.tag_cloud a small {
-  opacity: 0.5;
-  filter:alpha(opacity=50);
-}
-
 
 /********************* Product Categories Block **********************/
 
@@ -3101,7 +3089,7 @@ table#recaptcha_table tr:hover td {
 .vote-actions {
     position: relative;
     right: 0px;
-    top: 0px;
+    top: 8px;
 }
 .action .like:before {
   content: url('imgs/positive-hand.png');
@@ -3428,11 +3416,6 @@ body.noosfero .join-leave-button a.button.with-text:visited {
 
 
 /* Text editors sidebar */
-
-.controller-cms div.with_media_panel {
-    float: left;
-    width: 500px;
-}
 div.with_media_panel .formfield input {
     width: 100%;
 }
@@ -3443,9 +3426,9 @@ div.with_media_panel .formfield input[type="checkbox"] {
 
 .text-editor-sidebar {
     position: absolute;
-    width: 380px;
+    width: 400px;
     right: 20px;
-    top: 70px;
+    top: 30px;
 }
 
 #product-name h2 {
@@ -3497,5 +3480,19 @@ div.with_media_panel .formfield input[type="checkbox"] {
   padding: 0px 0px 0px 10px;
 }
 
-/*PROVISORY!*/
+/*Corrections due to incompatibilities with responsive design and solr. They must be removed when blogoosfero becomes responsive*/
 #product-owner { display:none; }
+#facets-column { display:none; }
+.hidden, .hidden-lg, .hidden-md { display: none; }
+.search-field .formfield, .search-field .formfield input { width: 800px; }
+#public-profile-search .search-field .formfield input { width: 100%; }
+.controller-search .search-field .formfield { width: 100%; }
+
+/* suggestions */
+#content .profiles-suggestions .profile-list li .profile-link {
+    height: 60px;
+}
+.profiles-suggestions .profile-list .remove-suggestion, .box-1 .profiles-suggestions .profile-list li > a {
+    height: 34px;
+    display: block;
+}

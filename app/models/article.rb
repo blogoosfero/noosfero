@@ -479,7 +479,7 @@ class Article < ActiveRecord::Base
   scope :folders, lambda {|profile|{:conditions => ['articles.type IN (?)', profile.folder_types] }}
   scope :no_folders, lambda {|profile|{:conditions => ['articles.type NOT IN (?)', profile.folder_types]}}
   scope :galleries, :conditions => [ "articles.type IN ('Gallery')" ]
-  scope :images, :conditions => { :is_image => true }
+  scope :images, :conditions => { :is_image => true }, :order => 'updated_at DESC'
   scope :no_images, :conditions => { :is_image => false }
   scope :text_articles, :conditions => [ 'articles.type IN (?)', text_article_types ]
   scope :files, :conditions => { :type => 'UploadedFile' }
@@ -496,11 +496,11 @@ class Article < ActiveRecord::Base
     return [] if user.nil? || (profile && !profile.public? && !user.follows?(profile))
     where(
       [
-       "published = ? OR last_changed_by_id = ? OR profile_id = ? OR ? 
-        OR  (show_to_followers = ? AND ?)", true, user.id, user.id, 
+       "published = ? OR last_changed_by_id = ? OR profile_id = ? OR ?
+        OR  (show_to_followers = ? AND ?)", true, user.id, user.id,
         profile.nil? ?  false : user.has_permission?(:view_private_content, profile),
         true, user.follows?(profile)
-      ] 
+      ]
     )
   }
 

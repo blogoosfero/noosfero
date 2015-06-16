@@ -1,3 +1,6 @@
+# FIXME: module not being loaded
+require 'solr_plugin'
+
 class SolrPlugin::Base < Noosfero::Plugin
 
   def stylesheet?
@@ -74,7 +77,7 @@ class SolrPlugin::Base < Noosfero::Plugin
     case asset
     when :catalog
       klass = Product
-      solr_options[:query_fields] = %w[solr_plugin_ac_name^100 solr_plugin_ac_category^1000]
+      solr_options[:query_fields] = %w[solr_plugin_ac_name^100 solr_plugin_ac_category^90 solr_plugin_ac_supplier^80]
       solr_options[:highlight] = {fields: 'name'}
       solr_options[:filter_queries] = scopes_to_solr_options scope, klass, options
     end
@@ -122,8 +125,7 @@ class SolrPlugin::Base < Noosfero::Plugin
     end
 
     solr_options[:filter_queries] ||= []
-    solr_options[:filter_queries] += solr_filters_queries asset
-    solr_options[:filter_queries] << "environment_id:#{environment.id}"
+    solr_options[:filter_queries] += solr_filters_queries asset, environment
     solr_options[:filter_queries] << klass.facet_category_query.call(category) if category
     solr_options[:filter_queries] += scopes_to_solr_options scope, klass, options
 
@@ -143,7 +145,7 @@ class SolrPlugin::Base < Noosfero::Plugin
   def scopes_to_solr_options scope, klass = nil, options = {}
     filter_queries = []
     klass ||= scope.base_class
-    solr_fields = klass.configuration[:solr_fields].keys
+    solr_fields = klass.configuration[:solr_fields].keys rescue []
     scopes_applied = scope.scopes_applied.dup rescue [] #rescue association and class direct filtering
 
     scope.scope_attributes.each do |attr, value|
@@ -188,7 +190,7 @@ class SolrPlugin::Base < Noosfero::Plugin
 
   def sort_options asset, klass, filter
     options = SolrPlugin::SearchHelper::SortOptions[asset]
-    options[filter][:solr_opts] rescue {}
+    options[filter][:solr_opts] || {} rescue {}
   end
 
 end

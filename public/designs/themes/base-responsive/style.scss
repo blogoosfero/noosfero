@@ -1,7 +1,5 @@
-/*@import url('bootstrap.css');*/
-
-/* @import url('/assets/plugins/responsive/_bootstrap-core'); */
-
+@import 'stylesheets/chat';
+// bootstrap not included here, see noosfero-responsive
 
 /* ==> button.css <== */
 
@@ -650,12 +648,13 @@ div#notice {
 .tag_cloud {
   text-align: center;
 }
-
 .tag_cloud a {
   text-decoration: none;
   white-space: nowrap;
 }
-
+#content .tags-block .tag_cloud a {
+  white-space: initial;
+}
 .tag_cloud a small {
   opacity: 0.5;
   filter:alpha(opacity=50);
@@ -1702,6 +1701,9 @@ div.tooltip-inner {
   font-size: 11px;
   background: transparent;
 }
+#product-list li.product {
+	line-height:1.1;
+}
 
 /********************* End of Product Catalog **********************/
 
@@ -1874,7 +1876,7 @@ img, video, audio {
 }
 .popover-content > a {
   text-align: left !important;
-} 
+}
 .popover-title {
     margin:0px !important;
 }
@@ -1926,14 +1928,6 @@ img, video, audio {
     }
 }
 
-/* dtygel: This breaks things, so I'll comment out
-@media screen and (min-width: 768px ) {
-  .box-container-1, .box-container-2, .box-container-3 {
-    padding-right: 0px;
-  }
-}
-*/
-
 .container > #content {
     margin-right: 0px;
 }
@@ -1942,9 +1936,6 @@ body {
     background-color: #eeeeee;
 }
 
-.no-boxes {
-	margin-bottom: 20px;
-}
 .block, .no-boxes {
     position: relative;
     padding: 8px;
@@ -1952,6 +1943,7 @@ body {
     border-radius: 3px;
     border: 1px solid rgba(0,0,0,0.2);/*#d8d8d8;*/
     background-color: white;
+    margin-bottom: 20px;
 }
 
 /*
@@ -1981,17 +1973,13 @@ $padding_value:7px;
   padding-top: 21px;
 }
 
-.navbar {
-  margin-bottom: 0px;
-}
-
 .nav > li > a {
   padding-left: 7px;
   padding-right: 7px;
 }
 
-#content .automatic-abstract-thumb, 
-#content #boxes .container-1 .article-block img.automatic-abstract-thumb, 
+#content .automatic-abstract-thumb,
+#content #boxes .container-1 .article-block img.automatic-abstract-thumb,
 #content #article .article-body img.automatic-abstract-thumb {
   float: left;
   max-width: 100px;
@@ -2014,12 +2002,12 @@ input.ui-autocomplete-input {
 }
 
 .article-controls .btn,
-table.cms-articles a.icon, 
+table.cms-articles a.icon,
 table.cms-articles a.icon-parent-folder,
 .cms-homepage a.icon {
   padding: 0;
 }
-table.cms-articles .article-mime, 
+table.cms-articles .article-mime,
 table.cms-articles .last-update,
 table.cms-articles .article-name {
   font-size: 12px;
@@ -2034,7 +2022,7 @@ table.cms-articles .article-name {
     display: none;
   }
   .article-controls .btn,
-  table.cms-articles a.icon, 
+  table.cms-articles a.icon,
   table.cms-articles a.icon-parent-folder,
   .cms-homepage a.icon {
     padding: 1px 3px;
@@ -2056,3 +2044,44 @@ table.cms-articles .article-name {
   color: #E75252;
   font-weight: bold;
 }
+
+#theme-footer #language-chooser {
+  text-align: left;
+}
+
+/* armengue */
+/* didn't find why .no-boxes has bigger width than its parent */
+.no-boxes {
+  width: 96%;
+}
+
+@media screen and (min-width:1200px) {
+  #top-bar a.icon-help {
+    font-size: 0;
+  }
+
+  #top-bar a.icon-help:before {
+    font-size:15px;
+  }
+}
+
+/* Default color for buttons */
+a.btn, .block a.btn, a.btn:visited, .block a.btn:visited, a.btn:hover, .block a.btn:hover {
+  color: #fff;
+}
+
+/* Adjustments for no-boxes */
+#content .no-boxes {
+  padding-left: 30px;
+  padding-right: 30px;
+}
+
+.modal {
+  background-color: rgba(0,0,0,0.5);
+}
+
+/* Products */
+#product-list .expand-box > span {
+  font-size: 0.6em;
+}
+

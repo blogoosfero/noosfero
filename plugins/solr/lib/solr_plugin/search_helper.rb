@@ -16,11 +16,10 @@ module SolrPlugin::SearchHelper
       updated: {option: ['Last updated', 'updated'], solr_opts: {sort: 'solr_plugin_available_sortable desc, updated_at desc'}},
     },
     products: {
-      none: {label: _('Relevance')},
-      # FIXME: retuns no results
-      #more_recent: {label: c_('More recent'), solr_opts: {sort: 'updated_at desc, score desc'}},
-      more_recent: {label: c_('More recent'), solr_opts: {boost_functions: ['recip(ms(NOW/HOUR,updated_at),1.3e-10,1,1)']}},
+      relevance: {label: _('Relevance')},
       name: {label: _('Name'), solr_opts: {sort: 'solr_plugin_name_sortable asc'}},
+      more_recent: {label: c_('More recent'), solr_opts: {sort: 'created_at desc, score desc'}},
+      #more_recent: {label: c_('More recent'), solr_opts: {boost_functions: ['recip(ms(NOW/HOUR,updated_at),1.3e-10,1,1)']}},
       closest: {label: _('Closest to me'), if: proc{ logged_in? && (profile=current_user.person).lat && profile.lng },
         solr_opts: {sort: "geodist() asc",
           latitude: proc{ current_user.person.lat }, longitude: proc{ current_user.person.lng }}},
@@ -28,23 +27,27 @@ module SolrPlugin::SearchHelper
     events: {
       none: {label: _('Relevance')},
       name: {label: _('Name'), solr_opts: {sort: 'solr_plugin_name_sortable asc'}},
+      more_recent: {label: c_('More recent'), solr_opts: {sort: 'created_at desc, score desc'}},
     },
     articles: {
       none: {label: _('Relevance')},
       name: {label: _('Name'), solr_opts: {sort: 'solr_plugin_name_sortable asc'}},
-      more_recent: {label: c_('More recent'), solr_opts: {sort: 'updated_at desc, score desc'}},
+      more_recent: {label: c_('More recent'), solr_opts: {sort: 'created_at desc, score desc'}},
     },
     enterprises: {
       none: {label: _('Relevance')},
       name: {label: _('Name'), solr_opts: {sort: 'solr_plugin_name_sortable asc'}},
+      more_recent: {label: c_('More recent'), solr_opts: {sort: 'created_at desc, score desc'}},
     },
     people: {
       none: {label: _('Relevance')},
       name: {label: _('Name'), solr_opts: {sort: 'solr_plugin_name_sortable asc'}},
+      more_recent: {label: c_('More recent'), solr_opts: {sort: 'created_at desc, score desc'}},
     },
     communities: {
       none: {label: _('Relevance')},
       name: {label: _('Name'), solr_opts: {sort: 'solr_plugin_name_sortable asc'}},
+      more_recent: {label: c_('More recent'), solr_opts: {sort: 'created_at desc, score desc'}},
     },
   }
 
@@ -64,14 +67,14 @@ module SolrPlugin::SearchHelper
     category.nil? && query.blank?
   end
 
-  def solr_filters_queries asset
+  def solr_filters_queries asset, environment
     case asset
     when :products
       ['solr_plugin_public:true', 'enabled:true']
-    when :catalog
+    when :catalog, :events, :categories, :product_categories
       []
-    when :events
-      []
+    when :profiles, :people, :organizations, :communities, :enterprises
+      ['solr_plugin_public:true', 'environment_id:%s' % environment.id]
     else
       ['solr_plugin_public:true']
     end

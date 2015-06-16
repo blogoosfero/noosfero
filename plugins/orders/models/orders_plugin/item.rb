@@ -1,6 +1,8 @@
 class OrdersPlugin::Item < ActiveRecord::Base
 
-  attr_accessible :price, :name, :order, :product
+  attr_accessible :order, :sale, :purchase,
+    :product, :product_id,
+    :price, :name
 
   # flag used by items to compare them with products
   attr_accessor :product_diff
@@ -26,9 +28,9 @@ class OrdersPlugin::Item < ActiveRecord::Base
 
   serialize :data
 
-  belongs_to :order, class_name: 'OrdersPlugin::Order', touch: true
-  belongs_to :sale, class_name: 'OrdersPlugin::Sale', foreign_key: :order_id
-  belongs_to :purchase, class_name: 'OrdersPlugin::Purchase', foreign_key: :order_id
+  belongs_to :order, class_name: 'OrdersPlugin::Order', foreign_key: :order_id, touch: true
+  belongs_to :sale, class_name: 'OrdersPlugin::Sale', foreign_key: :order_id, touch: true
+  belongs_to :purchase, class_name: 'OrdersPlugin::Purchase', foreign_key: :order_id, touch: true
 
   belongs_to :product
   has_one :supplier, through: :product
@@ -44,13 +46,19 @@ class OrdersPlugin::Item < ActiveRecord::Base
     has_many :supplier_products, through: :product
     has_many :suppliers, through: :product
   #end
+  def from_product
+    self.from_products.first
+  end
+  def supplier_product
+    self.supplier_products.first
+  end
 
   scope :ordered, conditions: ['orders_plugin_orders.status = ?', 'ordered'], joins: [:order]
   scope :for_product, lambda{ |product| {conditions: {product_id: product.id}} }
 
   default_scope include: [:product]
 
-  validates_presence_of :order
+  validate :has_order
   validates_presence_of :product
 
   before_save :save_calculated_prices
@@ -91,28 +99,86 @@ class OrdersPlugin::Item < ActiveRecord::Base
 
   # Attributes cached from product
   def name
-    self['name'] || (self.product.name rescue nil)
+    self[:name] || (self.product.name rescue nil)
   end
   def price
-    self['price'] || (self.product.price rescue nil)
+    self[:price] || (self.product.price_with_discount || 0 rescue nil)
   end
   def unit
     self.product.unit
   end
+  def unit_name
+    self.unit.singular if self.unit
+  end
   def supplier
     self.product.supplier rescue self.order.profile.self_supplier
+  end
+  def supplier_name
+    if self.product.supplier
+      self.product.supplier.abbreviation_or_name
+    else
+      self.order.profile.short_name
+    end
   end
 
   def status
     self.order.status
   end
 
+  # product used for comparizon when repeating an order
+  # override on subclasses
+  def repeat_product
+    self.product
+  end
+
+  def next_status_quantity_field actor_name
+    status = StatusDataMap[self.order.next_status actor_name] || 'consumer_ordered'
+    "quantity_#{status}"
+  end
+  def next_status_quantity actor_name
+    self.send self.next_status_quantity_field(actor_name)
+  end
+  def next_status_quantity_set actor_name, value
+    self.send "#{self.next_status_quantity_field actor_name}=", value
+  end
+
+  def status_quantity_field
+    @status_quantity_field ||= begin
+      status = StatusDataMap[self.order.status] || 'consumer_ordered'
+      "quantity_#{status}"
+    end
+  end
+  def status_price_field
+    @status_price_field ||= begin
+      status = StatusDataMap[self.order.status] || 'consumer_ordered'
+      "price_#{status}"
+    end
+  end
+
+  def status_quantity
+    self.send self.status_quantity_field
+  end
+  def status_quantity= value
+    self.send "#{self.status_quantity_field}=", value
+  end
+
+  def status_price
+    self.send self.status_price_field
+  end
+  def status_price= value
+    self.send "#{self.status_price_field}=", value
+  end
+
   StatusDataMap.each do |status, data|
     quantity = "quantity_#{data}".to_sym
     price = "price_#{data}".to_sym
 
-    define_method "calculated_#{price}" do |items=[]|
+    define_method "calculated_#{price}" do
       self.price * self.send(quantity) rescue nil
+    end
+
+    define_method price do
+      self[price] || self.send("calculated_#{price}")
     end
   end
 
@@ -128,16 +194,19 @@ class OrdersPlugin::Item < ActiveRecord::Base
 
     new_price = nil
     # compare with product
-    if self.product_diff and self.product
-      if self.price != self.product.price
-        new_price = self.product.price
-        data[:new_price] = self.product.price_as_currency_number
+    if self.product_diff
+      if self.repeat_product and self.repeat_product.available
+        if self.price != self.repeat_product.price
+          new_price = self.repeat_product.price
+          data[:new_price] = self.repeat_product.price_as_currency_number
+        end
+      else
+        data[:flags][:unavailable] = true
       end
-      data[:flags][:unavailable] = true if not self.product.available
     end
 
     # Fetch data
-    statuses.each_with_index do |status, i|
+    statuses.each.with_index do |status, i|
       data_field = StatusDataMap[status]
       access = StatusAccessMap[status]
 
@@ -149,7 +218,9 @@ class OrdersPlugin::Item < ActiveRecord::Base
 
       quantity = self.send "quantity_#{data_field}"
       if quantity.present?
-        status_data[:quantity] = self.send "quantity_#{data_field}_localized"
+        # quantity is used on <input type=number> so it should not be localized
+        status_data[:quantity] = quantity
+        status_data[:flags][:removed] = true if status_data[:quantity].zero?
         status_data[:price] = self.send "price_#{data_field}_as_currency_number"
         status_data[:new_price] = quantity * new_price if new_price
         status_data[:flags][:filled] = true
@@ -168,9 +239,8 @@ class OrdersPlugin::Item < ActiveRecord::Base
 
     # Set flags according to past/future data
     # Present flags are used as classes
-    statuses_data.each_with_index do |(status, status_data), i|
+    statuses_data.each.with_index do |(status, status_data), i|
       prev_status_data = statuses_data[statuses[i-1]] unless i.zero?
-      next_status_data = statuses_data[statuses[i+1]]
 
       if prev_status_data
         if status_data[:quantity] == prev_status_data[:quantity]
@@ -183,17 +253,22 @@ class OrdersPlugin::Item < ActiveRecord::Base
           status_data[:flags][:not_modified] = true
         end
       end
+    end
 
-      if next_status_data
-        if next_status_data[:flags][:filled] and status_data[:quantity] != next_status_data[:quantity]
-          status_data[:flags][:overwritten] = true
-        end
+    # reverse_each is necessary to set overwritten with intermediate not_modified
+    statuses_data.reverse_each.with_index do |(status, status_data), i|
+      prev_status_data = statuses_data[statuses[-i-1]]
+      if status_data[:not_modified] or
+          (prev_status_data and prev_status_data[:flags][:filled] and status_data[:quantity] != prev_status_data[:quantity])
+        status_data[:flags][:overwritten] = true
       end
     end
 
     # Set access
-    statuses_data.each_with_index do |(status, status_data), i|
-      status_data[:flags][:editable] = true if status_data[:access] == actor_name and (status_data[:flags][:admin] or self.order.open?)
+    statuses_data.each.with_index do |(status, status_data), i|
+      status_data[:flags][:editable] = true if StatusAccessMap[status] == actor_name
+      # code to only allow last status
+      #status_data[:flags][:editable] = true if status_data[:access] == actor_name and (status_data[:flags][:admin] or self.order.open?)
     end
 
     data
@@ -213,6 +288,9 @@ class OrdersPlugin::Item < ActiveRecord::Base
     end
   end
 
+  def has_order
+    self.order or self.sale or self.purchase
+  end
 
   def sync_fields
     self.name = self.product.name

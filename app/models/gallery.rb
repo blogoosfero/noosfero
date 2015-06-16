@@ -1,5 +1,7 @@
 class Gallery < Folder
 
+  has_many :images, :conditions => { :is_image => true }, :order => 'updated_at DESC', :class_name => 'Article', :foreign_key => 'parent_id'
+
   def self.type_name
     _('Gallery')
   end

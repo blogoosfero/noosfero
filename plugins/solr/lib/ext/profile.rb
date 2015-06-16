@@ -132,8 +132,8 @@ class Profile
 
   acts_as_searchable fields: facets_fields_for_solr + [:solr_plugin_extra_data_for_index,
       # searched fields
-      {name: {type: :text, boost: 2.0}},
-      {identifier: :text}, {nickname: :text}, {contact_email: :text},
+      {name: {type: :text, boost: 2.0}}, {nickname: :text}, {display_name: :text},
+      {identifier: :text}, {contact_email: :text},
       # filtered fields
       {solr_plugin_public: :boolean}, {environment_id: :integer},
       {solr_plugin_category_filter: :integer},
@@ -155,6 +155,10 @@ class Profile
   #handle_asynchronously :solr_save
   # solr_destroy don't work with delayed_job, as AR won't be found
   #handle_asynchronously :solr_destroy
+
+  def no_templates
+    !self.is_template
+  end
 
   def no_templates
     !self.is_template

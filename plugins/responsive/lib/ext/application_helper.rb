@@ -1,4 +1,5 @@
 require_dependency 'application_helper'
+require_relative 'input_helper'
 
 module ApplicationHelper
 
@@ -250,6 +251,8 @@ module ApplicationHelper
       #control_panel link
       output += '<li>' + link_to('<i class="icon-menu-ctrl-panel"></i><strong>' + _('Control panel') + '</strong>', user.admin_url, class: 'ctrl-panel', title: _("Configure your personal account and content")) + '</li>'
 
+      output += chat_user_status_menu('icon-menu-offline', _('Offline'))
+
       #manage_enterprises
       manage_enterprises_str = manage_enterprises
       output += manage_enterprises_str.present? ? '<li>' + manage_enterprises_str + '</li>' : ''
@@ -406,11 +409,11 @@ module ApplicationHelper
       end
 
       if options[:horizontal]
-        label_html = content_tag('label', gettext(text), class: 'control-label col-sm-3 col-md-2 col-lg-2', for: field_id)
-        result = content_tag('div', label_html + content_tag('div',field_html, class: 'col-sm-9 col-md-6 col-lg-6'), class: 'form-group' )
+        label_html = content_tag :label, gettext(text), class: 'control-label col-sm-3 col-md-2 col-lg-2', for: field_id
+        result = content_tag :div, label_html + content_tag('div',field_html, class: 'col-sm-9 col-md-6 col-lg-6'), class: 'form-group'
       else
-        label_html = content_tag('label', gettext(text), class: 'control-label', for: field_id)
-        result = content_tag('div', label_html + field_html, class: 'form-group' )
+        label_html = content_tag :label, gettext(text), class: 'control-label', for: field_id
+        result = content_tag :div, label_html + field_html, class: 'form-group'
       end
 
       result

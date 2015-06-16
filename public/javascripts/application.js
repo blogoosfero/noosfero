@@ -2,7 +2,7 @@
 // This file is automatically included by javascript_include_tag :defaults
 /*
 * third party libraries
-*= require lodash.compat.min.js
+*= require lodash.js
 *= require jquery-2.1.1.min.js
 *= require jquery-migrate-1.2.1.js
 *= require jquery.colorbox-min.js
@@ -20,7 +20,6 @@
 *= require inputosaurus.js
 *= require reflection.js
 *= require select-or-die/_src/selectordie
-*= require typeahead.bundle.js
 *= require rails.js
 *= require rails-extended.js
 *= require jrails.js
@@ -997,10 +996,20 @@ function notifyMe(title, options) {
 
       // If the user is okay, let's create a notification
       if (permission === "granted") {
-	notification = new Notification(title, options);
+        notification = new Notification(title, options);
       }
     });
   }
+
+  setTimeout(function() {notification.close()}, 5000);
+  notification.onclick = function(){
+    notification.close();
+    // Chromium tweak
+    window.open().close();
+    window.focus();
+    this.cancel();
+  };
+
   return notification;
   // At last, if the user already denied any notification, and you
   // want to be respectful there is no need to bother them any more.
