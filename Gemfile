@@ -31,6 +31,11 @@ platform :ruby do
   group :performance do
     gem 'fast_blank'
     gem 'gctools' if RUBY_VERSION >= '2.1.0' and RUBY_VERSION < '2.2.0'
+
+    gem 'stackprof'
+    gem 'flamegraph'
+    gem 'rack-mini-profiler'
+
     # DON'T IMPROVE
     #gem 'escape_utils'
   end
@@ -51,7 +56,7 @@ group :assets do
   gem 'uglifier', '>= 1.0.3'
   gem 'coffee-rails'
   gem 'sass'
-  gem 'sass-rails'
+  gem 'sass-rails', '~> 3.2.0'
 end
 
 group :production do
@@ -80,8 +85,9 @@ end
 
 group :development do
   gem 'wirble'
-  #gem 'byebug'
-  #gem 'method_source'
+  gem 'byebug'
+  gem 'html2haml'
+  gem 'haml2slim'
 end
 
 # Requires custom dependencies
