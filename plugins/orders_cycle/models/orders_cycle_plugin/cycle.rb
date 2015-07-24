@@ -9,53 +9,54 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
   DbStatuses = %w[new] + Statuses
   UserStatuses = Statuses
 
-  StatusActorMap = {
-    'edition' => :supplier,
-    'orders' => :supplier,
-    'purchases' => :consumer,
-    'receipts' => :consumer,
-    'separation' => :supplier,
-    'delivery' => :supplier,
-    'closing' => :supplier,
-  }
-  OrderStatusMap = {
-    # sales
+  # which status the sales are on each cycle status
+  SaleStatusMap = {
+    'edition' => nil,
     'orders' => :ordered,
-    # purchases
-    'purchases' => :draft,
-    'receipts' => :ordered,
-    # sales
+    'purchases' => :accepted,
+    'receipts' => :accepted,
     'separation' => :accepted,
     'delivery' => :separated,
     'closing' => :delivered,
   }
+  # which status the purchases are on each cycle status
+  PurchaseStatusMap = {
+    'edition' => nil,
+    'orders' => nil,
+    'purchases' => :draft,
+    'receipts' => :ordered,
+    'separation' => :received,
+    'delivery' => :received,
+    'closing' => :received,
+  }
 
   belongs_to :profile
 
-  has_many :delivery_options, class_name: 'DeliveryPlugin::Option', dependent: :destroy,
-    as: :owner, conditions: ["delivery_plugin_options.owner_type = 'OrdersCyclePlugin::Cycle'"]
+  has_many :delivery_options, -> {
+    where "delivery_plugin_options.owner_type = 'OrdersCyclePlugin::Cycle'"
+  }, class_name: 'DeliveryPlugin::Option', dependent: :destroy, as: :owner
   has_many :delivery_methods, through: :delivery_options, source: :delivery_method
 
-  has_many :cycle_orders, class_name: 'OrdersCyclePlugin::CycleOrder', foreign_key: :cycle_id, dependent: :destroy, order: 'id ASC'
+  has_many :cycle_orders, -> { order 'id ASC' }, class_name: 'OrdersCyclePlugin::CycleOrder', foreign_key: :cycle_id, dependent: :destroy
 
   # cannot use :order because of months/years named_scope
   has_many :sales, through: :cycle_orders, source: :sale
   has_many :purchases, through: :cycle_orders, source: :purchase
 
   has_many :cycle_products, foreign_key: :cycle_id, class_name: 'OrdersCyclePlugin::CycleProduct', dependent: :destroy
-  has_many :products, through: :cycle_products, order: 'products.name ASC',
-    include: [ :from_2x_products, :from_products, {profile: :domains}, ]
+  has_many :products, -> { includes :from_2x_products, :from_products, {profile: :domains} },
+    through: :cycle_products
 
-  has_many :consumers, through: :sales, source: :consumer, order: 'name ASC', uniq: true
-  has_many :suppliers, through: :products, order: 'suppliers_plugin_suppliers.name ASC', uniq: true
-  has_many :orders_suppliers, through: :sales, source: :profile, order: 'name ASC'
+  has_many :consumers, -> { distinct.reorder 'name ASC' }, through: :sales, source: :consumer
+  has_many :suppliers, -> { distinct.reorder 'suppliers_plugin_suppliers.name ASC' }, through: :products
+  has_many :orders_suppliers, -> { reorder 'name ASC' }, through: :sales, source: :profile
 
-  has_many :from_products, through: :products, order: 'name ASC', uniq: true
-  has_many :supplier_products, through: :products, order: 'name ASC', uniq: true
-  has_many :product_categories, through: :products, order: 'name ASC', uniq: true
+  has_many :from_products, -> { distinct.reorder 'name ASC' }, through: :products
+  has_many :supplier_products, -> { distinct.reorder 'name ASC' }, through: :products
+  has_many :product_categories, -> { distinct.reorder 'name ASC' }, through: :products
 
-  has_many :orders_confirmed, through: :cycle_orders, source: :sale, order: 'id ASC',
-    conditions: ['orders_plugin_orders.ordered_at IS NOT NULL']
+  has_many :orders_confirmed, -> { reorder('id ASC').where 'orders_plugin_orders.ordered_at IS NOT NULL' },
+    through: :cycle_orders, source: :sale
 
   has_many :items_selled, through: :sales, source: :items
   has_many :items_purchased, through: :purchases, source: :items
@@ -64,45 +65,48 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
 
   has_many :ordered_suppliers, through: :orders_confirmed, source: :suppliers
 
-  has_many :ordered_offered_products, through: :orders_confirmed, source: :offered_products, uniq: true, include: [:suppliers]
-  has_many :ordered_distributed_products, through: :orders_confirmed, source: :distributed_products, uniq: true, include: [:suppliers]
-  has_many :ordered_supplier_products, through: :orders_confirmed, source: :supplier_products, uniq: true, include: [:suppliers]
+  has_many :ordered_offered_products, -> { distinct.includes :suppliers }, through: :orders_confirmed, source: :offered_products
+  has_many :ordered_distributed_products, -> { distinct.includes :suppliers }, through: :orders_confirmed, source: :distributed_products
+  has_many :ordered_supplier_products, -> { distinct.includes :suppliers }, through: :orders_confirmed, source: :supplier_products
 
   has_many :volunteers_periods, class_name: 'VolunteersPlugin::Period', as: :owner
   has_many :volunteers, through: :volunteers_periods, source: :profile
   attr_accessible :volunteers_periods_attributes
   accepts_nested_attributes_for :volunteers_periods, allow_destroy: true
 
-  scope :has_volunteers_periods, -> {uniq.joins [:volunteers_periods]}
+  scope :has_volunteers_periods, -> { distinct.joins :volunteers_periods }
 
   # status scopes
-  scope :defuncts, conditions: ["status = 'new' AND created_at < ?", 2.days.ago]
-  scope :not_new, conditions: ["status <> 'new'"]
-  scope :on_orders, lambda {
-    {conditions: ["status = 'orders' AND ( (start <= :now AND finish IS NULL) OR (start <= :now AND finish >= :now) )",
-      {now: DateTime.now}]}
-  }
-  scope :not_on_orders, lambda {
-    {conditions: ["NOT (status = 'orders' AND ( (start <= :now AND finish IS NULL) OR (start <= :now AND finish >= :now) ) )",
-      {now: DateTime.now}]}
-  }
-  scope :opened, conditions: ["status <> 'new' AND status <> 'closing'"]
-  scope :closing, conditions: ["status = 'closing'"]
-  scope :by_status, lambda { |status| { conditions: {status: status} } }
+  scope :on_edition, -> { where status: 'edition' }
+  scope :on_orders, -> { where status: 'orders' }
+  scope :on_purchases, -> { where status: 'purchases' }
+  scope :on_separation, -> { where status: 'separation' }
+  scope :on_delivery, -> { where status: 'delivery' }
+  scope :on_closing, -> { where status: 'closing' }
 
-  scope :months, select: 'DISTINCT(EXTRACT(months FROM start)) as month', order: 'month DESC'
-  scope :years, select: 'DISTINCT(EXTRACT(YEAR FROM start)) as year', order: 'year DESC'
+  scope :defuncts, -> { where "status = 'new' AND created_at < ?", 2.days.ago }
+  scope :not_new, -> { where "status <> 'new'" }
+  scope :on_orders, -> {
+    where "status = 'orders' AND ( (start <= :now AND finish IS NULL) OR (start <= :now AND finish >= :now) )", now: DateTime.now
+  }
+  scope :not_on_orders, -> {
+    where "NOT (status = 'orders' AND ( (start <= :now AND finish IS NULL) OR (start <= :now AND finish >= :now) ) )", now: DateTime.now
+  }
+  scope :opened, -> { where "status <> 'new' AND status <> 'closing'" }
+  scope :closing, -> { where "status = 'closing'" }
+  scope :by_status, -> (status) { where status: status }
 
-  scope :by_month, lambda { |month| {
-    conditions: [ 'EXTRACT(month FROM start) <= :month AND EXTRACT(month FROM finish) >= :month', { month: month } ]}
+  scope :months, -> { order('month DESC').select 'DISTINCT(EXTRACT(months FROM start)) as month' }
+  scope :years, -> { order('year DESC').select 'DISTINCT(EXTRACT(YEAR FROM start)) as year' }
+
+  scope :by_month, -> (month) {
+    where 'EXTRACT(month FROM start) <= :month AND EXTRACT(month FROM finish) >= :month', month: month
   }
-  scope :by_year, lambda { |year| {
-    conditions: [ 'EXTRACT(year FROM start) <= :year AND EXTRACT(year FROM finish) >= :year', { year: year } ]}
+  scope :by_year, -> (year) {
+    where 'EXTRACT(year FROM start) <= :year AND EXTRACT(year FROM finish) >= :year', year: year
   }
-  scope :by_range, lambda { |range| {
-    conditions: [ 'start BETWEEN :start AND :finish OR finish BETWEEN :start AND :finish',
-      { start: range.first, finish: range.last }
-    ]}
+  scope :by_range, -> (range) {
+    where 'start BETWEEN :start AND :finish OR finish BETWEEN :start AND :finish', start: range.first, finish: range.last
   }
 
   validates_presence_of :profile
@@ -205,9 +209,7 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
   end
 
   def products_for_order
-    # FIXME name alias conflict
-    #self.products.unarchived.with_price.order('products.name ASC')
-    self.products.unarchived.with_price
+    self.products.unarchived.alphabetically.with_price
   end
 
   def supplier_products_by_suppliers orders = self.sales.ordered
@@ -256,21 +258,26 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
 
   def update_orders_status
     # step orders to next_status on status change
-    return if self.new? or self.status_was == self.status
-    return unless order_status_was = OrderStatusMap[self.status_was]
-    new_order_status = OrderStatusMap[self.status]
+    return if self.new? or self.status_was == "new" or self.status_was == self.status
 
-    actor_name = StatusActorMap[self.status_was]
-    orders_method = if actor_name == :supplier then :sales else :purchases end
-    # we can't rewind purchases status because the suppliers already got notified by the confirmed parcels
-    return if orders_method == :purchases and self.status_was == 'receipts' and self.status == 'purchases'
-    # don't rewind consumers' confirmed orders
-    return if orders_method == :sales and self.status_was == 'orders' and self.status == 'edition'
+    # Don't rewind confirmed sales
+    unless self.status_was == 'orders' and self.status == 'edition'
+      sale_status_was = SaleStatusMap[self.status_was]
+      new_sale_status = SaleStatusMap[self.status]
+      sales = self.sales.where(status: sale_status_was.to_s)
+      sales.each do |sale|
+        sale.update_attributes status: new_sale_status.to_s
+      end
+    end
 
-    # get only the orders in the same cycle status
-    orders = self.send(orders_method).where(status: order_status_was.to_s)
-    orders.each do |order|
-      order.update_attribute :status, new_order_status
+    # Don't rewind confirmed purchases
+    unless self.status_was == 'receipts' and self.status == 'purchases'
+      purchase_status_was = PurchaseStatusMap[self.status_was]
+      new_purchase_status = PurchaseStatusMap[self.status]
+      purchases = self.purchases.where(status: purchase_status_was.to_s)
+      purchases.each do |purchase|
+        purchase.update_attributes status: new_purchase_status.to_s
+      end
     end
   end
 

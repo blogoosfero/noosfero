@@ -173,7 +173,7 @@ class EnvironmentTest < ActiveSupport::TestCase
 
   should 'have regions' do
     env = fast_create(Environment)
-    assert_kind_of Array, env.regions
+    assert env.regions.empty?
     assert_raise ActiveRecord::AssociationTypeMismatch do
       env.regions << 1
     end
@@ -765,13 +765,10 @@ class EnvironmentTest < ActiveSupport::TestCase
 
   should 'set custom_person_fields with its dependecies' do
     env = Environment.new
-    env.custom_person_fields = {'cell_phone' => {'required' => 'true', 'active' => '', 'signup' => ''}, 'comercial_phone'=>  {'required' => '', 'active' => 'true', 'signup' => '' }, 'description' => {'required' => '', 'active' => '', 'signup' => 'true'}}
+    data = {'cell_phone' => {'required' => 'true', 'active' => '', 'signup' => ''}, 'comercial_phone'=>  {'required' => '', 'active' => 'true', 'signup' => '' }, 'description' => {'required' => '', 'active' => '', 'signup' => 'true'}}
+    env.custom_person_fields = data
 
-    assert_equal({'cell_phone' => {'required' => 'true', 'active' => 'true', 'signup' => 'true'}, 'comercial_phone'=>  {'required' => '', 'active' => 'true', 'signup' => '' }, 'description' => {'required' => '', 'active' => 'true', 'signup' => 'true'}}, env.custom_person_fields)
-  end
-
-  should 'have no custom_person_fields by default' do
-    assert_equal({}, Environment.new.custom_person_fields)
+    assert(env.custom_person_fields.merge(data) == env.custom_person_fields)
   end
 
   should 'not set in custom_person_fields if not in person.fields' do
@@ -779,7 +776,8 @@ class EnvironmentTest < ActiveSupport::TestCase
     Person.stubs(:fields).returns(['cell_phone', 'comercial_phone'])
 
     env.custom_person_fields = { 'birth_date' => {'required' => 'true', 'active' => 'true'}, 'cell_phone' => {'required' => 'true', 'active' => 'true'}}
-    assert_equal({'cell_phone' => {'required' => 'true','signup' => 'true',  'active' => 'true'}}, env.custom_person_fields)
+    expected_hash = {'cell_phone' => {'required' => 'true', 'active' => 'true', 'signup' => 'true'}}
+    assert(env.custom_person_fields.merge(expected_hash) == env.custom_person_fields)
     assert ! env.custom_person_fields.keys.include?('birth_date')
   end
 
@@ -788,7 +786,8 @@ class EnvironmentTest < ActiveSupport::TestCase
     Person.stubs(:fields).returns(['cell_phone', 'schooling'])
 
     env.custom_person_fields = { 'schooling' => {'required' => 'true', 'active' => 'true'}}
-    assert_equal({'schooling' => {'required' => 'true', 'signup' => 'true', 'active' => 'true'}, 'schooling_status' => {'required' => 'true', 'signup' => 'true', 'active' => 'true'}}, env.custom_person_fields)
+    expected_hash = {'schooling' => {'required' => 'true', 'active' => 'true', 'signup' => 'true'}, 'schooling_status' => {'required' => 'true', 'signup' => 'true', 'active' => 'true'}}
+    assert(env.custom_person_fields.merge(expected_hash) == env.custom_person_fields)
     assert ! env.custom_person_fields.keys.include?('birth_date')
   end
 
@@ -1152,7 +1151,7 @@ class EnvironmentTest < ActiveSupport::TestCase
     environment.message_for_disabled_enterprise = "<h1> Disabled Enterprise /h1>"
     environment.valid?
 
-    assert_no_match /[<>]/, environment.message_for_disabled_enterprise
+    assert_match /<h1> Disabled Enterprise \/h1&gt;<\/h1>/, environment.message_for_disabled_enterprise
   end
 
   should 'not sanitize html comments' do
@@ -1160,7 +1159,7 @@ class EnvironmentTest < ActiveSupport::TestCase
     environment.message_for_disabled_enterprise = '<p><!-- <asdf> << aasdfa >>> --> <h1> Wellformed html code </h1>'
     environment.valid?
 
-    assert_match  /<!-- .* --> <h1> Wellformed html code <\/h1>/, environment.message_for_disabled_enterprise
+    assert_match  /<p><!-- .* --> <\/p><h1> Wellformed html code <\/h1>/, environment.message_for_disabled_enterprise
   end
 
   should "not crash when set nil as terms of use" do
@@ -1393,11 +1392,12 @@ class EnvironmentTest < ActiveSupport::TestCase
   end
 
   should 'always store setting keys as symbol' do
+    Environment.settings_items :string_key, type: String
     env = Environment.default
-    env.settings['string_key'] = 'new value'
+    env.string_key = 'new value'
     env.save!; env.reload
-    assert_nil env.settings['string_key']
     assert_equal env.settings[:string_key], 'new value'
+    assert_nil env.settings['string_key']
   end
 
   should 'validate reports_lower_bound' do

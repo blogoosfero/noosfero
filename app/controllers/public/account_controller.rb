@@ -51,10 +51,12 @@ class AccountController < ApplicationController
 
     if logged_in?
       check_join_in_community(self.current_user)
+
       if params[:remember_me] == "1"
         self.current_user.remember_me
-        cookies[:auth_token] = { :value => self.current_user.remember_token , :expires => self.current_user.remember_token_expires_at }
+        cookies[:auth_token] = {value: self.current_user.remember_token, expires: self.current_user.remember_token_expires_at}
       end
+
       if redirect?
         go_to_initial_page
         session[:notice] = _("Logged in successfully")
@@ -93,6 +95,7 @@ class AccountController < ApplicationController
     @invitation_code = params[:invitation_code]
     begin
       @user = User.new(params[:user])
+      @user.session = session
       @user.terms_of_use = environment.terms_of_use
       @user.environment = environment
       @terms_of_use = environment.terms_of_use
@@ -114,9 +117,9 @@ class AccountController < ApplicationController
           @user.signup!
           owner_role = Role.find_by_name('owner')
           @user.person.affiliate(@user.person, [owner_role]) if owner_role
-          invitation = Task.find_by_code(@invitation_code)
+          invitation = Task.from_code(@invitation_code).first
           if invitation
-            invitation.update_attributes!({:friend => @user.person})
+            invitation.update_attributes! friend: @user.person
             invitation.finish
           end
 
@@ -207,7 +210,7 @@ class AccountController < ApplicationController
   #
   # Posts back.
   def new_password
-    @change_password = ChangePassword.find_by_code(params[:code])
+    @change_password = ChangePassword.from_code(params[:code]).first
 
     unless @change_password
       render :action => 'invalid_change_password_code', :status => 403
@@ -415,7 +418,7 @@ class AccountController < ApplicationController
   end
 
   def load_enterprise_activation
-    @enterprise_activation ||= EnterpriseActivation.find_by_code(params[:enterprise_code])
+    @enterprise_activation ||= EnterpriseActivation.from_code(params[:enterprise_code]).first
   end
 
   def load_enterprise
@@ -452,7 +455,7 @@ class AccountController < ApplicationController
   end
 
   def go_to_signup_initial_page
-    check_redirection_options(user, user.environment.redirection_after_signup, user.url)
+    check_redirection_options user, user.environment.redirection_after_signup, user.url, signup: true
   end
 
   def redirect_if_logged_in
@@ -472,8 +475,11 @@ class AccountController < ApplicationController
 
   protected
 
-  def check_redirection_options(user, condition, default)
-    case condition
+  def check_redirection_options user, condition, default, options={}
+    if options[:signup] and target = session.delete(:after_signup_redirect_to)
+      redirect_to target
+    else
+      case condition
       when 'keep_on_same_page'
         redirect_back_or_default(user.admin_url)
       when 'site_homepage'
@@ -486,8 +492,11 @@ class AccountController < ApplicationController
         redirect_to user.admin_url.merge(_: Time.now.to_i)
       when 'welcome_page'
         redirect_to :controller => :home, :action => :welcome, :template_id => (user.template && user.template.id)
-    else
-      redirect_back_or_default(default)
+      when 'custom_url'
+        if (url = user.custom_url_redirection).present? then redirect_to url else redirect_back_or_default default end
+      else
+        redirect_back_or_default(default)
+      end
     end
   end
 

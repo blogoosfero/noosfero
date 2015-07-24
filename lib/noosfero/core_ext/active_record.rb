@@ -2,6 +2,11 @@ require 'active_record'
 
 class ActiveRecord::Base
 
+  # default primary key
+  def self.primary_key
+    @primary_key = 'id' if self.column_names.include? 'id'
+  end
+
   def self.postgresql?
     ActiveRecord::Base.connection.adapter_name == 'PostgreSQL'
   end
@@ -9,10 +14,10 @@ class ActiveRecord::Base
   # an ActionView instance for rendering views on models
   def self.action_view
     @action_view ||= begin
-      view_paths = ActionController::Base.view_paths
-      action_view = ActionView::Base.new view_paths
+      view_paths = ::ActionController::Base.view_paths
+      action_view = ::ActionView::Base.new view_paths
       # for using Noosfero helpers inside render calls
-      action_view.extend ApplicationHelper
+      action_view.extend ::ApplicationHelper
       action_view
     end
   end

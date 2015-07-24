@@ -16,7 +16,8 @@ class SuppliersPlugin::BaseProduct < Product
     }
   ]
 
-  self.abstract_class = true
+  # if abstract_class is true then it will trigger https://github.com/rails/rails/issues/20871
+  #self.abstract_class = true
 
   settings_items :minimum_selleable, type: Float, default: nil
   settings_items :margin_percentage, type: Float, default: nil
@@ -36,11 +37,10 @@ class SuppliersPlugin::BaseProduct < Product
   default_delegate_setting :image, to: :supplier_product, prefix: :_default
   default_delegate_setting :description, to: :supplier_product
   default_delegate_setting :unit, to: :supplier_product
-  default_delegate_setting :available, to: :supplier_product
   default_delegate_setting :margin_percentage, to: :profile,
-    default_if: -> { self.own_margin_percentage.blank? or self.own_margin_percentage.zero? or self.own_price == self.supplier_product.price }
+    default_if: -> { self.own_margin_percentage.blank? or self.own_margin_percentage.zero? }
 
-  default_delegate :price, default_setting: :default_margin_percentage,
+  default_delegate :price, default_setting: :default_margin_percentage, default_if: :equal?,
     to: -> { self.supplier_product.price_with_discount if self.supplier_product }
   default_delegate :unit_detail, default_setting: :default_unit, to: :supplier_product
   default_delegate_setting :stored, to: :supplier_product,
@@ -94,9 +94,9 @@ SQL
   end
 
   def self.archive_orphans
-    # need full save to trigger search index
     self.where(id: self.orphans_ids).find_each batch_size: 50 do |product|
-      product.update_attribute :archived, true
+      # need full save to trigger search index
+      product.update_attributes archived: true
     end
   end
 
@@ -108,11 +108,9 @@ SQL
     (self.supplier_product.unit rescue nil) || self.class.default_unit
   end
 
-  # replace available? to use the replaced default_delegate method
-  def available?
-    self.available
+  def available
+    self[:available]
   end
-
   def available_with_supplier
     return self.available_without_supplier unless self.supplier_product
     self.available_without_supplier and self.supplier_product.available and self.supplier.active rescue false

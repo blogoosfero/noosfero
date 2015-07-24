@@ -145,17 +145,18 @@ class Noosfero::Plugin
         filters = [filters]
       end
       filters.each do |plugin_filter|
+        plugin_filter[:options] ||= {}
+        plugin_filter[:options][:if] = -> { environment.plugin_enabled? plugin.module_name }
+
         filter_method = "#{plugin.identifier}_#{plugin_filter[:method_name]}".to_sym
-        controller_class.send(plugin_filter[:type], filter_method, (plugin_filter[:options] || {}))
-        controller_class.send(:define_method, filter_method) do
-          instance_exec(&plugin_filter[:block]) if environment.plugin_enabled?(plugin)
-        end
+        controller_class.send plugin_filter[:type], filter_method, plugin_filter[:options]
+        controller_class.send :define_method, filter_method, &plugin_filter[:block]
       end
     end
 
     def load_plugin_extensions(dir)
       ActionDispatch::Reloader.to_prepare do
-        Dir[File.join(dir, 'lib', 'ext', '*.rb')].each {|file| require_dependency file }
+        Dir[File.join(dir, 'lib', 'ext', '*.rb')].each{ |file| require_dependency file }
       end
     end
 
@@ -201,6 +202,5 @@ end
 
 require 'noosfero/plugin/hot_spot'
 require 'noosfero/plugin/manager'
-require 'noosfero/plugin/active_record'
 require 'noosfero/plugin/mailer_base'
 require 'noosfero/plugin/settings'

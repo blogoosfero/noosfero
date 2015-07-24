@@ -24,7 +24,10 @@ module AuthenticatedSystem
     # Accesses the current user from the session.
     def current_user
       @current_user ||= begin
-        User.current = (session[:user] && User.find_by_id(session[:user])) || nil
+        id = session[:user]
+        user = User.where(id: id).first if id
+        user.session = session if user
+        User.current = user
       end
     end
 
@@ -34,6 +37,7 @@ module AuthenticatedSystem
         session.delete(:user)
       else
         session[:user] = new_user.id
+        new_user.session = session
         new_user.register_login
       end
       @current_user = User.current = new_user
@@ -145,14 +149,9 @@ module AuthenticatedSystem
     # When called with before_filter :login_from_cookie will check for an :auth_token
     # cookie and log the user back in if apropriate
     def login_from_cookie
-      return unless cookies[:auth_token] && !logged_in?
-      user = User.find_by_remember_token(cookies[:auth_token])
-      if user && user.remember_token?
-        user.remember_me
-        self.current_user = user
-        cookies[:auth_token] = { :value => self.current_user.remember_token , :expires => self.current_user.remember_token_expires_at }
-        flash[:notice] = "Logged in successfully"
-      end
+      return if cookies[:auth_token].blank? or logged_in?
+      user = User.where(remember_token: cookies[:auth_token]).first
+      self.current_user = user if user and user.remember_token?
     end
 
   private

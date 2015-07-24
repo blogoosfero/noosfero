@@ -20,6 +20,7 @@ Feature: edit article
     And I fill in "Title" with "My Folder"
     And I press "Save"
     And I go to joaosilva's control panel
+    And I follow "Manage Content"
     Then I should see "My Folder"
 
   @selenium
@@ -88,8 +89,7 @@ Feature: edit article
     When I follow "Folder"
     And I fill in "Title" with "My Folder"
     And I choose "article_published_false"
-    And I uncheck "article_show_to_followers"
-    Then I should see "Fill in the search field to add the exception users to see this content"
+    Then I should see "Fill in the search field to add the exception members to see this content"
 
   @selenium
   Scenario: allowed user should see the content of a folder

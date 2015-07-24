@@ -75,7 +75,8 @@ class User < ActiveRecord::Base
 
   attr_writer :person_data
   def person_data
-    @person_data || {}
+    @person_data = {} if @person_data.nil?
+    @person_data
   end
 
   def email_domain
@@ -92,8 +93,13 @@ class User < ActiveRecord::Base
     end
   end
 
-  has_one :person, :dependent => :destroy
+  # set autosave to false as we do manually when needed and Person syncs with us
+  has_one :person, dependent: :destroy, autosave: false
   belongs_to :environment
+
+  has_many :sessions, dependent: :destroy
+  # holds the current session, see lib/authenticated_system.rb
+  attr_accessor :session
 
   attr_protected :activated_at
 
@@ -118,8 +124,8 @@ class User < ActiveRecord::Base
   # Authenticates a user by their login name or email and unencrypted password.  Returns the user or nil.
   def self.authenticate(login, password, environment = nil)
     environment ||= Environment.default
-    u = self.first :conditions => ['(login = ? OR email = ?) AND environment_id = ? AND activated_at IS NOT NULL',
-                                   login, login, environment.id] # need to get the salt
+    u = self.where('(login = ? OR email = ?) AND environment_id = ? AND activated_at IS NOT NULL',
+                   login, login, environment.id).first # need to get the salt
     u && u.authenticated?(password) ? u : nil
   end
 
@@ -248,8 +254,9 @@ class User < ActiveRecord::Base
 
   # These create and unset the fields required for remembering users between browser closes
   def remember_me
-    self.remember_token_expires_at = 2.weeks.from_now.utc
-    self.remember_token            = encrypt("#{email}--#{remember_token_expires_at}")
+    self.remember_token_expires_at = 1.months.from_now.utc
+    # if the user's email/password changes this won't be valid anymore
+    self.remember_token = encrypt "#{email}-#{self.crypted_password}-#{remember_token_expires_at}"
     save(:validate => false)
   end
 
@@ -286,12 +293,12 @@ class User < ActiveRecord::Base
   end
 
   def name
-    name = (self[:name] || login)
+    name = (@name || login)
     person.nil? ? name : (person.name || name)
   end
 
   def name= name
-    self[:name] = name
+    @name = name
   end
 
   def enable_email!
