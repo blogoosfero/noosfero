@@ -11,24 +11,28 @@ class ProfileListBlock < Block
 
   # override in subclasses!
   def profiles
-    owner.profiles
+    if owner.is_a? Environment
+      owner.profiles.public
+    else
+      owner.profiles.visible
+    end
   end
 
   def profile_list
     result = nil
-    public_profiles = profiles.public.includes([:image,:domains,:preferred_domain,:environment])
+    visible_profiles = profiles.includes([:image,:domains,:preferred_domain,:environment])
     if !prioritize_profiles_with_image
-      result = public_profiles.all(:limit => get_limit, :order => 'profiles.updated_at DESC').sort_by{ rand }
+      result = visible_profiles.all(:limit => get_limit, :order => 'profiles.updated_at DESC').sort_by{ rand }
     elsif profiles.visible.with_image.count >= get_limit
-      result = public_profiles.with_image.all(:limit => get_limit * 5, :order => 'profiles.updated_at DESC').sort_by{ rand }
+      result = visible_profiles.with_image.all(:limit => get_limit * 5, :order => 'profiles.updated_at DESC').sort_by{ rand }
     else
-      result = public_profiles.with_image.sort_by{ rand } + public_profiles.without_image.all(:limit => get_limit * 5, :order => 'profiles.updated_at DESC').sort_by{ rand }
+      result = visible_profiles.with_image.sort_by{ rand } + visible_profiles.without_image.all(:limit => get_limit * 5, :order => 'profiles.updated_at DESC').sort_by{ rand }
     end
     result.slice(0..get_limit-1)
   end
 
   def profile_count
-    profiles.public.count
+    profiles.count
   end
 
   # the title of the block. Probably will be overriden in subclasses.
