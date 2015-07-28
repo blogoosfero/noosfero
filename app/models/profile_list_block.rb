@@ -32,7 +32,7 @@ class ProfileListBlock < Block
   end
 
   def profile_count
-    profiles.count
+    profiles.length
   end
 
   # the title of the block. Probably will be overriden in subclasses.
