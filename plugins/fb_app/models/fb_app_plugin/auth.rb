@@ -1,4 +1,4 @@
-class FbAppPlugin::Auth < OauthPlugin::ProviderAuth
+class FbAppPlugin::Auth < OauthClientPlugin::Auth
 
   module Status
     Connected = 'connected'
@@ -7,13 +7,15 @@ class FbAppPlugin::Auth < OauthPlugin::ProviderAuth
   end
 
   settings_items :signed_request
-  settings_items :user
+  settings_items :fb_user
+
   attr_accessible :provider_user_id, :signed_request
 
   before_create :update_user
   before_create :exchange_token
   after_create :schedule_exchange_token
   after_destroy :destroy_page_tabs
+  before_validation :set_enabled
 
   validates_presence_of :provider_user_id
   validates_uniqueness_of :provider_user_id, scope: :profile_id
@@ -37,10 +39,19 @@ class FbAppPlugin::Auth < OauthPlugin::ProviderAuth
   def exchange_token
     app_id = FbAppPlugin.timeline_app_credentials[:id]
     app_secret = FbAppPlugin.timeline_app_credentials[:secret]
-    fb_auth = FbGraph::Auth.new app_id, app_secret
-    fb_auth.exchange_token! self.access_token
-    self.expires_in = fb_auth.access_token.expires_in
-    self.access_token = fb_auth.access_token.access_token
+    fb_auth = FbGraph2::Auth.new app_id, app_secret
+    fb_auth.fb_exchange_token = self.access_token
+
+    access_token = fb_auth.access_token!
+    self.access_token = access_token.access_token
+    self.expires_in = access_token.expires_in
+    # refresh user and its stored access token
+    self.fetch_user
+  end
+
+  def exchange_token!
+    self.exchange_token
+    self.save!
   end
 
   def signed_request_data
@@ -48,13 +59,11 @@ class FbAppPlugin::Auth < OauthPlugin::ProviderAuth
   end
 
   def fetch_user
-    @user ||= begin
-      user = FbGraph::User.me self.access_token
-      self.user = user.fetch
-    end
+    fb_user = FbGraph2::User.me self.access_token
+    self.fb_user = fb_user.fetch
   end
   def update_user
-    self.user = self.fetch_user
+    self.fb_user = self.fetch_user
   end
 
   protected
@@ -63,13 +72,18 @@ class FbAppPlugin::Auth < OauthPlugin::ProviderAuth
     self.profile.fb_app_page_tabs.destroy_all
   end
 
-  def schedule_exchange_token
-    self.exchange_token
-    self.save!
-    # repeat this again
+  def exchange_token_and_reschedule!
+    self.exchange_token!
     self.schedule_exchange_token
   end
-  handle_asynchronously :schedule_exchange_token, run_at: proc{ 1.month.from_now }
+
+  def schedule_exchange_token
+    self.delay(run_at: self.expires_at - 2.weeks).exchange_token_and_reschedule!
+  end
+
+  def set_enabled
+    self.enabled = self.not_expired?
+  end
 
 end
 

@@ -2,7 +2,7 @@
 # cycle.products will go to an infinite loop
 class SuppliersPlugin::BaseProduct < Product
 
-  attr_accessible :default_margin_percentage, :margin_percentage, :default_stored, :stored, :default_unit, :unit_detail
+  attr_accessible :default_margin_percentage, :margin_percentage, :default_unit, :unit_detail
 
   default_scope include: [
     # from_products is required for products.available
@@ -20,36 +20,39 @@ class SuppliersPlugin::BaseProduct < Product
 
   settings_items :minimum_selleable, type: Float, default: nil
   settings_items :margin_percentage, type: Float, default: nil
-  settings_items :stored, type: Float, default: nil
   settings_items :quantity, type: Float, default: nil
   settings_items :unit_detail, type: String, default: nil
 
-  DEFAULT_ATTRIBUTES = [
+  CORE_DEFAULT_ATTRIBUTES = [
     :name, :description, :price, :unit_id, :product_category_id, :image_id,
-    :margin_percentage, :stored, :minimum_selleable, :unit_detail
+  ]
+  DEFAULT_ATTRIBUTES = CORE_DEFAULT_ATTRIBUTES + [
+    :margin_percentage, :stored, :minimum_selleable, :unit_detail,
   ]
 
   extend DefaultDelegate::ClassMethods
   default_delegate_setting :name, to: :supplier_product
-  default_delegate_setting :product_category, to: :supplier_product
-  default_delegate_setting :qualifiers, to: :supplier_product
-  default_delegate_setting :image, to: :supplier_product, prefix: :_default
   default_delegate_setting :description, to: :supplier_product
+
+  default_delegate_setting :qualifiers, to: :supplier_product
+  default_delegate :product_qualifiers, default_setting: :default_qualifiers, to: :supplier_product
+
+  default_delegate_setting :product_category, to: :supplier_product
+  default_delegate :product_category_id, default_setting: :default_product_category, to: :supplier_product
+
+  default_delegate_setting :image, to: :supplier_product, prefix: :_default
+  default_delegate :image_id, default_setting: :_default_image, to: :supplier_product
+
   default_delegate_setting :unit, to: :supplier_product
+  default_delegate :unit_id, default_setting: :default_unit, to: :supplier_product
+
   default_delegate_setting :margin_percentage, to: :profile,
     default_if: -> { self.own_margin_percentage.blank? or self.own_margin_percentage.zero? }
-
   default_delegate :price, default_setting: :default_margin_percentage, default_if: :equal?,
     to: -> { self.supplier_product.price_with_discount if self.supplier_product }
-  default_delegate :unit_detail, default_setting: :default_unit, to: :supplier_product
-  default_delegate_setting :stored, to: :supplier_product,
-    default_if: -> { self.own_stored.blank? or self.own_stored.zero? }
-  default_delegate_setting :minimum_selleable, to: :supplier_product
 
-  default_delegate :product_qualifiers, default_setting: :default_qualifiers, to: :supplier_product
-  default_delegate :product_category_id, default_setting: :default_product_category, to: :supplier_product
-  default_delegate :image_id, default_setting: :_default_image, to: :supplier_product
-  default_delegate :unit_id, default_setting: :default_unit, to: :supplier_product
+  default_delegate :unit_detail, default_setting: :default_unit, to: :supplier_product
+  default_delegate_setting :minimum_selleable, to: :supplier_product
 
   extend CurrencyHelper::ClassMethods
   has_currency :own_price
@@ -57,9 +60,6 @@ class SuppliersPlugin::BaseProduct < Product
   has_number_with_locale :minimum_selleable
   has_number_with_locale :own_minimum_selleable
   has_number_with_locale :original_minimum_selleable
-  has_number_with_locale :stored
-  has_number_with_locale :own_stored
-  has_number_with_locale :original_stored
   has_number_with_locale :quantity
   has_number_with_locale :margin_percentage
   has_number_with_locale :own_margin_percentage

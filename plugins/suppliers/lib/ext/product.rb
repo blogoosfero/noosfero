@@ -60,8 +60,16 @@ class Product
   has_many :consumers, through: :to_products, source: :profile, uniq: true, order: 'id ASC'
 
   # prefer distributed_products has_many to use DistributedProduct scopes and eager loading
-  scope :distributed, conditions: ["products.type = 'SuppliersPlugin::DistributedProduct'"]
-  scope :own, conditions: ["products.type = 'Product'"]
+  scope :distributed, -> { where type: 'SuppliersPlugin::DistributedProduct'}
+  scope :own, -> { where type: nil }
+  scope :supplied, -> {
+    where(type: [nil, 'SuppliersPlugin::DistributedProduct']).
+    # this allow duplicates and sorting on the fields
+    group('products.id')
+  }
+  scope :supplied_for_count, -> {
+    where(type: [nil, 'SuppliersPlugin::DistributedProduct']).uniq
+  }
 
   scope :from_supplier, lambda { |supplier| { conditions: ['suppliers_plugin_suppliers.id = ?', supplier.id] } }
   scope :from_supplier_id, lambda { |supplier_id| { conditions: ['suppliers_plugin_suppliers.id = ?', supplier_id] } }
@@ -73,6 +81,9 @@ class Product
   end
   def distributed?
     self.class == SuppliersPlugin::DistributedProduct
+  end
+  def supplied?
+    self.own? or self.distributed?
   end
 
   def sources_supplier_product
@@ -125,6 +136,15 @@ class Product
     end
   end
 
+  def diff from = self.from_product
+    return @changed_attrs if @changed_attrs
+    @changed_attrs = []
+    SuppliersPlugin::BaseProduct::CORE_DEFAULT_ATTRIBUTES.each do |attr|
+      @changed_attrs << attr if self[attr].present? and self[attr] != from[attr]
+    end
+    @changed_attrs
+  end
+
   protected
 
   def distribute_to_consumers
@@ -135,5 +155,10 @@ class Product
       self.distribute_to_consumer consumer.profile
     end
   end
+
+  def solr_supplied
+    self.supplied?
+  end
+  self.solr_extra_fields << :solr_supplied
 
 end
