@@ -6,12 +6,16 @@ class SuppliersPlugin::DistributedProduct < SuppliersPlugin::BaseProduct
   attr_accessible :external_id, :price_details
 
   # overhide original
-  scope :available, conditions: ['products.available = ? AND from_products_products.available = ? AND suppliers_plugin_suppliers.active = ?', true, true, true]
-  scope :unavailable, conditions: ['products.available <> ? OR from_products_products.available <> ? OR suppliers_plugin_suppliers.active <> ?', true, true, true]
-  scope :with_available, lambda { |available|
+  scope :available, -> {
+    where 'products.available = ? AND suppliers_plugin_suppliers.active = ?', true, true
+  }
+  scope :unavailable, -> {
+    where 'products.available <> ? OR suppliers_plugin_suppliers.active <> ?', true, true
+  }
+  scope :with_available, -> (available) {
     op = if available then '=' else '<>' end
     cond = if available then 'AND' else 'OR' end
-    where "products.available #{op} ? #{cond} from_products_products.available #{op} ? #{cond} suppliers_plugin_suppliers.active #{op} ?", true, true, true
+    where "products.available #{op} ? #{cond} suppliers_plugin_suppliers.active #{op} ?", true, true
   }
 
   scope :name_like, lambda { |name| where "from_products_products.name ILIKE ?", "%#{name}%" }
@@ -19,7 +23,6 @@ class SuppliersPlugin::DistributedProduct < SuppliersPlugin::BaseProduct
 
   validates_presence_of :supplier
 
-  # TODO: maybe move to lib/ext/product
   def supplier_price
     self.supplier_product.price if self.supplier_product
   end
