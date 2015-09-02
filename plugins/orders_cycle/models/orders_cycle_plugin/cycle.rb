@@ -44,11 +44,12 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
   has_many :purchases, through: :cycle_orders, source: :purchase
 
   has_many :cycle_products, foreign_key: :cycle_id, class_name: 'OrdersCyclePlugin::CycleProduct', dependent: :destroy
-  has_many :products, -> { includes :from_2x_products, :from_products, {profile: :domains} },
-    through: :cycle_products
+  has_many :products, -> {
+    includes(:from_2x_products, :from_products, {profile: :domains})
+  }, through: :cycle_products, class_name: 'OrdersCyclePlugin::OfferedProduct', source: :product
 
   has_many :consumers, -> { distinct.reorder 'name ASC' }, through: :sales, source: :consumer
-  has_many :suppliers, -> { distinct.reorder 'suppliers_plugin_suppliers.name ASC' }, through: :products
+  has_many :suppliers, -> { group 'suppliers_plugin_suppliers.id' }, through: :products
   has_many :orders_suppliers, -> { reorder 'name ASC' }, through: :sales, source: :profile
 
   has_many :from_products, -> { distinct.reorder 'name ASC' }, through: :products
@@ -119,7 +120,7 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
   validate :validate_orders_dates, if: :not_new?
   validate :validate_delivery_dates, if: :not_new?
 
-  before_validation :step_new
+  before_save :step_new
   before_validation :update_orders_status
   before_save :add_products_on_edition_state
   after_create :delay_purge_profile_defuncts
@@ -230,13 +231,17 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
     self.generate_purchases sales
   end
 
-  def add_distributed_products
+  def add_products
     return if self.products.count > 0
     ActiveRecord::Base.transaction do
-      self.profile.distributed_products.unarchived.available.find_each(batch_size: 20) do |product|
-        OrdersCyclePlugin::OfferedProduct.create_from_distributed self, product
+      self.profile.products.supplied.unarchived.available.find_each batch_size: 20 do |product|
+        self.add_product product
       end
     end
+  end
+
+  def add_product product
+    OrdersCyclePlugin::OfferedProduct.create_from product, self
   end
 
   def add_products_job
@@ -247,18 +252,19 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
 
   def add_products_on_edition_state
     return unless self.status_was == 'new'
-    job = self.delay.add_distributed_products
+    job = self.delay.add_products
     self.data[:add_products_job_id] = job.id
   end
 
   def step_new
-    return if new_record?
+    return if self.new_record?
     self.step if self.new?
   end
 
+  # step orders to next_status on status change
   def update_orders_status
-    # step orders to next_status on status change
-    return if self.new? or self.status_was == "new" or self.status_was == self.status
+    return if self.new? or self.status_was == "new"
+    return if self.status_was == self.status
 
     # Don't rewind confirmed sales
     unless self.status_was == 'orders' and self.status == 'edition'

@@ -72,7 +72,16 @@ module FormsHelper
   end
 
   include ResponsiveChecks
-  prepend ResponsiveMethods
+  if RUBY_VERSION >= '2.0.0'
+    prepend ResponsiveMethods
+  else
+    extend ActiveSupport::Concern
+    included { include ResponsiveMethods }
+  end
 
 end
+
+# WORKAROUND
+require_dependency 'application_helper'
+ApplicationHelper.include FormsHelper
 

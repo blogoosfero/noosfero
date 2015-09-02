@@ -1,5 +1,5 @@
 source "https://rubygems.org"
-gem 'rails',                    '~> 4.2.3'
+gem 'rails',                    '~> 4.2.4'
 gem 'fast_gettext',             '~> 0.6.8'
 gem 'acts-as-taggable-on',      '~> 3.4.2'
 gem 'rails_autolink',           '~> 1.1.5'
@@ -8,7 +8,7 @@ gem 'ruby-feedparser',          '~> 0.7'
 gem 'daemons',                  '~> 1.1.5'
 gem 'nokogiri',                 '~> 1.6.0'
 gem 'will_paginate'
-gem 'pothoven-attachment_fu'
+gem 'pothoven-attachment_fu',   '~> 3.2.16'
 gem 'delayed_job'
 gem 'delayed_job_active_record'
 gem 'rake', :require => false
@@ -79,19 +79,14 @@ gem 'actionpack-action_caching'
 gem 'activerecord-session_store'
 gem 'activerecord-deprecated_finders', require: 'active_record/deprecated_finders'
 
-
-# FIXME list here all actual dependencies (i.e. the ones in debian/control),
-# with their GEM names (not the Debian package names)
-
 group :production do
   gem 'newrelic_rpm'
   gem 'redis-rails'
-  gem 'rack-cache'
+  # not in active development :(
+  #gem 'rack-cache'
 end
 
 group :test do
-  gem 'spring'
-  gem 'spring-commands-testunit'
   gem 'rspec',                  '~> 2.14.0'
   gem 'rspec-rails',            '~> 2.14.1'
   gem 'mocha',                  '~> 1.1.0', :require => false
@@ -106,8 +101,12 @@ group :cucumber do
   gem 'cucumber',               '~> 1.3.20'
   gem 'cucumber-rails',         '~> 1.4.2', :require => false
   gem 'database_cleaner',       '~> 1.2.0'
-  # FIXME: conflicts with axlsx version 2, that requires rubyzip 1.0.0 and selenium-webdriver requires rubyzip 1.1.6
-  #gem 'selenium-webdriver',     '~> 2.39.0'
+  gem 'selenium-webdriver'
+end
+
+group :development, :test do
+  gem 'spring'
+  gem 'spring-commands-testunit'
 end
 
 group :development do

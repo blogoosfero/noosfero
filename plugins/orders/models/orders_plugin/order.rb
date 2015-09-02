@@ -48,7 +48,7 @@ class OrdersPlugin::Order < ActiveRecord::Base
   belongs_to :supplier, foreign_key: :profile_id, class_name: 'Profile'
   belongs_to :consumer, class_name: 'Profile'
 
-  belongs_to :session, primary_key: :session_id, foreign_key: :session_id, class_name: 'ActiveRecord::SessionStore::Session'
+  belongs_to :session, primary_key: :session_id, foreign_key: :session_id, class_name: 'Session'
 
   has_many :items, -> { order 'name ASC' }, class_name: 'OrdersPlugin::Item', foreign_key: :order_id, dependent: :destroy
   has_many :products, through: :items
@@ -159,17 +159,17 @@ class OrdersPlugin::Order < ActiveRecord::Base
   #         / Items
   #        /       \ OfferedProduct (column product_id)
   # Order /         \ SourceProduct from DistributedProduct (quantity=1, always)
-  #                  \ SourceProduct from Product* (quantity be more than 1 if DistributedProduct is an agregate product)
+  #                  \ SourceProduct from Product* (multiple for each if is an aggregate product)
   # for order outside cycle we have
   #         / Items
   #        /       \ SourceProduct from DistributedProduct (quantity=1, always)
-  # Order /         \ SourceProduct from Product* (quantity be more than 1 if DistributedProduct is an agregate product)
+  # Order /         \ SourceProduct from Product* (multiple for each if is an aggregate product)
   #
   # *suppliers usually don't distribute using cycles, so they only have Product
   #
   def self.supplier_products_by_suppliers orders
     products_by_supplier = {}
-    items = OrdersPlugin::Item.where(order_id: orders.map(&:id)).includes({sources_supplier_products: [:supplier, :from_product]})
+    items = self.parent::Item.where(order_id: orders.map(&:id)).includes(sources_supplier_products: [:supplier, :from_product])
     items.each do |item|
       if item.sources_supplier_products.present?
         item.sources_supplier_products.each do |source_sp|

@@ -119,7 +119,8 @@ class ShoppingCartPluginController < OrdersPluginController
     @settings = cart_profile.shopping_cart_settings
     @cart = cart
     @profile = cart_profile
-    @order = profile.sales.build consumer: user
+    supplier_delivery = profile.delivery_methods.first
+    @order = build_order self.cart[:items], supplier_delivery
 
     @order.supplier_delivery = profile.delivery_methods.find session[:cart][:last_delivery_option_id] rescue nil
     if repeat_order_id = self.cart[:repeat_order_id]
@@ -331,11 +332,13 @@ class ShoppingCartPluginController < OrdersPluginController
   after_filter :save_cookie
   def save_cookie
     if @cart.nil?
-      cookies.delete(cookie_key, :path => '/plugin/shopping_cart')
+      # cookie.delete does not work, set to empty value
+      cookies[cookie_key] = {value: '', path: '/plugin/shopping_cart', expires: Time.at(0)}
     else
       cookies[cookie_key] = {
-        :value => Base64.encode64(@cart.to_yaml),
-        :path => "/plugin/shopping_cart"
+        value: Base64.encode64(@cart.to_yaml),
+        path: "/plugin/shopping_cart",
+        expires: Time.at(0),
       }
     end
   end

@@ -585,6 +585,14 @@ class Profile < ActiveRecord::Base
     options.merge(Noosfero.url_options)
   end
 
+  def top_url(scheme = 'http')
+    url = scheme + '://'
+    url << url_options[:host]
+    url << ':' << url_options[:port].to_s if url_options.key?(:port)
+    url << Noosfero.root('')
+    url
+  end
+
 private :generate_url, :url_options
 
   def default_domain
@@ -760,7 +768,7 @@ private :generate_url, :url_options
   def short_name(chars = 40)
     if self[:nickname].blank?
       if chars
-        truncate self.name, :length => chars, :omission => '...'
+        truncate self.name, length: chars, omission: '...'
       else
         self.name
       end

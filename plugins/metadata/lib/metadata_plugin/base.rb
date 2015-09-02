@@ -32,6 +32,7 @@ class MetadataPlugin::Base < Noosfero::Plugin
         when Proc then instance_exec(&variable)
         else instance_variable_get variable
         end
+      return if object.respond_to? :public? and not object.public?
       return unless specs = (object.class.metadata_specs rescue nil)
 
       r = []
@@ -49,7 +50,8 @@ class MetadataPlugin::Base < Noosfero::Plugin
           Array(values).each do |value|
             value = value.call(object, plugin) if value.is_a? Proc rescue nil
             next if value.blank?
-            r << tag(:meta, key_attr => key, value_attr => CGI.escape_html(value.to_s))
+            value = h value unless value.html_safe?
+            r << tag(:meta, {key_attr => key, value_attr => value.to_s}, false, false)
           end
         end
       end

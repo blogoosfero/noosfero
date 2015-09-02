@@ -48,6 +48,8 @@ class PersonNotifierTest < ActiveSupport::TestCase
 
   should 'display author name in delivered mail' do
     @community.add_member(@member)
+    ActionMailer::Base.deliveries.clear
+
     Comment.create!(:author => @admin, :title => 'test comment', :body => 'body!', :source => @article)
     process_delayed_job_queue
     notify
@@ -163,6 +165,21 @@ class PersonNotifierTest < ActiveSupport::TestCase
     end
   end
 
+  Targets = {
+    create_article: -> { create Forum, profile: @profile },
+    new_friendship: -> { create Friendship, person: @member, friend: @member },
+    join_community: -> { @member },
+    add_member_in_community: -> { create_user.person },
+    upload_image: -> { create Forum, profile: @profile },
+    leave_scrap: -> { create Scrap, sender: @member, receiver: @profile },
+    leave_scrap_to_self: -> { create Scrap, sender: @member, receiver: @profile },
+    reply_scrap_on_self: -> { create Scrap, sender: @member, receiver: @profile },
+    create_product: -> { create Product, profile: @profile, product_category: create(ProductCategory, environment: Environment.default) },
+    update_product: -> { create Product, profile: @profile, product_category: create(ProductCategory, environment: Environment.default) },
+    remove_product: -> { create Product, profile: @profile, product_category: create(ProductCategory, environment: Environment.default) },
+    favorite_enterprise: -> { create FavoriteEnterprisePerson, enterprise: create(Enterprise), person: @member },
+  }
+
   ActionTrackerConfig.verb_names.each do |verb|
     should "render notification for verb #{verb}" do
       @member.tracked_notifications = []
@@ -171,13 +188,15 @@ class PersonNotifierTest < ActiveSupport::TestCase
       a.verb = verb
       a.user = @member
       a.created_at = @member.notifier.notify_from + 1.day
-      a.target = fast_create(Forum)
+      @profile = create(Community)
+      a.target = instance_exec &Targets[verb.to_sym]
       a.comments_count = 0
       a.params = {
         'name' => 'home', 'url' => '/', 'lead' => '',
         'receiver_url' => '/', 'content' => 'nothing',
         'friend_url' => '/', 'friend_profile_custom_icon' => [], 'friend_name' => ['joe'],
         'resource_name' => ['resource'], 'resource_profile_custom_icon' => [], 'resource_url' => ['/'],
+        'enterprise_name' => 'coop', 'enterprise_url' => '/coop',
         'view_url'=> ['/'], 'thumbnail_path' => ['1'],
       }
       a.get_url = ''
@@ -195,11 +214,11 @@ class PersonNotifierTest < ActiveSupport::TestCase
 
   should 'exists? method in NotifyAllJob return false if there is no instance of this class created' do
     Delayed::Job.enqueue(PersonNotifier::NotifyJob.new)
-    assert !PersonNotifier::NotifyAllJob.exists?
+    refute PersonNotifier::NotifyAllJob.exists?
   end
 
   should 'exists? method in NotifyAllJob return false if there is no jobs created' do
-    assert !PersonNotifier::NotifyAllJob.exists?
+    refute PersonNotifier::NotifyAllJob.exists?
   end
 
   should 'exists? method in NotifyAllJob return true if there is at least one instance of this class' do
@@ -233,7 +252,7 @@ class PersonNotifierTest < ActiveSupport::TestCase
 
     process_delayed_job_queue
     jobs = PersonNotifier::NotifyJob.find(@member.id)
-    assert !jobs.select {|j| !j.failed? && j.last_error.nil? }.empty?
+    refute jobs.select {|j| !j.failed? && j.last_error.nil? }.empty?
   end
 
   should 'render image tags for both internal and external src' do

@@ -1,4 +1,10 @@
+require_relative '../helpers/application_helper'
+
 class ApplicationMailer < ActionMailer::Base
+
+  include AuthenticatedSystem
+
+  helper ApplicationHelper
 
   attr_accessor :environment
 
@@ -6,6 +12,10 @@ class ApplicationMailer < ActionMailer::Base
     options ||= {}
     options[:host] = environment.default_hostname if environment
     options
+  end
+
+  def user
+    nil
   end
 
 end

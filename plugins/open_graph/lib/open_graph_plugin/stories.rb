@@ -99,9 +99,6 @@ class OpenGraphPlugin::Stories
       publish_if: proc do |article, actor|
         article.published?
       end,
-      object_data_url: proc do |article, actor|
-        article.url.merge og_type: "#{MetadataPlugin::og_types[:forum]}"
-      end,
     },
 
     # these a published as passive to give focus to the enterprise
@@ -216,9 +213,6 @@ class OpenGraphPlugin::Stories
         article.published?
       end,
     },
-    # this does not work with the current interface as the product
-    # is created empty and then have a lot of updates
-=begin
     announce_a_new_sse_product: {
       action_tracker_verb: :create_product,
       track_config: 'OpenGraphPlugin::EnterpriseTrackConfig',
@@ -231,7 +225,6 @@ class OpenGraphPlugin::Stories
         product.profile.enterprise?
       end,
     },
-=end
     announce_an_update_of_sse_product: {
       action_tracker_verb: :update_product,
       track_config: 'OpenGraphPlugin::EnterpriseTrackConfig',

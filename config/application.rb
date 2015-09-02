@@ -25,11 +25,10 @@ module Noosfero
     # -- all .rb files in that directory are automatically loaded.
 
     # Custom directories with classes and modules you want to be autoloadable.
-    config.autoload_paths += %W( #{Rails.root.join('app', 'sweepers')} )
+    config.autoload_paths += %W( #{config.root.join('app', 'sweepers')} )
     config.autoload_paths += Dir["#{config.root}/lib"]
     config.autoload_paths += Dir["#{config.root}/app/controllers/**/"]
-    config.autoload_paths += %W( #{Rails.root.join('test', 'mocks', Rails.env)} )
-
+    config.autoload_paths += %W( #{config.root.join('test', 'mocks', Rails.env)} )
 
     # Only load the plugins named here, in the order given (default is alphabetical).
     # :all can be used as a placeholder for all plugins not explicitly named.
@@ -92,9 +91,8 @@ module Noosfero
     config.sass.cache = true
     config.sass.line_comments = false
 
-    config.action_dispatch.session = {
-      :key    => '_noosfero_session',
-    }
+    config.action_dispatch.session = {key: '_noosfero_session'}
+    config.session_store :active_record_store, key: '_noosfero_session'
 
     # Set Time.zone default to the specified zone and make Active Record auto-convert to this zone.
     # Run "rake -D time" for a list of tasks for finding time zone names. Default is UTC.

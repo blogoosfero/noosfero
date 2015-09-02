@@ -3,6 +3,7 @@ class OrdersCyclePlugin::Sale < OrdersPlugin::Sale
   include OrdersCyclePlugin::OrderBase
 
   has_many :cycles, through: :cycle_sales, source: :cycle
+  has_one  :cycle,  through: :cycle_sale,  source: :cycle
 
   after_save :change_purchases, if: :cycle
   before_destroy :remove_purchases_items, if: :cycle
@@ -21,10 +22,6 @@ class OrdersCyclePlugin::Sale < OrdersPlugin::Sale
 
   def open?
     super and self.cycle.orders?
-  end
-
-  def supplier_delivery
-    super || (self.cycle.delivery_methods.first rescue nil)
   end
 
   def change_purchases

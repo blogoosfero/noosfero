@@ -6,6 +6,7 @@ class ProfileController < PublicController
   before_filter :login_required, :only => [:add, :join, :leave, :unblock, :leave_scrap, :remove_scrap, :remove_activity, :view_more_activities, :view_more_network_activities, :report_abuse, :register_report, :leave_comment_on_activity, :send_mail]
 
   helper TagsHelper
+  helper ActionTrackerHelper
 
   protect 'send_mail_to_members', :profile, :only => [:send_mail]
 
@@ -302,7 +303,7 @@ class ProfileController < PublicController
   end
 
   def register_report
-    unless user.is_admin? || captcha_verify
+    unless @user_is_admin || captcha_verify
       render :text => {
         :ok => false,
         :error => {

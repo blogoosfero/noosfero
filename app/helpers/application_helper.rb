@@ -6,11 +6,11 @@ require 'redcloth'
 # application.
 module ApplicationHelper
 
-  include UrlHelper
-
   include PermissionNameHelper
 
   include PaginationHelper
+
+  include UrlHelper
 
   include ModalHelper
 
@@ -906,7 +906,7 @@ module ApplicationHelper
   end
 
   def base_url
-    environment.top_url(request.scheme)
+    profile ? profile.top_url(request.scheme) : environment.top_url(request.scheme)
   end
   alias :top_url :base_url
 
@@ -920,7 +920,9 @@ module ApplicationHelper
     article_helper = View.new
     article_helper.controller = controller
     article_helper.extend Rails.application.routes.url_helpers
-    article_helper.extend ApplicationHelper
+    article_helper.extend UrlHelper
+    # FIXME: this causes everything to be considered a forum
+    #article_helper.extend ApplicationHelper
     article_helper.extend ArticleHelper
     begin
       class_name = article.class.name + 'Helper'
@@ -1298,19 +1300,6 @@ module ApplicationHelper
 
   def cache_timeout(key, timeout, &block)
     cache(key, { :expires_in => timeout }, &block)
-  end
-
-  # Backport from rails 4
-  def cache_if condition, name = {}, options = nil, &block
-    if condition
-      cache name, options, &block
-    else
-      yield
-    end
-    nil
-  end
-  def cache_unless condition, name = {}, options = nil, &block
-    cache_if !condition, name, options, &block
   end
 
   def is_cache_expired?(key)
