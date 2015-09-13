@@ -80,11 +80,11 @@ class OrganizationTest < ActiveSupport::TestCase
   should 'validate contact_email if filled' do
     org = Organization.new
     org.valid?
-    assert !org.errors[:contact_email.to_s].present?
+    refute org.errors[:contact_email.to_s].present?
 
     org.contact_email = ''
     org.valid?
-    assert !org.errors[:contact_email.to_s].present?
+    refute org.errors[:contact_email.to_s].present?
 
 
     org.contact_email = 'invalid-email'
@@ -93,7 +93,7 @@ class OrganizationTest < ActiveSupport::TestCase
 
     org.contact_email = 'someone@somedomain.com'
     org.valid?
-    assert !org.errors[:contact_email.to_s].present?
+    refute org.errors[:contact_email.to_s].present?
   end
 
   should 'list contact_email plus admin emails as "notification emails"' do
@@ -130,7 +130,7 @@ class OrganizationTest < ActiveSupport::TestCase
 
   should 'list pending enterprise validations' do
     org = Organization.new
-    assert_kind_of ActiveRecord::Relation, org.pending_validations
+    assert org.pending_validations.empty?
   end
 
   should 'be able to find a pending validation by its code' do
@@ -148,7 +148,7 @@ class OrganizationTest < ActiveSupport::TestCase
 
   should 'be able to find already processed validations' do
     org = Organization.new
-    assert_kind_of ActiveRecord::Relation, org.processed_validations
+    assert org.processed_validations.empty?
   end
 
   should 'be able to find an already processed validation by its code' do
@@ -188,10 +188,10 @@ class OrganizationTest < ActiveSupport::TestCase
     org.foundation_year = 20.07
     org.valid?
     assert org.errors[:foundation_year.to_s].present?
-    
+
     org.foundation_year = 2007
     org.valid?
-    assert ! org.errors[:foundation_year.to_s].present?
+    refute  org.errors[:foundation_year.to_s].present?
   end
 
   should 'has closed' do
@@ -208,7 +208,7 @@ class OrganizationTest < ActiveSupport::TestCase
 
     assert o.members.include?(p), "Organization should add the new member"
   end
-  
+
   should 'allow to remove members' do
     c = fast_create(Organization)
     p = create_user('myothertestuser').person
@@ -245,7 +245,7 @@ class OrganizationTest < ActiveSupport::TestCase
 
   should 'be closed if organization is not public' do
     organization = fast_create(Organization)
-    assert !organization.closed
+    refute organization.closed
 
     organization.public_profile = false
     organization.save!
@@ -278,11 +278,11 @@ class OrganizationTest < ActiveSupport::TestCase
     p2 = fast_create(Person)
     p3 = fast_create(Person)
 
-    assert !p1.is_member_of?(o)
+    refute p1.is_member_of?(o)
     o.add_member(p1)
     assert p1.is_member_of?(o)
 
-    assert !p3.is_member_of?(o)
+    refute p3.is_member_of?(o)
     o.add_member(p3)
     assert p3.is_member_of?(o)
 
@@ -380,7 +380,7 @@ class OrganizationTest < ActiveSupport::TestCase
 
     organization.cnpj = '94.132.024/0001-48'
     organization.valid?
-    assert !organization.errors[:cnpj.to_s].present?
+    refute organization.errors[:cnpj.to_s].present?
   end
 
   should 'get members by role' do
@@ -429,7 +429,7 @@ class OrganizationTest < ActiveSupport::TestCase
     assert organization.visible
 
     organization.disable
-    assert !organization.visible
+    refute organization.visible
   end
 
   should 'increase members_count on new membership' do
@@ -450,6 +450,86 @@ class OrganizationTest < ActiveSupport::TestCase
       organization.remove_member(member)
       organization.reload
     end
+  end
+
+  should 'check if a community admin user is really a community admin' do
+    c = fast_create(Organization, :name => 'my test profile', :identifier => 'mytestprofile')
+    admin = create_user('adminuser').person
+    c.add_admin(admin)
+   
+    assert c.is_admin?(admin)
+  end
+
+  should 'a member user not be a community admin' do
+    c = fast_create(Organization, :name => 'my test profile', :identifier => 'mytestprofile')
+    admin = create_user('adminuser').person
+    c.add_admin(admin)
+
+    member = create_user('memberuser').person
+    c.add_member(member)
+    refute c.is_admin?(member)
+  end
+
+  should 'a moderator user not be a community admin' do
+    c = fast_create(Organization, :name => 'my test profile', :identifier => 'mytestprofile')
+    moderator = create_user('moderatoruser').person
+    c.add_moderator(moderator)
+    refute c.is_admin?(moderator)
+  end
+
+  should 'fetch organizations there are visible for a user' do
+    person = create_user('some-person').person
+    admin = create_user('some-admin').person
+    env_admin = create_user('env-admin').person
+
+    o1 = fast_create(Organization, :public_profile => true , :visible => true )
+    o1.add_admin(admin)
+    o1.add_member(person)
+
+    o2 = fast_create(Organization, :public_profile => true , :visible => true )
+    o3 = fast_create(Organization, :public_profile => false, :visible => true )
+
+    o4 = fast_create(Organization, :public_profile => false, :visible => true)
+    o4.add_admin(admin)
+    o4.add_member(person)
+
+    o5 = fast_create(Organization, :public_profile => true , :visible => false)
+    o5.add_admin(admin)
+    o5.add_member(person)
+
+    o6 = fast_create(Enterprise, :enabled => false, :visible => true)
+    o6.add_admin(admin)
+
+    o7 = fast_create(Organization, :public_profile => false, :visible => false)
+
+    Environment.default.add_admin(env_admin)
+
+    person_orgs    = Organization.visible_for_person(person)
+    admin_orgs     = Organization.visible_for_person(admin)
+    env_admin_orgs = Organization.visible_for_person(env_admin)
+
+    assert_includes     person_orgs,    o1
+    assert_includes     admin_orgs,     o1
+    assert_includes     env_admin_orgs, o1
+
+    assert_includes     person_orgs,    o2
+    assert_includes     env_admin_orgs, o2
+    assert_not_includes person_orgs,    o3
+    assert_includes     env_admin_orgs, o3
+
+    assert_includes     person_orgs,    o4
+    assert_includes     admin_orgs,     o4
+    assert_includes     env_admin_orgs, o4
+
+    assert_not_includes person_orgs,    o5
+    assert_includes     admin_orgs,     o5
+    assert_includes     env_admin_orgs, o5
+
+    assert_not_includes person_orgs,    o6
+    assert_includes     admin_orgs,     o6
+
+    assert_not_includes person_orgs,    o7
+    assert_includes     env_admin_orgs, o7
   end
 
 end

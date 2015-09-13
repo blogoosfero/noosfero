@@ -58,8 +58,8 @@ class SuppliersPluginMyprofileController < MyProfileController
 
   def search
     @query = params[:query].downcase
-    @enterprises = environment.enterprises.enabled.public.all limit: 12, order: 'name ASC',
-      conditions: ['LOWER(name) LIKE ? OR LOWER(name) LIKE ? OR identifier LIKE ?', "#{@query}%", "% #{@query}%", "#{@query}%"]
+    @enterprises = environment.enterprises.enabled.is_public.limit(12).order('name ASC').
+      where('name ILIKE ? OR name ILIKE ? OR identifier LIKE ?', "#{@query}%", "% #{@query}%", "#{@query}%")
     @enterprises -= profile.suppliers.collect(&:profile)
   end
 

@@ -38,7 +38,7 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
       @order.consumer = @consumer
       @order.cycle = @cycle
       @order.save!
-      redirect_to params.merge(action: :edit, id: @order.id)
+      redirect_to url_for(params.merge action: :edit, id: @order.id)
     end
   end
 
@@ -55,7 +55,7 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
       end
       @repeat_order.supplier_delivery = @order.supplier_delivery
       @repeat_order.save!
-      redirect_to params.merge(action: :edit, id: @repeat_order.id)
+      redirect_to url_for(params.merge action: :edit, id: @repeat_order.id)
     else
       @orders = @cycle.consumer_previous_orders(@consumer).last(5).reverse
       @orders.each{ |o| o.enable_product_diff }
@@ -162,7 +162,7 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
   end
 
   def supplier_balloon
-    @supplier = SuppliersPlugin::Supplier.find params[:id]
+    @supplier = profile.suppliers.find params[:id]
   end
   def product_balloon
     @product = OrdersCyclePlugin::OfferedProduct.find params[:id]
@@ -174,7 +174,7 @@ class OrdersCyclePluginOrderController < OrdersPluginOrderController
     scope = @cycle.products_for_order
     page, per_page = params[:page].to_i, 20
     page = 1 if page < 1
-    @products = SuppliersPlugin::BaseProduct.search_scope(scope, params).paginate page: page, per_page: per_page
+    @products = OrdersCyclePlugin::OfferedProduct.search_scope(scope, params).paginate page: page, per_page: per_page
   end
 
   extend HMVC::ClassMethods

@@ -8,9 +8,11 @@ class ContentViewerController < ApplicationController
   helper TagsHelper
 
   def view_page
+
     path = get_path(params[:page], params[:format])
 
     @version = params[:version].to_i
+    @npage = params[:npage] || '1'
 
     if path.blank?
       @page = profile.home_page
@@ -46,7 +48,7 @@ class ContentViewerController < ApplicationController
     end
 
     # At this point the page will be showed
-    @page.hit unless user_is_a_bot?
+    @page.hit unless user_is_a_bot? || already_visited?(@page)
 
     @page = FilePresenter.for @page
 
@@ -71,20 +73,10 @@ class ContentViewerController < ApplicationController
 
     process_page_followers(params)
 
-    process_comments(params)
+    process_comments params
+    return render partial: 'comments_list' if request.xhr? and (params[:comment_order] or params[:comment_page])
 
-    if request.xhr? and params[:comment_order]
-      if @comment_order == 'newest'
-        @comments = @comments.reverse
-      end
-
-      return render :partial => 'comment/comment', :collection => @comments
-    end
-
-    if params[:slideshow]
-      render :action => 'slideshow', :layout => 'slideshow'
-      return
-    end
+    return render action: 'slideshow', layout: 'slideshow' if params[:slideshow]
     render :view_page, :formats => [:html]
   end
 
@@ -136,21 +128,23 @@ class ContentViewerController < ApplicationController
   helper_method :pass_without_comment_captcha?
 
   def allow_access_to_page(path)
-    allowed = true
     if @page.nil? # page not found, give error
       render_not_found(path)
-      allowed = false
-    elsif !@page.display_to?(user)
-      if !profile.public?
+      return false
+    end
+
+    unless @page.display_to?(user)
+      if !profile.visible? || profile.secret? || (user && user.follows?(profile)) || user.blank?
+        render_access_denied
+      else #!profile.public?
         private_profile_partial_parameters
         render :template => 'profile/_private_profile', :status => 403, :formats => [:html]
-        allowed = false
-      else #if !profile.visible?
-        render_access_denied
-        allowed = false
       end
+
+      return false
     end
-    allowed
+
+    return true
   end
 
   def user_is_a_bot?
@@ -280,8 +274,23 @@ class ContentViewerController < ApplicationController
     @comments = @page.comments.without_spam
     @comments = @plugins.filter(:unavailable_comments, @comments)
     @comments_count = @comments.count
+    @comments = @comments.reverse if @comment_order == 'oldest'
     @comments = @comments.without_reply.paginate(:per_page => per_page, :page => params[:comment_page] )
-    @comment_order = params[:comment_order].nil? ? 'oldest' : params[:comment_order]
+    @comment_order = params[:comment_order] || 'newest'
+  end
+
+  private
+
+  def already_visited?(element)
+    user_id = if user.nil? then -1 else current_user.id end
+    user_id = "#{user_id}_#{element.id}_#{element.class}"
+
+    if cookies.signed[:visited] == user_id
+      return true
+    else
+      cookies.permanent.signed[:visited] = user_id
+      return false
+    end
   end
 
 end

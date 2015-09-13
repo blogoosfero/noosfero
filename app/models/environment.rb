@@ -3,21 +3,42 @@
 # domains.
 class Environment < ActiveRecord::Base
 
-  attr_accessible :name, :is_default, :signup_welcome_text_subject, :signup_welcome_text_body, :terms_of_use, :message_for_disabled_enterprise, :news_amount_by_folder, :default_language, :languages, :description, :organization_approval_method, :enabled_plugins, :enabled_features, :redirection_after_login, :redirection_after_signup, :contact_email, :theme, :reports_lower_bound, :noreply_email, :signup_welcome_screen_body, :members_whitelist_enabled, :members_whitelist, :highlighted_news_amount, :portal_news_amount
+  attr_accessible :name, :is_default, :signup_welcome_text_subject,
+                  :signup_welcome_text_body, :terms_of_use,
+                  :message_for_disabled_enterprise, :news_amount_by_folder,
+                  :default_language, :languages, :description,
+                  :organization_approval_method, :enabled_plugins,
+                  :enabled_features, :redirection_after_login,
+                  :redirection_after_signup, :contact_email, :theme,
+                  :reports_lower_bound, :noreply_email,
+                  :signup_welcome_screen_body, :members_whitelist_enabled,
+                  :members_whitelist, :highlighted_news_amount,
+                  :portal_news_amount, :date_format, :signup_intro
 
   has_many :users
 
-  self.partial_updates = false
+  # allow roles use
+  def self.dangerous_attribute_method? name
+    false
+  end
 
   has_many :tasks, :dependent => :destroy, :as => 'target'
   has_many :search_terms, :as => :context
 
   IDENTIFY_SCRIPTS = /(php[0-9s]?|[sp]htm[l]?|pl|py|cgi|rb)/
 
+  validates_inclusion_of :date_format,
+                         :in => [ 'numbers_with_year', 'numbers',
+                                  'month_name_with_year', 'month_name',
+                                  'past_time'],
+                         :if => :date_format
+
   def self.verify_filename(filename)
     filename += '.txt' if File.extname(filename) =~ IDENTIFY_SCRIPTS
     filename
   end
+
+  NUMBER_OF_BOXES = 4
 
   PERMISSIONS['Environment'] = {
     'view_environment_admin_panel' => N_('View environment admin panel'),
@@ -27,6 +48,7 @@ class Environment < ActiveRecord::Base
     'manage_environment_roles' => N_('Manage environment roles'),
     'manage_environment_validators' => N_('Manage environment validators'),
     'manage_environment_users' => N_('Manage environment users'),
+    'manage_environment_organizations' => N_('Manage environment organizations'),
     'manage_environment_templates' => N_('Manage environment templates'),
     'manage_environment_licenses' => N_('Manage environment licenses'),
     'manage_environment_trusted_sites' => N_('Manage environment trusted sites'),
@@ -72,7 +94,8 @@ class Environment < ActiveRecord::Base
         'edit_profile_design',
         'manage_products',
         'manage_friends',
-        'perform_task'
+        'perform_task',
+        'view_tasks'
       ]
     )
   end
@@ -90,7 +113,7 @@ class Environment < ActiveRecord::Base
   def admins
     admin_role = Environment::Roles.admin(self)
     return [] if admin_role.blank?
-    Person.members_of(self).all(:conditions => ['role_assignments.role_id = ?', admin_role.id])
+    Person.members_of(self).where 'role_assignments.role_id = ?', admin_role.id
   end
 
   # returns the available features for a Environment, in the form of a
@@ -110,6 +133,7 @@ class Environment < ActiveRecord::Base
       'disable_select_city_for_contact' => _('Disable state/city select for contact form'),
       'disable_contact_person' => _('Disable contact for people'),
       'disable_contact_community' => _('Disable contact for groups/communities'),
+      'forbid_destroy_profile' => _('Forbid users of removing profiles'),
 
       'products_for_enterprises' => _('Enable products for enterprises'),
       'enterprise_registration' => _('Enterprise registration'),
@@ -175,7 +199,7 @@ class Environment < ActiveRecord::Base
   acts_as_having_boxes
 
   after_create do |env|
-    3.times do
+    NUMBER_OF_BOXES.times do
       env.boxes << Box.new
     end
 
@@ -202,9 +226,11 @@ class Environment < ActiveRecord::Base
   has_many :licenses
 
   has_many :categories
-  has_many :display_categories, :class_name => 'Category', :conditions => 'display_color is not null and parent_id is null', :order => 'display_color'
+  has_many :display_categories, -> {
+    order('display_color').where('display_color is not null and parent_id is null')
+  }, class_name: 'Category'
 
-  has_many :product_categories, :conditions => { :type => 'ProductCategory'}
+  has_many :product_categories, -> { where type: 'ProductCategory'}
   has_many :regions
   has_many :states
   has_many :cities
@@ -363,6 +389,16 @@ class Environment < ActiveRecord::Base
   def enable_plugin(plugin)
     self.enabled_plugins += [plugin.to_s]
     self.enabled_plugins.uniq!
+    self.save!
+  end
+
+  def enable_all_plugins
+    Noosfero::Plugin.available_plugin_names.each do |plugin|
+      plugin_name = plugin.to_s + "Plugin"
+      unless self.enabled_plugins.include?(plugin_name)
+        self.enabled_plugins += [plugin_name]
+      end
+    end
     self.save!
   end
 
@@ -668,7 +704,7 @@ class Environment < ActiveRecord::Base
 
   # the default Environment.
   def self.default
-    self.find(:first, :conditions => [ 'is_default = ?', true ] )
+    self.where('is_default = ?', true).first
   end
 
   # returns an array with the top level categories for this environment.
@@ -858,7 +894,7 @@ class Environment < ActiveRecord::Base
   end
 
   def portal_folders
-    (settings[:portal_folders] || []).map{|fid| portal_community.articles.find(:first, :conditions => { :id => fid }) }.compact
+    (settings[:portal_folders] || []).map{|fid| portal_community.articles.where(id: fid).first }.compact
   end
 
   def portal_folders=(folders)
@@ -945,7 +981,7 @@ class Environment < ActiveRecord::Base
   end
 
   def highlighted_products_with_image(options = {})
-    Product.find(:all, {:conditions => {:highlighted => true, :profile_id => self.enterprises.find(:all, :select => :id) }, :joins => :image}.merge(options))
+    self.products.where(highlighted: true).joins(:image).order('created_at ASC')
   end
 
   settings_items :home_cache_in_minutes, :type => :integer, :default => 5

@@ -107,12 +107,12 @@ def run_test(name, files)
   if name == :cucumber || name == :selenium
     run_cucumber task2profile(name, plugin), files
   else
-    run_testrb files
+    run_minitest files
   end
 end
 
-def run_testrb(files)
-  sh 'testrb', '-I.:test', *files
+def run_minitest files
+  sh 'ruby', '-Itest', *files
 end
 
 def run_cucumber(profile, files)
@@ -169,7 +169,7 @@ def test_sequence(plugins, tasks)
         failed[plugin] << task
       end
     end
-    disable_plugins(plugin)
+    disable_plugins
   end
   fail_flag = false
   failed.each do |plugin, tasks|

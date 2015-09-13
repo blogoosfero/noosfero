@@ -1,12 +1,5 @@
 require 'test_helper'
 
-class ProfileDesignController
-  append_view_path File.join(File.dirname(__FILE__) + '/../../views')
-  def rescue_action(e)
-    raise e
-  end
-end
-
 class ProfileDesignControllerTest < ActionController::TestCase
 
   def setup
@@ -47,7 +40,7 @@ class ProfileDesignControllerTest < ActionController::TestCase
     post :save, :id => @block.id, :block => {:title => 'context', :show_image => '0', :show_name => '0', :show_parent_content => '0', :types => ['TinyMceArticle', '', nil, 'Folder'] }, :profile => @profile.identifier
     @block.reload
     assert_equal 'context', @block.title
-    assert !@block.show_image && !@block.show_name && !@block.show_parent_content
+    refute @block.show_image && !@block.show_name && !@block.show_parent_content
     assert_equal ['TinyMceArticle', 'Folder'], @block.types
   end
 

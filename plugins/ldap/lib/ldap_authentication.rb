@@ -19,6 +19,7 @@ require 'rubygems'
 require 'iconv'
 require 'net/ldap'
 require 'net/ldap/dn'
+require 'magic'
 
 class LdapAuthentication
 
@@ -77,18 +78,20 @@ class LdapAuthentication
   end
 
   def get_user_attributes_from_ldap_entry(entry)
-    {
-     :dn => entry.dn,
-     :fullname => LdapAuthentication.get_attr(entry, self.attr_fullname),
-     :mail => LdapAuthentication.get_attr(entry, self.attr_mail),
-    }
+    attributes = entry.instance_values["myhash"]
+
+    attributes[:dn] = entry.dn
+    attributes[:fullname] = LdapAuthentication.get_attr(entry, self.attr_fullname)
+    attributes[:mail] = LdapAuthentication.get_attr(entry, self.attr_mail)
+
+    attributes
   end
 
   # Return the attributes needed for the LDAP search.  It will only
   # include the user attributes if on-the-fly registration is enabled
   def search_attributes
     if onthefly_register?
-      ['dn', self.attr_fullname, self.attr_mail]
+      nil
     else
       ['dn']
     end
@@ -111,6 +114,7 @@ class LdapAuthentication
     end
     login_filter = Net::LDAP::Filter.eq( self.attr_login, login )
     object_filter = Net::LDAP::Filter.eq( "objectClass", "*" )
+
     attrs = {}
 
     search_filter = object_filter & login_filter
@@ -131,7 +135,18 @@ class LdapAuthentication
 
   def self.get_attr(entry, attr_name)
     if !attr_name.blank?
-      entry[attr_name].is_a?(Array) ? entry[attr_name].first : entry[attr_name]
+      val = entry[attr_name].is_a?(Array) ? entry[attr_name].first : entry[attr_name]
+      if val.nil?
+        Rails.logger.warn "LDAP entry #{entry.dn} has no attr #{attr_name}."
+        nil
+      elsif val == '' || val == ' '
+        Rails.logger.warn "LDAP entry #{entry.dn} has attr #{attr_name} empty."
+        ''
+      else
+        charset = Magic.guess_string_mime_encoding(val)
+        val.encode 'utf-8', charset, invalid: :replace, undef: :replace
+      end
     end
   end
+
 end

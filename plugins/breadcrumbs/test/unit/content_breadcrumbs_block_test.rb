@@ -1,4 +1,4 @@
-require File.dirname(__FILE__) + '/../test_helper'
+require_relative '../test_helper'
 
 class ContentBreadcrumbsBlockTest < ActiveSupport::TestCase
 
@@ -69,7 +69,7 @@ class ContentBreadcrumbsBlockTest < ActiveSupport::TestCase
   end
 
   should 'not be cacheable' do
-    assert !@block.cacheable?
+    refute @block.cacheable?
   end
 
 end

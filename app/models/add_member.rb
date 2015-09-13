@@ -2,13 +2,16 @@ class AddMember < Task
 
   validates_presence_of :requestor_id, :target_id
 
+  validates :requestor, kind_of: {kind: Person}
+  validates :target, kind_of: {kind: Organization}
+
   alias :person :requestor
   alias :person= :requestor=
 
   alias :organization :target
   alias :organization= :target=
 
-  settings_items :roles
+  settings_items :roles, type: Array
 
   after_create do |task|
     remove_from_suggestion_list(task)

@@ -14,8 +14,8 @@ Build-Depends: cucumber,
                ruby-database-cleaner,
                ruby-gettext,
                ruby-mocha,
-               ruby-rspec,
-               ruby-rspec-rails,
+               ruby-rspec (>= 2.14),
+               ruby-rspec-rails (>= 2.14),
                ruby-selenium-webdriver,
                ruby-sqlite3,
                ruby-tidy,
@@ -49,21 +49,28 @@ Depends: adduser,
          ruby-feedparser,
          ruby-feedparser (>= 0.7-3~),
          ruby-gettext,
+         ruby-grape,
+         ruby-grape-entity,
+         ruby-grape-logging,
          ruby-memcache-client,
          ruby-minitest,
          ruby-nokogiri,
          ruby-pg,
          ruby-progressbar,
          ruby-rack (>= 1.4.5-2~),
+         ruby-rack-contrib,
+         ruby-rack-cors,
          ruby-rails-autolink,
          ruby-redcloth,
          ruby-rest-client,
          ruby-rmagick,
+         ruby-sass-rails,
          ruby-tzinfo (>= 1.1.0-2~),
+         ruby-uglifier,
          ruby-whenever,
          ruby-will-paginate (>= 2.3.12-1~),
          tango-icon-theme,
-         thin,
+         unicorn (>= 4.8),
          ${misc:Depends}
 Recommends: postgresql, postgresql-client
 Description: free web-based platform for social networks
@@ -86,7 +93,7 @@ Description: free web-based platform for social networks (apache frontend)
 
 Package: noosfero-chat
 Architecture: all
-Depends: noosfero, ejabberd, odbc-postgresql, pidgin-data
+Depends: noosfero (>= 1.2), ejabberd, odbc-postgresql, pidgin-data
 Description: free web-based platform for social networks (ejabberd based chat)
  Noosfero is a web platform for social and solidarity economy networks with
  blog, e-Porfolios, CMS, RSS, thematic discussion, events agenda and collective

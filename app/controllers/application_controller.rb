@@ -14,6 +14,7 @@ class ApplicationController < ActionController::Base
   before_filter :check_admin
 
   before_filter :verify_members_whitelist, :if => [:private_environment?, :user]
+  before_filter :redirect_to_current_user
   before_filter :authorize_profiler if defined? Rack::MiniProfiler
   around_filter :set_time_zone
 
@@ -60,7 +61,7 @@ class ApplicationController < ActionController::Base
 
   layout :get_layout
   def get_layout
-    return nil if request.format == :js or request.xhr?
+    return false if request.format == :js or request.xhr?
 
     theme_layout = theme_option(:layout)
     if theme_layout
@@ -84,18 +85,16 @@ class ApplicationController < ActionController::Base
   helper :language
 
   include DesignHelper
-
-  # Be sure to include AuthenticationSystem in Application Controller instead
   include AuthenticatedSystem
   include PermissionCheck
 
   before_filter :set_locale
   def set_locale
     FastGettext.available_locales = environment.available_locales
-    FastGettext.default_locale = environment.default_locale
-    FastGettext.locale = (params[:lang] || session[:lang] || environment.default_locale || request.env['HTTP_ACCEPT_LANGUAGE'] || 'en')
-    I18n.locale = FastGettext.locale.to_s.gsub '_', '-'
-    I18n.default_locale = FastGettext.default_locale.to_s.gsub '_', '-'
+    FastGettext.default_locale = environment.default_locale || :en_US
+    FastGettext.locale = (params[:lang] || session[:lang] || environment.default_locale || request.env['HTTP_ACCEPT_LANGUAGE'] || :en_US)
+    I18n.locale = FastGettext.locale
+    I18n.default_locale = FastGettext.default_locale
     if params[:lang]
       session[:lang] = params[:lang]
     end
@@ -168,7 +167,7 @@ class ApplicationController < ActionController::Base
       if @domain.profile and params[:profile].present? and params[:profile] != @domain.profile.identifier
         @profile = @environment.profiles.find_by_identifier params[:profile]
         return render_not_found if @profile.blank?
-        redirect_to params.merge(:host => @profile.default_hostname, :protocol => @profile.default_protocol)
+        redirect_to url_for(params.merge host: @profile.default_hostname, protocol: @profile.default_protocol)
       end
     end
   end
@@ -183,7 +182,7 @@ class ApplicationController < ActionController::Base
   def render_not_found(path = nil)
     @no_design_blocks = true
     @path ||= request.path
-    render :template => 'shared/not_found.html.erb', :status => 404, :layout => get_layout
+    render template: 'shared/not_found', status: 404, layout: get_layout
   end
   alias :render_404 :render_not_found
 
@@ -191,7 +190,7 @@ class ApplicationController < ActionController::Base
     @no_design_blocks = true
     @message = message
     @title = title
-    render :template => 'shared/access_denied.html.erb', :status => 403
+    render template: 'shared/access_denied', status: 403
   end
 
   def load_category
@@ -227,6 +226,7 @@ class ApplicationController < ActionController::Base
   end
 
   def find_by_contents(asset, context, scope, query, paginate_options={:page => 1}, options={})
+    scope = scope.with_templates(options[:template_id]) unless options[:template_id].blank?
     search = plugins.dispatch_first(:find_by_contents, asset, scope, query, paginate_options, options)
     register_search_term(query, scope.count, search[:results].count, context, asset)
     search
@@ -239,4 +239,15 @@ class ApplicationController < ActionController::Base
   def private_environment?
     @environment.enabled?(:restrict_to_members)
   end
+
+  def redirect_to_current_user
+    if params[:profile] == '~'
+      if logged_in?
+        redirect_to url_for(params.merge profile: user.identifier)
+      else
+        render_not_found
+      end
+    end
+  end
+
 end

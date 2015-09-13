@@ -1,8 +1,6 @@
 require_relative "../test_helper"
 require 'profile_design_controller'
 
-class ProfileDesignController; def rescue_action(e) raise e end; end
-
 class ProfileDesignControllerTest < ActionController::TestCase
 
   COMMOM_BLOCKS = [ ArticleBlock, TagsBlock, RecentDocumentsBlock, ProfileInfoBlock, LinkListBlock, MyNetworkBlock, FeedReaderBlock, ProfileImageBlock, LocationBlock, SlideshowBlock, ProfileSearchBlock, HighlightsBlock ]
@@ -203,12 +201,12 @@ class ProfileDesignControllerTest < ActionController::TestCase
     assert @controller.instance_variable_get('@center_block_types').include?(CustomBlock1)
     assert @controller.instance_variable_get('@center_block_types').include?(CustomBlock2)
     assert @controller.instance_variable_get('@center_block_types').include?(CustomBlock3)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock4)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock5)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock6)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock7)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock8)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock9)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock4)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock5)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock6)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock7)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock8)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock9)
   end
 
   should 'a block plugin with side position add new blocks only in this position' do
@@ -242,9 +240,9 @@ class ProfileDesignControllerTest < ActionController::TestCase
     get :add_block, :profile => 'designtestuser'
     assert_response :success
 
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock1)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock2)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock3)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock1)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock2)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock3)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock4)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock5)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock6)
@@ -283,13 +281,13 @@ class ProfileDesignControllerTest < ActionController::TestCase
     assert_response :success
 
     assert @controller.instance_variable_get('@center_block_types').include?(CustomBlock1)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock2)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock3)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock4)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock2)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock3)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock4)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock5)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock6)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock7)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock8)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock6)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock7)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock8)
   end
 
   should 'not edit main block with never option' do
@@ -726,7 +724,7 @@ class ProfileDesignControllerTest < ActionController::TestCase
     end
 
     Noosfero::Plugin::Manager.any_instance.stubs(:enabled_plugins).returns([TestBlockPlugin.new])
-    assert !@controller.available_blocks.include?(CustomBlock1)
+    refute @controller.available_blocks.include?(CustomBlock1)
   end
 
   should 'clone a block' do
@@ -737,9 +735,9 @@ class ProfileDesignControllerTest < ActionController::TestCase
     end
   end
 
-  test 'should forbid POST to save for fixed blocks' do
+  test 'should forbid POST to save for uneditable blocks' do
     block = profile.blocks.last
-    block.fixed = true
+    block.edit_modes = "none"
     block.save!
 
     post :save, id: block.id, profile: profile.identifier
@@ -748,7 +746,7 @@ class ProfileDesignControllerTest < ActionController::TestCase
 
   test 'should forbid POST to move_block for fixed blocks' do
     block = profile.blocks.last
-    block.fixed = true
+    block.move_modes = "none"
     block.save!
 
     post :move_block, id: block.id, profile: profile.identifier, target: "end-of-box-#{@box3.id}"

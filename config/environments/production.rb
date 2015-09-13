@@ -8,9 +8,6 @@ Noosfero::Application.configure do
   # Full error reports are disabled and caching is turned on
   # config.action_controller.perform_caching = true
 
-  # Enable Rails's static asset server (Apache or nginx should do this)
-  config.serve_static_assets = true
-
   # Compress JavaScripts and CSS
   config.assets.compress = true
 
@@ -24,7 +21,8 @@ Noosfero::Application.configure do
   end.compact
 
   # fallback to assets pipeline if a precompiled asset is missed
-  config.assets.digest = true
+  config.serve_static_assets = true
+  config.assets.compile = true
   config.assets.cache_store = :assets_live_compile_store
 
   # Defaults to nil and saved in location specified by config.assets.prefix
@@ -65,9 +63,5 @@ Noosfero::Application.configure do
 
   # Send deprecation notices to registered listeners
   config.active_support.deprecation = :notify
-
-  # Log the query plan for queries taking more than this (works
-  # with SQLite, MySQL, and PostgreSQL)
-  # config.active_record.auto_explain_threshold_in_seconds = 0.5
 end
 

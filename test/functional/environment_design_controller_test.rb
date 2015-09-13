@@ -1,9 +1,6 @@
 require_relative "../test_helper"
 require 'environment_design_controller'
 
-# Re-raise errors caught by the controller.
-class EnvironmentDesignController; def rescue_action(e) raise e end; end
-
 class EnvironmentDesignControllerTest < ActionController::TestCase
 
   ALL_BLOCKS = [ArticleBlock, LoginBlock, RecentDocumentsBlock, EnterprisesBlock, CommunitiesBlock, SellersSearchBlock, LinkListBlock, FeedReaderBlock, SlideshowBlock, HighlightsBlock, FeaturedProductsBlock, CategoriesBlock, RawHTMLBlock, TagsBlock ]
@@ -207,9 +204,9 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
 
     Noosfero::Plugin::Manager.any_instance.stubs(:enabled_plugins).returns([TestBlockPlugin.new])
     assert @controller.available_blocks.include?(CustomBlock1)
-    assert !@controller.available_blocks.include?(CustomBlock2)
-    assert !@controller.available_blocks.include?(CustomBlock3)
-    assert !@controller.available_blocks.include?(CustomBlock4)
+    refute @controller.available_blocks.include?(CustomBlock2)
+    refute @controller.available_blocks.include?(CustomBlock3)
+    refute @controller.available_blocks.include?(CustomBlock4)
   end
 
   should 'a block plugin with center position add new blocks only in this position' do
@@ -247,12 +244,12 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     assert @controller.instance_variable_get('@center_block_types').include?(CustomBlock1)
     assert @controller.instance_variable_get('@center_block_types').include?(CustomBlock2)
     assert @controller.instance_variable_get('@center_block_types').include?(CustomBlock3)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock4)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock5)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock6)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock7)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock8)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock9)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock4)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock5)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock6)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock7)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock8)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock9)
   end
 
   should 'a block plugin with side position add new blocks only in this position' do
@@ -287,9 +284,9 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     get :add_block
     assert_response :success
 
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock1)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock2)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock3)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock1)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock2)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock3)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock4)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock5)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock6)
@@ -328,13 +325,13 @@ class EnvironmentDesignControllerTest < ActionController::TestCase
     get :add_block
     assert_response :success
 
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock1)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock2)
-    assert !@controller.instance_variable_get('@center_block_types').include?(CustomBlock3)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock1)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock2)
+    refute @controller.instance_variable_get('@center_block_types').include?(CustomBlock3)
     assert @controller.instance_variable_get('@center_block_types').include?(CustomBlock4)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock5)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock6)
-    assert !@controller.instance_variable_get('@side_block_types').include?(CustomBlock7)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock5)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock6)
+    refute @controller.instance_variable_get('@side_block_types').include?(CustomBlock7)
     assert @controller.instance_variable_get('@side_block_types').include?(CustomBlock8)
   end
 

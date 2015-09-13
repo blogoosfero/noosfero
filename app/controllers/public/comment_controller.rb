@@ -71,20 +71,32 @@ class CommentController < ApplicationController
       return
     end
 
-    if @comment.save
-      @plugins.dispatch(:process_extra_comment_params, [@comment,params])
-    end
+    @saved = @comment.save
+    url = "#{url_for only_path: true, controller: :content_viewer, action: :view_page, profile: profile.identifier, page: @page.path.split('/')}/new_comment"
+    comment_to_render = @comment.comment_root
+    comment_html = render_to_string partial: 'comment', locals: {comment: comment_to_render, display_link: true}
 
-    respond_to do |format|
-      format.js do
-        comment_to_render = @comment.comment_root
-        render :json => {
-            :render_target => comment_to_render.anchor,
-            :html => render_to_string(:partial => 'comment', :locals => {:comment => comment_to_render, :display_link => true}),
-            :msg => _('Comment successfully created.')
-         }
+    @plugins.dispatch(:process_extra_comment_params, [@comment,params]) if @saved
+
+    MessageBus.publish url, {
+      user_id: current_user.id,
+      saved: @saved,
+      render_target: comment_to_render.anchor,
+      html: comment_html,
+      msg: _('Comment successfully created.')
+    }
+    MessageBus.client_filter url do |user_id, message|
+      current_user_id = message.data['user_id']
+      this_user = user_id == current_user_id
+      if message.data['saved'] and this_user
+        message.data.delete 'msg' if user_id != current_user_id
+        message.data['this_user'] = this_user
+        message.data = message.data.to_json
+        message.dup
       end
     end
+
+    render nothing: true
   end
 
   def destroy

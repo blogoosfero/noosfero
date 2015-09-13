@@ -5,8 +5,8 @@
 *= require lodash.js
 *= require jquery-2.1.1.min.js
 *= require jquery-migrate-1.2.1.js
-*= require jquery.colorbox-min.js
 *= require jquery.cycle.all.min.js
+*= require jquery.colorbox-min.js
 *= require jquery-ui-1.10.4/js/jquery-ui-1.10.4.min.js
 *= require jquery.scrollTo.js
 *= require jquery.form.js
@@ -14,15 +14,17 @@
 *= require jquery.cookie.js
 *= require jquery.ba-bbq.min.js
 *= require jquery.tokeninput.js
-*= require jquery.typewatch.js
-*= require jquery.textchange.js
 *= require jquery-timepicker-addon/dist/jquery-ui-timepicker-addon.js
 *= require inputosaurus.js
 *= require reflection.js
-*= require select-or-die/_src/selectordie
 *= require rails.js
 *= require rails-extended.js
 *= require jrails.js
+*= require message-bus.js
+*= require riot
+*= require riot_rails
+*= require i18n
+*= require js-routes
 * noosfero libraries
 *= require_self
 *= require modal.js
@@ -35,15 +37,18 @@
 *= require autogrow.js
 *= require pagination.js
 *= require loading-overlay.js
+*= require require_login.js
 */
 
 _.templateSettings = {
   interpolate: /\{\{(.+?)\}\}/g,
 };
 
+MessageBus.start()
+MessageBus.callbackInterval = 500;
+
 // scope for noosfero stuff
-noosfero = {
-};
+noosfero = {}
 
 function noosfero_init() {
   // focus_first_field(); it is moving the page view when de form is down.
@@ -118,13 +123,11 @@ function convToValidEmail( str ) {
 }
 
 function updateUrlField(name_field, id) {
-  name_field = jQuery(name_field)
-  var old_name_value = name_field.get(0).defaultValue
-  var url_field = $(id);
+   url_field = jQuery('#'+id);
+   old_url_value = url_field.val();
+   new_url_value = convToValidIdentifier(name_field.value, "-");
 
-  var old_url_value = url_field.val()
-  var new_url_value = convToValidIdentifier(name_field.val(), "-")
-  url_field.val(new_url_value)
+   url_field.val(new_url_value);
 
   if (old_name_value && !/^\s*$/.test(old_url_value) && old_url_value != new_url_value) {
     warn_value_change(url_field);
@@ -698,10 +701,9 @@ Array.min = function(array) {
 
 function hideAndGetUrl(link) {
   document.body.style.cursor = 'wait';
-  link = jQuery(link)
-  link.hide();
-  url = link.attr('href');
-  jQuery.getScript(link.attr('href') , function(){
+  jQuery(link).hide();
+  url = jQuery(link).attr('href');
+  jQuery.get(url, function( data ) {
     document.body.style.cursor = 'default';
   });
 }
@@ -1031,3 +1033,37 @@ function add_new_file_fields() {
 }
 
 window.isHidden = function isHidden() { return (typeof(document.hidden) != 'undefined') ? document.hidden : !document.hasFocus() };
+
+function $_GET(id){
+    var a = new RegExp(id+"=([^&#=]*)");
+    var result_of_search = a.exec(window.location.search)
+    if(result_of_search != null){
+      return decodeURIComponent(result_of_search[1]);
+    }
+}
+
+var fullwidth=false;
+function toggle_fullwidth(itemId){
+  if(fullwidth){
+    jQuery(itemId).removeClass("fullwidth");
+    jQuery("#fullscreen-btn").show()
+    jQuery("#exit-fullscreen-btn").hide()
+    fullwidth = false;
+  }
+  else{
+    jQuery(itemId).addClass("fullwidth");
+    jQuery("#exit-fullscreen-btn").show()
+    jQuery("#fullscreen-btn").hide()
+    fullwidth = true;
+  }
+  jQuery(window).trigger("toggleFullwidth", fullwidth);
+}
+
+function fullscreenPageLoad(itemId){
+  jQuery(document).ready(function(){
+
+    if ($_GET('fullscreen') == 1){
+      toggle_fullwidth(itemId);
+    }
+  });
+}
