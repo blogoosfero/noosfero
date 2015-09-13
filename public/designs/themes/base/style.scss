@@ -1,5 +1,6 @@
 @import url(/assets/designs/themes/blogoosfero-responsive/bootstrap/all.css);
 @import url(/stylesheets/typeahead.css);
+@import 'blogoosfero';
 
 /* ==> button.css <== */
 
@@ -1969,23 +1970,6 @@ div.with_media_panel .formfield input[type="checkbox"] {
   color: #555;
   height: 28px;
   padding: 0px 0px 0px 10px;
-}
-
-/*Corrections due to incompatibilities with responsive design and solr. They must be removed when blogoosfero becomes responsive*/
-#product-owner { display:none; }
-#facets-column { display:none; }
-.hidden, .hidden-lg, .hidden-md { display: none; }
-.search-field .formfield, .search-field .formfield input { width: 800px; }
-#public-profile-search .search-field .formfield input { width: 100%; }
-.controller-search .search-field .formfield { width: 100%; }
-
-/* suggestions */
-#content .profiles-suggestions .profile-list li .profile-link {
-  height: 60px;
-}
-.profiles-suggestions .profile-list .remove-suggestion, .box-1 .profiles-suggestions .profile-list li > a {
-  height: 34px;
-  display: block;
 }
 
 /************************* Article Page *****************************/
