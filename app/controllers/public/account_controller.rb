@@ -98,12 +98,9 @@ class AccountController < ApplicationController
     @block_bot = !!session[:may_be_a_bot]
     @invitation_code = params[:invitation_code]
     begin
-      @user = User.new(params[:user])
+      @user = User.build(params[:user], params[:profile_data], environment)
       @user.session = session
-      @user.terms_of_use = environment.terms_of_use
-      @user.environment = environment
       @terms_of_use = environment.terms_of_use
-      @user.person_data = params[:profile_data]
       @user.return_to = session[:return_to]
       @person = Person.new(params[:profile_data])
       @person.environment = @user.environment
@@ -446,7 +443,7 @@ class AccountController < ApplicationController
 
   def go_to_initial_page
     if params[:return_to]
-      redirect_to params[:return_to]
+      redirect_to url_for(params[:return_to])
     elsif environment.enabled?('allow_change_of_redirection_after_login')
       check_redirection_options(user, user.preferred_login_redirection, user.admin_url)
     else

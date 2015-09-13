@@ -12,6 +12,8 @@ module ApplicationHelper
 
   include UrlHelper
 
+  include TranslationsHelper
+
   include ModalHelper
 
   include BoxesHelper

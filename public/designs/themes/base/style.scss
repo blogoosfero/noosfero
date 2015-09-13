@@ -234,6 +234,10 @@ body, th, td, input {
   border-left: 0px;
 }
 
+.menu-submenu-list>li{
+  width: 100%;
+}
+
 #navigation .menu-submenu ul{
   border: 1px solid #888a85;
   border-top: 0px;
@@ -302,10 +306,9 @@ body, th, td, input {
   //border-color: #babdb6;
   //border-width: 1px;
   //border-radius: 10px;
-
   //box-shadow: 1px 1px 2px #888888;
-
   //padding: 10px 20px;
+  //position: relative;
 }
 
 #content .main-block h1, #not-found h1, #access-denied h1 {
@@ -1619,42 +1622,6 @@ table#recaptcha_table tr:hover td {
     margin-right: 200px;
 }
 
-
-/* Votes (positive - negative) */
-.vote-actions {
-    position: relative;
-    right: 0px;
-    top: 8px;
-}
-.action .like:before {
-  content: url('imgs/positive-hand.png');
-  position: relative;
-  top: 3px;
-}
-.action .dislike:before {
-  content: url('imgs/negative-hand.png');
-  position: relative;
-  top: 5px;
-}
-.join-leave-button {
-  background-color: #EEE;
-  border: 1px solid #CCC;
-}
-.join-leave-button:hover {
-  background-color: #555;
-  border: 1px solid #2E3436;
-}
-#content .join-leave-button:hover a.button {
-  color: #fff;
-}
-#content .join-leave-button a.button,
-.join-leave-button a.button.with-text,
-.join-leave-button a.button.with-text:visited,
-body.noosfero .join-leave-button a.button.with-text,
-body.noosfero .join-leave-button a.button.with-text:visited {
-  border: none;
-  background-color: transparent;
-}
 /* product cateogories */
 #categories-container #product_category_id {
   font-size: 18px;
@@ -2006,6 +1973,21 @@ div.with_media_panel .formfield input[type="checkbox"] {
 
 /*Corrections due to incompatibilities with responsive design and solr. They must be removed when blogoosfero becomes responsive*/
 #product-owner { display:none; }
+#facets-column { display:none; }
+.hidden, .hidden-lg, .hidden-md { display: none; }
+.search-field .formfield, .search-field .formfield input { width: 800px; }
+#public-profile-search .search-field .formfield input { width: 100%; }
+.controller-search .search-field .formfield { width: 100%; }
+
+/* suggestions */
+#content .profiles-suggestions .profile-list li .profile-link {
+  height: 60px;
+}
+.profiles-suggestions .profile-list .remove-suggestion, .box-1 .profiles-suggestions .profile-list li > a {
+  height: 34px;
+  display: block;
+}
+
 /************************* Article Page *****************************/
 
 #article-header .preview {
@@ -2118,4 +2100,8 @@ div.with_media_panel .formfield input[type="checkbox"] {
   margin-top: 20px;
   width: 494px;
   padding-left: 2px;
+}
+
+.profile-members-title-sort {
+  clear: both;
 }

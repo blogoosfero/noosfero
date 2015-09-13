@@ -80,6 +80,7 @@ class Noosfero::Plugin
         end
         [ config.autoload_paths, $:].each do |path|
           path << File.join(dir, 'models')
+          path << File.join(dir, 'serializers')
           path << File.join(dir, 'lib')
           # load vendor/plugins
           Dir.glob(File.join(dir, '/vendor/plugins/*')).each do |vendor_plugin|
@@ -178,7 +179,6 @@ class Noosfero::Plugin
     def all
       @all ||= available_plugins.map{ |dir| (File.basename(dir) + "_plugin").camelize }
     end
-
   end
 
   def expanded_template(file_path, locals = {})

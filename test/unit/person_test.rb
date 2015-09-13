@@ -1372,7 +1372,7 @@ class PersonTest < ActiveSupport::TestCase
     assert_includes non_abusers, not_abuser
   end
 
-  should 'admins named_scope return persons who are admin users' do
+  should 'admins scope return persons who are admin users' do
     Person.delete_all
     e = Environment.default
     admins = []
@@ -1387,7 +1387,7 @@ class PersonTest < ActiveSupport::TestCase
     assert_equivalent admins, Person.admins
   end
 
-  should 'activated named_scope return persons who are activated users' do
+  should 'activated scope return persons who are activated users' do
     Person.delete_all
     e = Environment.default
     activated = []
@@ -1403,7 +1403,7 @@ class PersonTest < ActiveSupport::TestCase
     assert_equivalent activated, Person.activated
   end
 
-  should 'deactivated named_scope return persons who are deactivated users' do
+  should 'deactivated scope return persons who are deactivated users' do
     Person.delete_all
     e = Environment.default
     deactivated = []
@@ -1634,6 +1634,66 @@ class PersonTest < ActiveSupport::TestCase
   should 'follow? return false when no profile is passed as parameter' do
     person = Person.new
     assert_equal false, person.follows?(nil)
+  end
+
+  should 'allow posting content when has post_content permission' do
+    person = create_user('person').person
+    profile = mock
+    person.expects(:has_permission?).with('post_content', profile).returns(true)
+    assert person.can_post_content?(profile)
+  end
+
+  should 'allow posting content when has publish_content permission' do
+    person = create_user('person').person
+    profile = mock
+    person.expects(:has_permission?).with('post_content', profile).returns(false)
+    person.expects(:has_permission?).with('publish_content', profile).returns(true)
+    assert person.can_post_content?(profile)
+  end
+
+  should 'allow posting content when has permission in the parent' do
+    person = create_user('person').person
+    profile = mock
+    parent = mock
+    parent.expects(:allow_create?).with(person).returns(true)
+    assert person.can_post_content?(profile, parent)
+  end
+
+  should 'fetch people there are visible for a user' do
+    person = create_user('some-person').person
+    admin = create_user('some-admin').person
+    Environment.default.add_admin(admin)
+
+    p1 = fast_create(Person, :public_profile => true , :visible => true )
+    p1.add_friend(person)
+    p2 = fast_create(Person, :public_profile => true , :visible => true )
+    p3 = fast_create(Person, :public_profile => false, :visible => true )
+    p4 = fast_create(Person, :public_profile => false, :visible => true)
+    p4.add_friend(person)
+    person.add_friend(p4)
+    p5 = fast_create(Person, :public_profile => true , :visible => false)
+    p6 = fast_create(Person, :public_profile => false, :visible => false)
+
+    people = Person.visible_for_person(person)
+    people_for_admin = Person.visible_for_person(admin)
+
+    assert_includes     people, p1
+    assert_includes     people_for_admin, p1
+
+    assert_includes     people, p2
+    assert_includes     people_for_admin, p2
+
+    assert_not_includes people, p3
+    assert_includes     people_for_admin, p3
+
+    assert_includes     people, p4
+    assert_includes     people_for_admin, p4
+
+    assert_not_includes people, p5
+    assert_includes     people_for_admin, p5
+
+    assert_not_includes people, p6
+    assert_includes     people_for_admin, p6
   end
 
   should 'vote in a comment with value greater than 1' do

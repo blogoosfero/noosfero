@@ -80,7 +80,7 @@ class ProfileEditorController < MyProfileController
       if @profile.destroy
         session[:notice] = _('The profile was deleted.')
         if(params[:return_to])
-          redirect_to params[:return_to]
+          redirect_to url_for(params[:return_to])
         else
           redirect_to :controller => 'home'
         end
@@ -129,6 +129,13 @@ class ProfileEditorController < MyProfileController
         session[:notice] = _('Could not activate the profile.')
       end
     end
+
+    redirect_to_previous_location
+  end
+
+  def reset_private_token
+    profile = environment.profiles.find(params[:id])
+    profile.user.generate_private_token!
 
     redirect_to_previous_location
   end
