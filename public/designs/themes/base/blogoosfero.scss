@@ -1,0 +1,53 @@
+/* Votes (positive - negative) */
+.vote-actions {
+    position: relative;
+    right: 0px;
+    top: 8px;
+}
+.action .like:before {
+  content: url('imgs/positive-hand.png');
+  position: relative;
+  top: 3px;
+}
+.action .dislike:before {
+  content: url('imgs/negative-hand.png');
+  position: relative;
+  top: 5px;
+}
+.join-leave-button {
+  background-color: #EEE;
+  border: 1px solid #CCC;
+}
+.join-leave-button:hover {
+  background-color: #555;
+  border: 1px solid #2E3436;
+}
+#content .join-leave-button:hover a.button {
+  color: #fff;
+}
+#content .join-leave-button a.button,
+.join-leave-button a.button.with-text,
+.join-leave-button a.button.with-text:visited,
+body.noosfero .join-leave-button a.button.with-text,
+body.noosfero .join-leave-button a.button.with-text:visited {
+  border: none;
+  background-color: transparent;
+}
+
+/*Corrections due to incompatibilities with responsive design and solr. They must be removed when blogoosfero becomes responsive*/
+#product-owner { display:none; }
+#facets-column { display:none; }
+.hidden, .hidden-lg, .hidden-md { display: none; }
+.search-field .formfield, .search-field .formfield input { width: 800px; }
+#public-profile-search .search-field .formfield input { width: 100%; }
+.controller-search .search-field .formfield { width: 100%; }
+
+/* suggestions */
+#content .profiles-suggestions .profile-list li .profile-link {
+  height: 60px;
+}
+.profiles-suggestions .profile-list .remove-suggestion, .box-1 .profiles-suggestions .profile-list li > a {
+  height: 34px;
+  display: block;
+}
+
