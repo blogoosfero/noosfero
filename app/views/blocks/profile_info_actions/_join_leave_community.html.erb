@@ -4,10 +4,11 @@
       <%= _('Your membership is waiting for approval') %>
     <% else %>
       <% if user.in? profile.members %>
-        <%= button :delete, content_tag('span', _('Leave community')), profile.leave_url,
+        <%# see http://sac.eita.org.br/rt/Ticket/Display.html?id=624 %>
+        <%# button :delete, content_tag('span', _('Leave community')), profile.leave_url,
           class: 'leave-community',
           style: 'position: relative;' %>
-        <%= button :add, content_tag('span', _('Join this community')), profile.join_url,
+        <%# button :add, content_tag('span', _('Join this community')), profile.join_url,
           class: 'join-community',
           style: 'position: relative; display: none;' %>
       <% else %>
