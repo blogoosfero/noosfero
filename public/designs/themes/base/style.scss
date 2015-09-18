@@ -40,9 +40,11 @@ input.button.with-text {
 
 /* ==> layout.css <== */
 
+@import url(http://fonts.googleapis.com/css?family=Ubuntu:400,400italic,700,700italic);
+
 body {
   background: #EEE;
-  font-family: Liberation Sans, Arial, sans-serif;
+  font-family: 'Ubuntu', sans-serif;
 }
 
 #wrap-1, #theme-footer {
