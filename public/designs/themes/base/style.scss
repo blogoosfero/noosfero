@@ -687,6 +687,24 @@ div#notice {
   clear: left;
 }
 
+/****************************** Tags *********************************/
+
+/* the style here is not only for #content .tags-block .tag_cloud */
+
+.tag_cloud {
+  text-align: center;
+}
+
+.tag_cloud a {
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.tag_cloud a small {
+  opacity: 0.5;
+  filter:alpha(opacity=50);
+}
+
 
 /********************* Product Categories Block **********************/
 
@@ -1860,6 +1878,11 @@ table#recaptcha_table tr:hover td {
 }
 
 /* Text editors sidebar */
+
+.controller-cms div.with_media_panel {
+    float: left;
+    width: 500px;
+}
 div.with_media_panel .formfield input {
     width: 100%;
 }
@@ -1870,9 +1893,9 @@ div.with_media_panel .formfield input[type="checkbox"] {
 
 .text-editor-sidebar {
     position: absolute;
-    width: 400px;
+    width: 380px;
     right: 20px;
-    top: 30px;
+    top: 70px;
 }
 
 #product-name h2 {
@@ -1924,6 +1947,8 @@ div.with_media_panel .formfield input[type="checkbox"] {
   padding: 0px 0px 0px 10px;
 }
 
+/*PROVISORY!*/
+#product-owner { display:none; }
 /************************* Article Page *****************************/
 
 #article-header .preview {
