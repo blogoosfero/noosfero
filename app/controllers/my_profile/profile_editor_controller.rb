@@ -6,10 +6,13 @@ class ProfileEditorController < MyProfileController
   before_filter :access_welcome_page, :only => [:welcome_page]
   before_filter :back_to
   before_filter :forbid_destroy_profile, :only => [:destroy_profile]
+  before_filter :check_user_can_edit_header_footer, :only => [:header_footer]
   helper_method :has_welcome_page
 
   def index
     @pending_tasks = Task.to(profile).pending.without_spam.select{|i| user.has_permission?(i.permission, profile)}
+    @show_appearance_option = @user_is_admin || environment.enabled?('enable_appearance')
+    @show_header_footer_option = @user_is_admin || !environment.enabled?('disable_header_and_footer')
   end
 
   helper :profile
@@ -24,7 +27,7 @@ class ProfileEditorController < MyProfileController
         Image.transaction do
           begin
             @plugins.dispatch(:profile_editor_transaction_extras)
-            @profile_data.update_attributes!(params[:profile_data])
+            @profile_data.update!(params[:profile_data])
             redirect_to :action => 'index', :profile => profile.identifier
           rescue Exception => ex
             profile.identifier = params[:profile] if profile.identifier.blank?
@@ -94,7 +97,7 @@ class ProfileEditorController < MyProfileController
     @welcome_page = profile.welcome_page || TinyMceArticle.new(:name => 'Welcome Page', :profile => profile, :published => false)
     if request.post?
       begin
-        @welcome_page.update_attributes!(params[:welcome_page])
+        @welcome_page.update!(params[:welcome_page])
         profile.welcome_page = @welcome_page
         profile.save!
         session[:notice] = _('Welcome page saved successfully.')
@@ -168,5 +171,10 @@ class ProfileEditorController < MyProfileController
       session[:notice] = _('You can not destroy the profile.')
       redirect_to_previous_location
     end
+  end
+
+  def check_user_can_edit_header_footer
+    user_can_not_edit_header_footer = !user.is_admin?(environment) && environment.enabled?('disable_header_and_footer')
+    redirect_to back_to if user_can_not_edit_header_footer
   end
 end

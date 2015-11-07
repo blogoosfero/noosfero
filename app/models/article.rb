@@ -43,6 +43,10 @@ class Article < ActiveRecord::Base
     'full'
   end
 
+  def self.refuse_blocks
+    true
+  end
+
   #FIXME This is necessary because html is being generated on the model...
   include ActionView::Helpers::TagHelper
 
@@ -101,6 +105,8 @@ class Article < ActiveRecord::Base
   before_destroy :rotate_translations
 
   acts_as_voteable
+
+  after_save :invalidate_parent_cache
 
   before_create do |article|
     article.published_at ||= Time.now
@@ -265,12 +271,12 @@ class Article < ActiveRecord::Base
 
   scope :is_public, -> {
     joins(:profile).
-    where("advertise = ? AND published = ? AND profiles.visible = ? AND profiles.public_profile = ?", true, true, true, true)
+    where("articles.advertise = ? AND articles.published = ? AND profiles.visible = ? AND profiles.public_profile = ?", true, true, true, true)
   }
 
   scope :more_recent, -> {
     order('articles.published_at desc, articles.id desc')
-    .where("advertise = ? AND published = ? AND profiles.visible = ? AND profiles.public_profile = ? AND
+    .where("articles.advertise = ? AND articles.published = ? AND profiles.visible = ? AND profiles.public_profile = ? AND
     ((articles.type != ?) OR articles.type is NULL)",
     true, true, true, true, 'RssFeed')
   }
@@ -743,6 +749,10 @@ class Article < ActiveRecord::Base
     profile.environment.licenses.find_by_id(get_version(version_number).license_id)
   end
 
+  def cacheable?
+    true
+  end
+
   alias :active_record_cache_key :cache_key
   def cache_key(params = {}, the_profile = nil, language = 'en')
     active_record_cache_key+'-'+language +
@@ -751,7 +761,11 @@ class Article < ActiveRecord::Base
       (params[:year] ? "-year-#{params[:year]}" : '') +
       (params[:month] ? "-month-#{params[:month]}" : '') +
       (params[:version] ? "-version-#{params[:version]}" : '')
+  end
 
+  def invalidate_parent_cache
+    self.parent.touch if self.parent
+    self.environment.touch if self.profile == self.environment.portal_community
   end
 
   def automatic_abstract

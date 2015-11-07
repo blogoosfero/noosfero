@@ -808,13 +808,11 @@ class ProfileControllerTest < ActionController::TestCase
   end
 
   should 'the network activity be paginated' do
-    p1= fast_create(Person)
-    40.times{fast_create(ActionTrackerNotification, :action_tracker_id => fast_create(ActionTracker::Record), :profile_id => p1.id)}
+    User.current = user = create_user
+    p1 = user.person
+    40.times{fast_create(ActionTrackerNotification, action_tracker_id: create(ActionTracker::Record, verb: :leave_scrap, user: p1, params: {content: 'blah'}), profile_id: p1.id)}
 
     @controller.stubs(:logged_in?).returns(true)
-    user = mock()
-    user.stubs(:person).returns(p1)
-    user.stubs(:login).returns('some')
     @controller.stubs(:current_user).returns(user)
     get :index, :profile => p1.identifier
     assert_equal 15, assigns(:network_activities).size
@@ -965,7 +963,7 @@ class ProfileControllerTest < ActionController::TestCase
 
   should 'the activities be paginated in people profiles' do
     p1= fast_create(Person)
-    40.times{create(Scrap, :receiver_id => p1.id, :created_at => Time.now)}
+    40.times{create(Scrap, sender: p1, receiver: p1, created_at: Time.now)}
 
     @controller.stubs(:logged_in?).returns(true)
     user = mock()
@@ -981,7 +979,7 @@ class ProfileControllerTest < ActionController::TestCase
   should 'the activities be paginated in community profiles' do
     p1= fast_create(Person)
     c = fast_create(Community)
-    40.times{create(Scrap, :receiver_id => c.id)}
+    40.times{create(Scrap, sender: p1, receiver: c)}
 
     @controller.stubs(:logged_in?).returns(true)
     user = mock()
@@ -1809,6 +1807,12 @@ class ProfileControllerTest < ActionController::TestCase
     get :members, :profile => community.identifier, :sort => "desc"
 
     assert @response.body.index("another_user") > @response.body.index("different_user")
+  end
+
+  should 'redirect to login if environment is restrict to members' do
+    Environment.default.enable(:restrict_to_members)
+    get :index
+    assert_redirected_to :controller => 'account', :action => 'login'
   end
 
 end

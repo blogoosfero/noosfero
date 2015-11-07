@@ -75,28 +75,20 @@ class CommentController < ApplicationController
     url = "#{url_for only_path: true, controller: :content_viewer, action: :view_page, profile: profile.identifier, page: @page.path.split('/')}/new_comment"
     comment_to_render = @comment.comment_root
     comment_html = render_to_string partial: 'comment', locals: {comment: comment_to_render, display_link: true}
-
-    @plugins.dispatch(:process_extra_comment_params, [@comment,params]) if @saved
-
-    MessageBus.publish url, {
-      user_id: current_user.id,
+    comment_json = {
+      user_login: current_user.login,
       saved: @saved,
       render_target: comment_to_render.anchor,
       html: comment_html,
-      msg: _('Comment successfully created.')
     }
-    MessageBus.client_filter url do |user_id, message|
-      current_user_id = message.data['user_id']
-      this_user = user_id == current_user_id
-      if message.data['saved'] and this_user
-        message.data.delete 'msg' if user_id != current_user_id
-        message.data['this_user'] = this_user
-        message.data = message.data.to_json
-        message.dup
-      end
+
+    if @saved
+      @plugins.dispatch(:process_extra_comment_params, [@comment,params]) if @saved
+      MessageBus.publish url, comment_json
     end
 
-    render nothing: true
+    comment_json[:msg] = _('Comment successfully created.')
+    render json: comment_json
   end
 
   def destroy
@@ -126,7 +118,7 @@ class CommentController < ApplicationController
   end
 
   def update
-    if @comment.update_attributes(params[:comment])
+    if @comment.update(params[:comment])
       @plugins.dispatch(:process_extra_comment_params, [@comment,params])
 
       respond_to do |format|

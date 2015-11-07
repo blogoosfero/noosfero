@@ -9,6 +9,10 @@ class Event < Article
     _('Event')
   end
 
+  def self.refuse_blocks
+    true
+  end
+
   settings_items :address, :type => :string
 
   def link=(value)
@@ -114,7 +118,7 @@ class Event < Article
   end
 
   alias_method :article_lead, :lead
-  def lead
+  def lead(length = nil)
     self.class.action_view.render 'content_viewer/event_lead', event: self
   end
 

@@ -86,14 +86,13 @@ class CmsController < MyProfileController
     refuse_blocks
     record_coming
     if request.post?
-      @article.image = nil if params[:remove_image] == 'true'
       if @article.image.present? && params[:article][:image_builder] &&
         params[:article][:image_builder][:label]
         @article.image.label = params[:article][:image_builder][:label]
         @article.image.save!
       end
       @article.last_changed_by = user
-      if @article.update_attributes(params[:article])
+      if @article.update(params[:article])
         if !continue
           if @article.content_type.nil? || @article.image?
             success_redirect
@@ -457,9 +456,7 @@ class CmsController < MyProfileController
   end
 
   def refuse_blocks
-    if ['TinyMceArticle', 'TextileArticle', 'Event', 'EnterpriseHomepage'].include?(@type)
-      @no_design_blocks = true
-    end
+    @no_design_blocks = true if @type.constantize.refuse_blocks
   end
 
   def per_page

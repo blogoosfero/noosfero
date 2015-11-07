@@ -13,6 +13,7 @@ module Noosfero
 
       rescue_from :all do |e|
         logger.error e
+        error! e.message, 500
       end
 
       @@NOOSFERO_CONF = nil
@@ -32,7 +33,7 @@ module Noosfero
       after { set_session_cookie }
 
       version 'v1'
-      prefix "api"
+      prefix [ENV['RAILS_RELATIVE_URL_ROOT'], "api"].compact.join('/')
       format :json
       content_type :txt, "text/plain"
 

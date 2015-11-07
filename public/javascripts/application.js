@@ -30,6 +30,8 @@
 *= require modal.js
 *= require form.js
 *= require timezone.js
+*= require loading-overlay.js
+*= require pagination.js
 * views speficics
 *= require add-and-join.js
 *= require report-abuse.js
@@ -40,15 +42,17 @@
 *= require require_login.js
 */
 
+// lodash configuration
 _.templateSettings = {
   interpolate: /\{\{(.+?)\}\}/g,
 };
 
+// scope for noosfero stuff
+noosfero = {
+};
+
 MessageBus.start()
 MessageBus.callbackInterval = 500;
-
-// scope for noosfero stuff
-noosfero = {}
 
 function noosfero_init() {
   // focus_first_field(); it is moving the page view when de form is down.
@@ -129,7 +133,7 @@ function updateUrlField(name_field, id) {
 
    url_field.val(new_url_value);
 
-  if (old_name_value && !/^\s*$/.test(old_url_value) && old_url_value != new_url_value) {
+  if (old_url_value && !/^\s*$/.test(old_url_value) && old_url_value != new_url_value) {
     warn_value_change(url_field);
   }
 }

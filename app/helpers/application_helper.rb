@@ -14,6 +14,8 @@ module ApplicationHelper
 
   include TranslationsHelper
 
+  include PartialsHelper
+
   include ModalHelper
 
   include BoxesHelper
@@ -290,36 +292,6 @@ module ApplicationHelper
       options[:class]='button-bar' :
       options[:class]+=' button-bar'
     concat(content_tag('div', capture(&block).to_s + tag('br', :style => 'clear: left;'), options))
-  end
-
-
-  def partial_for_class_in_view_path(klass, view_path, prefix = nil, suffix = nil)
-    return nil if klass.nil?
-    name = [prefix, klass.name.underscore, suffix].compact.map(&:to_s).join('_')
-
-    search_name = String.new(name)
-    if search_name.include?("/")
-      search_name.gsub!(/(\/)([^\/]*)$/,'\1_\2')
-      name = File.join(params[:controller], name) if defined?(params) && params[:controller]
-    else
-      search_name = "_" + search_name
-    end
-
-    path = defined?(params) && params[:controller] ? File.join(view_path, params[:controller], search_name + '.html.erb') : File.join(view_path, search_name + '.html.erb')
-    return name if File.exists?(File.join(path))
-
-    partial_for_class_in_view_path(klass.superclass, view_path, prefix, suffix)
-  end
-
-  def partial_for_class(klass, prefix=nil, suffix=nil)
-    raise ArgumentError, 'No partial for object. Is there a partial for any class in the inheritance hierarchy?' if klass.nil?
-    name = klass.name.underscore
-    controller.view_paths.each do |view_path|
-      partial = partial_for_class_in_view_path(klass, view_path, prefix, suffix)
-      return partial if partial
-    end
-
-    raise ArgumentError, 'No partial for object. Is there a partial for any class in the inheritance hierarchy?'
   end
 
   def render_profile_actions klass
@@ -730,10 +702,10 @@ module ApplicationHelper
     javascript_include_tag script if script
   end
 
-  def file_field_or_thumbnail(label, image, i)
+  def file_field_or_thumbnail(label, image, i, removable = true)
     display_form_field label, (
       render :partial => (image && image.valid? ? 'shared/show_thumbnail' : 'shared/change_image'),
-      :locals => { :i => i, :image => image }
+      :locals => { :i => i, :image => image, :removable => removable }
       )
   end
 
@@ -1330,7 +1302,12 @@ module ApplicationHelper
       options[:class] = (options[:class] || '') + ' disabled'
       content_tag('a', '&nbsp;'+content_tag('span', content), options)
     else
-      link_to content, url, options
+      if options[:modal]
+        options.delete(:modal)
+        modal_link_to content, url, options
+      else
+        link_to content, url, options
+      end
     end
   end
 

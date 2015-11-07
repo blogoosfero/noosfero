@@ -8,8 +8,8 @@ class ApplicationController < ActionController::Base
   before_filter :init_noosfero_plugins
   before_filter :allow_cross_domain_access
 
-  before_filter :login_from_cookie
-  before_filter :login_required, :if => :private_environment?
+  include AuthenticatedSystem
+  before_filter :require_login_for_environment, :if => :private_environment?
 
   before_filter :check_admin
 
@@ -17,6 +17,10 @@ class ApplicationController < ActionController::Base
   before_filter :redirect_to_current_user
   before_filter :authorize_profiler if defined? Rack::MiniProfiler
   around_filter :set_time_zone
+
+  def require_login_for_environment
+    login_required
+  end
 
   def verify_members_whitelist
     render_access_denied unless @user_is_admin || environment.in_whitelist?(user)
@@ -85,7 +89,6 @@ class ApplicationController < ActionController::Base
   helper :language
 
   include DesignHelper
-  include AuthenticatedSystem
   include PermissionCheck
 
   before_filter :set_locale
@@ -182,7 +185,8 @@ class ApplicationController < ActionController::Base
   def render_not_found(path = nil)
     @no_design_blocks = true
     @path ||= request.path
-    render template: 'shared/not_found', status: 404, layout: get_layout
+    # force html template even if the browser asked for a image
+    render template: 'shared/not_found', status: 404, layout: get_layout, formats: [:html]
   end
   alias :render_404 :render_not_found
 
@@ -190,7 +194,8 @@ class ApplicationController < ActionController::Base
     @no_design_blocks = true
     @message = message
     @title = title
-    render template: 'shared/access_denied', status: 403
+    # force html template even if the browser asked for a image
+    render template: 'shared/access_denied', status: 403, formats: [:html]
   end
 
   def load_category
