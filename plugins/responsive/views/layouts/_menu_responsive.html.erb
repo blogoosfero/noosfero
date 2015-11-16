@@ -48,8 +48,7 @@
     </div>
     <div class="collapse navbar-collapse" id="navbar-user-collapse">
       <ul class="nav navbar-nav pull-right">
-        <% if logged_in? %>
-          <% user = user.person %>
+        <% if user.present? %>
           <%= usermenu_logged_in %>
         <% else %>
             <li>
