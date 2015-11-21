@@ -24,11 +24,12 @@ gem 'delayed_job_active_record'
 gem 'rake', :require => false
 gem 'rest-client',              '~> 1.6'
 gem 'exception_notification',   '~> 4.0.1'
-gem 'gettext',                  '~> 2.2.1', :require => false
-gem 'locale',                   '~> 2.0.5'
+gem 'gettext',                  '~> 3.1', :require => false
+gem 'locale',                   '~> 2.1'
 gem 'whenever', :require => false
 gem 'eita-jrails', '~> 0.10.0', require: 'jrails'
 gem 'diffy',                    '~> 3.0'
+gem 'slim'
 
 gem 'will-paginate-i18n'
 gem 'utf8-cleaner'
@@ -109,9 +110,6 @@ group :production do
   gem 'redis-rails'
   # not in active development :(
   #gem 'rack-cache'
-end
-
-group :development do
 end
 
 group :development, :test do
