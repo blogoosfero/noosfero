@@ -31,6 +31,10 @@ class BlockTest < ActiveSupport::TestCase
     assert_equal '', Block.new.default_title
   end
 
+  should 'provide an empty default subtitle' do
+    assert_equal '', Block.new.subtitle
+  end
+
   should 'be editable by default' do
     assert Block.new.editable?
   end
@@ -301,6 +305,11 @@ class BlockTest < ActiveSupport::TestCase
     person = fast_create(Person)
     block = Block.new
     assert_equal block.cache_key('en'), block.cache_key('en', person)
+  end
+
+  should 'use language in cache key' do
+    block = Block.new
+    assert_not_equal block.cache_key('en'), block.cache_key('pt')
   end
 
   should 'display block to members of community for display_user = members' do

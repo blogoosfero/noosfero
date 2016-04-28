@@ -13,16 +13,16 @@ msgid ""
 msgstr ""
 "Project-Id-Version: 1.3~rc2-1-ga15645d\n"
 "POT-Creation-Date: 2015-10-30 16:34-0300\n"
-"PO-Revision-Date: 2015-11-15 18:17-0300\n"
-"Last-Translator: Michal Čihař <michal@cihar.com>\n"
-"Language-Team: Portuguese <https://hosted.weblate.org/projects/noosfero/"
-"plugin-shopping-cart/pt/>\n"
+"PO-Revision-Date: 2016-03-14 15:52+0000\n"
+"Last-Translator: Eduardo Vital <vitaldu@gmail.com>\n"
+"Language-Team: Portuguese <https://hosted.weblate.org/projects/noosfero"
+"/plugin-shopping-cart/pt/>\n"
 "Language: pt\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n != 1;\n"
-"X-Generator: Weblate 2.3-dev\n"
+"X-Generator: Weblate 2.5\n"
 
 #: plugins/shopping_cart/lib/shopping_cart_plugin.rb:10
 msgid "A shopping basket feature for enterprises"
@@ -201,7 +201,6 @@ msgstr "Tem certeza que quer limpar seu cesto?"
 msgid "repeat order"
 msgstr "repetir pedido"
 
-
 #: plugins/shopping_cart/views/shopping_cart_plugin/_items.html.erb:7
 msgid "Item name"
 msgstr "Nome do item"
@@ -216,8 +215,11 @@ msgid "Hi %s!"
 msgstr "Olá %s!"
 
 #: plugins/shopping_cart/views/shopping_cart_plugin/mailer/customer_notification.html.erb:10
-msgid "This is a notification e-mail about your buy request on the enterprise %s."
-msgstr "Esse é um email de notificação sobre o seu pedido de compra no empreendimento %s."
+msgid ""
+"This is a notification e-mail about your buy request on the enterprise %s."
+msgstr ""
+"Esse é um email de notificação sobre o seu pedido de compra no "
+"empreendimento %s."
 
 #: plugins/shopping_cart/views/shopping_cart_plugin/mailer/customer_notification.html.erb:11
 msgid ""
@@ -225,9 +227,7 @@ msgid ""
 "confirmation."
 msgstr ""
 "O empreendimento já recebeu o seu pedido de compra e entrará em contato para "
-"confirmação."
-
-"confirmação."
+"confirmação.confirmação."
 
 #: plugins/shopping_cart/views/shopping_cart_plugin/mailer/customer_notification.html.erb:12
 msgid "If you have any doubts about your order, write to us at: %s."
@@ -304,7 +304,7 @@ msgstr "Nome"
 
 #: plugins/shopping_cart/views/shopping_cart_plugin/buy.html.erb:16
 msgid "Email"
-msgstr ""
+msgstr "E-mail"
 
 #: plugins/shopping_cart/views/shopping_cart_plugin/buy.html.erb:17
 msgid "Contact phone"
@@ -337,6 +337,7 @@ msgstr "Qtde"
 #: plugins/shopping_cart/views/shopping_cart_plugin/_items.html.erb
 msgid "Unit price"
 msgstr "Preço unitário"
+
 #~ msgid "Can't join items from different enterprises."
 #~ msgstr "Não é possível juntar itens de empreendimentos diferentes."
 

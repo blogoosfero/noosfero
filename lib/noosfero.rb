@@ -63,7 +63,7 @@ module Noosfero
   end
 
   def self.identifier_format
-    '[a-z0-9][a-z0-9~.]*([_\-][a-z0-9~.|:*]+)*'
+    '[a-z0-9][a-z0-9~.*]*([_\-][a-z0-9~.|:*]+)*'
   end
 
   # All valid identifiers, plus ~ meaning "the current user". See
@@ -91,7 +91,7 @@ module Noosfero
       development_url_options
     when 'cucumber'
       if Capybara.current_driver == :selenium
-        { :host => Capybara.current_session.driver.rack_server.host, :port => Capybara.current_session.driver.rack_server.port }
+        { :host => Capybara.current_session.server.host, :port => Capybara.current_session.server.port }
       end
     end || { }
   end

@@ -3,7 +3,6 @@ require 'noosfero/multi_tenancy'
 class ApplicationController < ActionController::Base
   protect_from_forgery
 
-  before_filter :setup_multitenancy
   before_filter :detect_stuff_by_domain
   before_filter :init_noosfero_plugins
   before_filter :allow_cross_domain_access
@@ -121,12 +120,22 @@ class ApplicationController < ActionController::Base
 
   protected
 
-  def verified_request?
-    super || form_authenticity_token == request.headers['X-XSRF-TOKEN']
+  before_filter :load_active_organization, except: :select_active_organization
+  def load_active_organization id = nil
+    return unless user
+    if id
+      @active_organization = environment.profiles.find_by_id id
+    elsif cookies[:active_organization]
+      @active_organization = environment.profiles.find_by_id cookies[:active_organization]
+    else
+      @active_organization = user.memberships.first
+    end
+    @active_organization = nil unless @active_organization and @active_organization.members.include? user
+    cookies[:active_organization] = @active_organization.id if @active_organization
   end
 
-  def setup_multitenancy
-    Noosfero::MultiTenancy.setup!(request.host)
+  def verified_request?
+    super || form_authenticity_token == request.headers['X-XSRF-TOKEN']
   end
 
   def boxes_editor?
@@ -148,15 +157,14 @@ class ApplicationController < ActionController::Base
     # Sets text domain based on request host for custom internationalization
     FastGettext.text_domain = Domain.custom_locale(request.host)
 
-    @domain = Domain.find_by_name(request.host)
+    @domain = Domain.by_name(request.host)
     if @domain.nil?
       @environment = Environment.default
-      if @environment.nil? && Rails.env.development?
-        # This should only happen in development ...
+      # Avoid crashes on test and development setups
+      if @environment.nil? && !Rails.env.production?
         @environment = Environment.new
         @environment.name = "Noosfero"
         @environment.is_default = true
-        @environment.save!
       end
     else
       @environment = @domain.environment
@@ -168,7 +176,7 @@ class ApplicationController < ActionController::Base
 
       # Check if the requested profile belongs to another domain
       if @domain.profile and params[:profile].present? and params[:profile] != @domain.profile.identifier
-        @profile = @environment.profiles.find_by_identifier params[:profile]
+        @profile = @environment.profiles.find_by identifier: params[:profile]
         return render_not_found if @profile.blank?
         redirect_to url_for(params.merge host: @profile.default_hostname, protocol: @profile.default_protocol)
       end
@@ -201,7 +209,7 @@ class ApplicationController < ActionController::Base
   def load_category
     unless params[:category_path].blank?
       path = params[:category_path]
-      @category = environment.categories.find_by_path(path)
+      @category = environment.categories.find_by(path: path)
       if @category.nil?
         render_not_found(path)
       end
@@ -232,5 +240,30 @@ class ApplicationController < ActionController::Base
       end
     end
   end
+
+  cattr_accessor :controller_path_class
+  self.controller_path_class = {}
+
+  def default_url_options options={}
+    #if @domain or (@profile and @profile.default_protocol)
+    #protocol = if @profile then @profile.default_protocol else @domain.protocol end
+    #options.merge! :protocol => protocol if protocol != 'http'
+    #end
+    options[:protocol] ||= '//'
+
+    # Only use profile's custom domains for the profiles and the account controllers.
+    # This avoids redirects and multiple URLs for one specific resource
+    if controller_path = options[:controller] || self.class.controller_path
+      controller = (self.class.controller_path_class[controller_path] ||= "#{controller_path}_controller".camelize.constantize rescue nil)
+      profile_needed = controller.profile_needed rescue false
+      if controller and not profile_needed and not controller == AccountController
+        options.merge! :host => environment.default_hostname, :only_path => false
+      end
+    end
+
+    options
+  end
+
+  include UrlHelper
 
 end

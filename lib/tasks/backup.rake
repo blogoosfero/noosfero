@@ -1,5 +1,6 @@
 task :load_backup_config do
-  $config = YAML.load_file('config/database.yml')
+  db_file = Rails.root.join('config', 'database.yml')
+  $config = YAML.load(ERB.new(File.read(db_file)).result)
 end
 
 task :check_backup_support => :load_backup_config do
@@ -114,7 +115,7 @@ end
 
 desc 'Removes emails from database'
 task 'restore:remove_emails' => :environment do
-  connection = ActiveRecord::Base.connection
+  connection = ApplicationRecord.connection
   [
     "UPDATE users SET email = concat('user', id, '@localhost.localdomain')",
     "UPDATE environments SET contact_email = concat('environment', id, '@localhost.localdomain')",

@@ -25,7 +25,7 @@ def enable_plugins(plugins)
   plugins = Array(plugins)
   command = ['./script/noosfero-plugins', '-q', 'enable', *plugins]
   puts plugins.join(' ')
-  system *command
+  Bundler.clean_system *command
 end
 
 def disable_plugins(plugins = '*')
@@ -111,11 +111,12 @@ def run_test(name, files)
 end
 
 def run_minitest files
-  sh 'ruby', '-Itest', *files
+  files = files.map{|f| File.join(Rails.root, f)}
+  sh 'ruby', '-Itest', '-e ARGV.each{|f| require f}', *files
 end
 
 def run_cucumber(profile, files)
-  sh 'xvfb-run', 'ruby', '-S', 'cucumber', '--profile', profile.to_s, '--format', ENV['CUCUMBER_FORMAT'] || 'progress' , *files
+  sh 'xvfb-run', '-a', 'ruby', '-S', 'cucumber', '--profile', profile.to_s, '--format', ENV['CUCUMBER_FORMAT'] || 'progress' , *files
 end
 
 def custom_run(name, files, run=:all)
@@ -214,7 +215,14 @@ namespace :test do
 
   desc "Run all tests for all plugins"
   task :noosfero_plugins do
-    test_sequence(@all_plugins - $broken_plugins, @all_tasks) do |failed|
+    plugins    = @all_plugins - $broken_plugins
+    if slice   = ENV['SLICE']
+      sel,size = slice.split '/'
+      size     = (plugins.size / size.to_f).ceil
+      plugins  = plugins.each_slice(size).to_a[sel.to_i - 1]
+    end
+
+    test_sequence plugins, @all_tasks do |failed|
       plugins_status_report(failed)
     end
   end
@@ -232,8 +240,10 @@ def plugins_status_report(failed)
 
   @all_plugins.each do |plugin|
     if $broken_plugins.include?(plugin)
+      status = "BROKEN"
+    elsif failed[plugin].nil?
       status = "SKIP"
-    elsif !failed[plugin] || failed[plugin].empty?
+    elsif failed[plugin].empty?
       status = "PASS"
     else
       status = "FAIL: #{failed[plugin].join(', ')}"

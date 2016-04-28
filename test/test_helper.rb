@@ -19,6 +19,7 @@ require_relative 'support/controller_test_case'
 require_relative 'support/authenticated_test_helper'
 require_relative 'support/action_tracker_test_helper'
 require_relative 'support/noosfero_doc_test'
+require_relative 'support/performance_helper'
 require_relative 'support/noosfero_test_helper'
 
 plugins_factories = Dir.glob(File.join(Rails.root, 'config', 'plugins', '*','test', 'factories.rb'))
@@ -63,6 +64,8 @@ class ActiveSupport::TestCase
 
   include AuthenticatedTestHelper
 
+  include PerformanceHelper
+
   extend Test::Should
 
   fixtures :environments, :roles
@@ -90,11 +93,11 @@ class ActiveSupport::TestCase
   alias_method :ok, :assert_block
 
   def assert_equivalent(enum1, enum2)
-    norm1 = enum1.to_a
-    norm2 = enum2.to_a
+    norm1 = enum1.group_by{|e|e}.values
+    norm2 = enum2.group_by{|e|e}.values
+    assert_equal norm1.size, norm2.size, "Size mismatch: #{enum1.inspect} vs #{enum2.inspect}"
     assert_equal [], norm1 - norm2
     assert_equal [], norm2 - norm1
-    assert_equal norm1.size, enum2.size, "Size mismatch: #{enum1.inspect} vs #{enum2.inspect}"
   end
 
   def assert_mandatory(object, attribute, test_value = 'some random string')
@@ -181,20 +184,20 @@ class ActiveSupport::TestCase
   end
 
   def process_delayed_job_queue
-    silence_stream(STDOUT) do
+    silence_stream STDOUT do
       Delayed::Worker.new.work_off
     end
   end
 
   def uses_postgresql(schema_name = 'test_schema')
-    adapter = ActiveRecord::Base.connection.class
+    adapter = ApplicationRecord.connection.class
     adapter.any_instance.stubs(:adapter_name).returns('PostgreSQL')
     adapter.any_instance.stubs(:schema_search_path).returns(schema_name)
     Noosfero::MultiTenancy.stubs(:on?).returns(true)
   end
 
   def uses_sqlite
-    adapter = ActiveRecord::Base.connection.class
+    adapter = ApplicationRecord.connection.class
     adapter.any_instance.stubs(:adapter_name).returns('SQLite')
     Noosfero::MultiTenancy.stubs(:on?).returns(false)
   end

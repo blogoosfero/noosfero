@@ -1,4 +1,4 @@
-class OrdersCyclePlugin::Cycle < ActiveRecord::Base
+class OrdersCyclePlugin::Cycle < ApplicationRecord
 
   attr_accessible :profile, :status, :name, :description, :opening_message
 
@@ -39,7 +39,7 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
 
   has_many :cycle_orders, -> { order 'id ASC' }, class_name: 'OrdersCyclePlugin::CycleOrder', foreign_key: :cycle_id, dependent: :destroy
 
-  # cannot use :order because of months/years named_scope
+  # cannot use :order because of months/years scope
   has_many :sales, through: :cycle_orders, source: :sale
   has_many :purchases, through: :cycle_orders, source: :purchase
 
@@ -233,7 +233,7 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
 
   def add_products
     return if self.products.count > 0
-    ActiveRecord::Base.transaction do
+    ApplicationRecord.transaction do
       self.profile.products.supplied.unarchived.available.find_each batch_size: 20 do |product|
         self.add_product product
       end
@@ -245,7 +245,7 @@ class OrdersCyclePlugin::Cycle < ActiveRecord::Base
   end
 
   def add_products_job
-    @add_products_job ||= Delayed::Job.find_by_id self.data[:add_products_job_id]
+    @add_products_job ||= Delayed::Job.find_by id: self.data[:add_products_job_id]
   end
 
   protected
