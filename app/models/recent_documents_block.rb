@@ -27,6 +27,16 @@ class RecentDocumentsBlock < Block
   end
 
   def self.expire_on
-      { :profile => [:article], :environment => [:article] }
+    { :profile => [:article], :environment => [:article] }
   end
+
+  # blogoosfero specific, sac #704
+  def timeout
+    if owner.is_a? Environment
+      20.minutes
+    else
+      super
+    end
+  end
+
 end
