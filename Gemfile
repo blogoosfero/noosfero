@@ -49,7 +49,7 @@ gem 'sprockets-es6'
 #############################################
 
 platform :ruby do
-  gem 'unicorn'
+  gem 'unicorn', '~> 4.9'
 
   gem 'unicode'
 
