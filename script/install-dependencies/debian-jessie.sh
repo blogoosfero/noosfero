@@ -1,4 +1,4 @@
-binary_packages='deb http://download.noosfero.org/debian/jessie ./'
+binary_packages='deb http://download.noosfero.org/debian/jessie-test ./'
 
 source_packages=$(echo "$binary_packages" | sed -e 's/^deb/deb-src/')
 
@@ -10,7 +10,7 @@ EOF
 
   sudo apt-key add - <<EOF
 -----BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1.4.9 (GNU/Linux)
+Version: GnuPG v1.4.12 (GNU/Linux)
 
 mQGiBE1HCIURBADw6SnRbc1qCHdTV9wD0rxSMIWevzUX+bnDgvV455yudqtVFUhX
 2QYvtlwclllbLWKzRdiM7GsBi+2DyWli4B17xl86A5RBQNdc1v1vWZG3QwURxd4E
@@ -61,12 +61,26 @@ else
   sudo rm -f /etc/apt/sources.list.d/local.list
 fi
 
+retry() {
+  local times="$1"
+  shift
+  local i=0
+  local rc=0
+  while [ $i -lt "$times" ]; do
+    echo '$' "$@"
+    "$@" && rc=0 || rc=$?
+    i=$(($i + 1))
+    if [ $rc -eq 0 ]; then return 0; fi
+  done
+  return $rc
+}
+
 # update system, at most every 6h (internal between Debian mirror pushes)
 timestamp=/tmp/.noosfero.apt-get.update
 now=$(date +%s)
 if [ ! -f $timestamp ] || [ $(($now - $(stat --format=%Y $timestamp))) -gt 21600 ]; then
-  run sudo apt-get update
-  run sudo apt-get -qy dist-upgrade
+  run retry 3 sudo apt-get update
+  run retry 3 sudo apt-get -qy dist-upgrade
   touch $timestamp
 fi
 

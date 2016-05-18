@@ -1,6 +1,7 @@
 class Gallery < Folder
 
-  has_many :images, :conditions => { :is_image => true }, :order => 'updated_at DESC', :class_name => 'Article', :foreign_key => 'parent_id'
+  has_many :images, -> { where(is_image: true).order('updated_at DESC') },
+    class_name: 'Article', foreign_key: :parent_id
 
   def self.type_name
     _('Gallery')
@@ -18,7 +19,7 @@ class Gallery < Folder
   def to_html(options={})
     article = self
     proc do
-      render :file => 'content_viewer/image_gallery', :locals => {:article => article}
+      render file: 'content_viewer/image_gallery', locals: {article: article}
     end
   end
 

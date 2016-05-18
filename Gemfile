@@ -17,7 +17,7 @@ gem 'RedCloth',                 '~> 4.2'
 gem 'ruby-feedparser',          '~> 0.7'
 gem 'daemons',                  '~> 1.1'
 gem 'nokogiri',                 '~> 1.6.0'
-gem 'will_paginate'
+gem 'will_paginate',            '~> 3.0.7'
 gem 'pothoven-attachment_fu',   '~> 3.2.16'
 gem 'delayed_job'
 gem 'delayed_job_active_record'
@@ -30,6 +30,7 @@ gem 'whenever', :require => false
 gem 'eita-jrails', '~> 0.10.0', require: 'jrails'
 gem 'diffy',                    '~> 3.0'
 gem 'slim'
+gem 'activerecord-session_store', ('1.0.0.pre' if RUBY_VERSION >= '2.3.0')
 
 gem 'will-paginate-i18n'
 gem 'utf8-cleaner'
@@ -48,7 +49,7 @@ gem 'sprockets-es6'
 #############################################
 
 platform :ruby do
-  gem 'unicorn'
+  gem 'unicorn', '~> 4.9'
 
   gem 'unicode'
 
@@ -86,23 +87,23 @@ end
 
 # API dependencies
 gem 'grape',                    '~> 0.12'
-gem 'grape-entity'
+gem 'grape-entity',             '0.4.8'
 gem 'grape_logging'
 gem 'rack-cors'
 gem 'rack-contrib'
+gem 'api-pagination',           '>= 4.1.1'
+gem 'liquid',                    '~> 3.0.3'
 
-group :assets do
-  gem 'uglifier', '>= 1.0.3'
-  gem 'sass-rails'
-end
+# asset pipeline
+gem 'uglifier', '>= 1.0.3'
+gem 'sass-rails'
+gem 'sprockets-rails', '~> 2.1'
 
 # gems to enable rails3 behaviour
 gem 'protected_attributes'
 gem 'rails-observers'
 gem 'actionpack-page_caching'
 gem 'actionpack-action_caching'
-gem 'activerecord-session_store'
-gem 'activerecord-deprecated_finders', require: 'active_record/deprecated_finders'
 
 group :production do
   gem 'newrelic_rpm'
@@ -130,10 +131,11 @@ group :cucumber do
   gem 'cucumber'
   gem 'cucumber-rails',         '~> 1.4.2', :require => false
   gem 'database_cleaner',       '~> 1.3'
-  gem 'selenium-webdriver'
+  gem 'selenium-webdriver',     '>= 2.50'
 end
 
 group :development do
+  gem 'better_errors'
   gem 'wirble'
   #gem 'byebug', platform: :mri
   gem 'html2haml', require: false

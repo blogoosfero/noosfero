@@ -4,6 +4,8 @@
 # instead of editing this one. Cucumber will automatically load all features/**/*.rb
 # files.
 
+ENV["RAILS_ENV"] ||= "cucumber"
+
 require File.expand_path(File.dirname(__FILE__) + '/../../config/environment')
 require 'cucumber/rails'
 
@@ -63,5 +65,13 @@ Before do
   fixtures_folder = Rails.root.join('test', 'fixtures')
   fixtures = ['environments', 'roles']
   ActiveRecord::Fixtures.create_fixtures(fixtures_folder, fixtures)
+
+  # The same browser session is used across tests, so expire caching
+  # can create changes from scenario to another.
+  e=Environment.default
+  e.home_cache_in_minutes    = 0
+  e.general_cache_in_minutes = 0
+  e.profile_cache_in_minutes = 0
+  e.save
 end
 
