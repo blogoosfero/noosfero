@@ -29,6 +29,8 @@ module SolrPlugin
         handle_asynchronously :solr_save
         # solr_destroy don't work with delayed_job, as AR won't be found
         #handle_asynchronously :solr_destroy
+        # blogoosfero: solr is crashing
+        define_method(:solr_destroy) {}
 
         extend FindByContents
         include InstanceMethods
