@@ -234,7 +234,7 @@ module ApplicationHelper
 
 
       output += '<ul class="dropdown-menu" role="menu">'
-      output += '<li>' + link_to('<span class="icon-person">'+_('Profile')+'</span>', user.public_profile_url, id: "homepage-link", title: _('Go to your homepage')) + '</li>'
+      output += '<li>' + link_to('<span class="icon-person">'+_('Profile')+'</span>', user.url, id: "homepage-link", title: _('Go to your homepage')) + '</li>'
 
       output += '<li class="divider"></li>'
 
