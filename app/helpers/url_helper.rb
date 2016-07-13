@@ -1,5 +1,7 @@
 module UrlHelper
 
+  extend ActiveSupport::Concern
+
   mattr_accessor :controller_path_class
   self.controller_path_class = {}
 
