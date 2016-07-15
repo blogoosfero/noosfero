@@ -23,7 +23,7 @@ module UrlSupport
     # 3) Add :profile if target controller needs a profile and target profile doesn't use a custom domain
     #
     path              = (options[:controller] || self.controller_path).to_sym
-    controller        = UrlHelper.controller_path_class[path] ||= "#{path}_controller".camelize.constantize
+    controller        = UrlSupport.controller_path_class[path] ||= "#{path}_controller".camelize.constantize
     profile_needed    = controller.profile_needed if controller.respond_to? :profile_needed, true
     use_custom_domain = @profile.identifier == options[:profile] && @profile.hostname
     if use_custom_domain
