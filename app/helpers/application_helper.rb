@@ -12,8 +12,6 @@ module ApplicationHelper
 
   include PaginationHelper
 
-  include UrlHelper
-
   include TranslationsHelper
 
   include PartialsHelper

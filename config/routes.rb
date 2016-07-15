@@ -130,10 +130,11 @@ Noosfero::Application.routes.draw do
   # Match requests for profiles that don't have a custom domain
   #
   match ':profile(/*page)', controller: :content_viewer, action: :view_page, profile: /#{Noosfero.identifier_format_in_url}/i, constraints: environment_domain, via: :all
+
   ##
   # Match requests for content in domains hosted for profiles.
   # :profile parameter extracted conditionally at needs_profile concern
   #
-  match '/(*page)', controller: :content_viewer, action: :view_page, profile: /#{Noosfero.identifier_format_in_url}/i, via: :all
+  match '/(*page)', controller: :content_viewer, action: :view_page, profile: /#{Noosfero.identifier_format_in_url}/i, constraints: profile_domain, via: :all
 
 end
