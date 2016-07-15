@@ -33,6 +33,8 @@ class ApplicationController < ActionController::Base
 
   protected
 
+  include UrlSupport
+
   def set_time_zone
     return yield unless (utc_offset = cookies['browser.tzoffset']).present?
     utc_offset = utc_offset.to_i
@@ -240,7 +242,5 @@ class ApplicationController < ActionController::Base
       end
     end
   end
-
-  include UrlHelper
 
 end
