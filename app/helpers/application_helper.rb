@@ -8,6 +8,8 @@ module ApplicationHelper
 
   protected
 
+  include UrlHelper
+
   include PermissionNameHelper
 
   include PaginationHelper
