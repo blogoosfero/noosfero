@@ -10,6 +10,9 @@ module UrlSupport
   mattr_accessor :controller_path_class
   self.controller_path_class = {}
 
+  mattr_accessor :omit_profile_if_unnecessary
+  self.omit_profile_if_unnecessary = false
+
   def url_for options = {}
     return super unless options.is_a? Hash
     # for action mailer
@@ -21,20 +24,24 @@ module UrlSupport
     # 2) #url_options is general and not specific to each options/url_for call
     #
     # This does:
-    # 1) Remove :profile when not needed by the target controller
-    # 2) Remove :profile when target profile has a custom domain
-    # 3) Add :profile if target controller needs a profile and target profile doesn't use a custom domain
+    # 1) Remove :profile when target profile has a custom domain
+    # 2) Ensure :profile if target controller needs a profile and target profile doesn't use a custom domain
+    #
+    # PS: options[:profile] = nil assure :profile isn't reinserted
+    # (this happens with options.delete :profile)
     #
     path              = (options[:controller] || self.controller_path).to_sym
     controller        = UrlSupport.controller_path_class[path] ||= "#{path}_controller".camelize.constantize
     profile_needed    = controller.profile_needed if controller.respond_to? :profile_needed, true
-    use_custom_domain = @profile && (@profile.identifier == options[:profile] || options[:profile].blank?) && @profile.hostname
-    if use_custom_domain
-      options.delete :profile
-    elsif not profile_needed and options[:profile].present?
-      options.delete :profile
-    elsif profile_needed and @profile
-      options[:profile] ||= @profile.identifier
+    if profile_needed
+      use_custom_domain = options[:host] != request.host || (@profile && @profile.hostname.present?)
+      if use_custom_domain
+        options[:profile] = nil
+      elsif profile_needed and @profile
+        options[:profile] ||= @profile.identifier
+      end
+    elsif UrlSupport.omit_profile_if_unnecessary and options[:profile].present?
+      options[:profile] = nil
     end
 
     super options

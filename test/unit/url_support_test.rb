@@ -7,6 +7,12 @@ class UrlSupportTest < ActionDispatch::IntegrationTest
   prepend UrlSupport
 
   let(:params){ {} }
+  let :environment do
+    Environment.default
+  end
+  let :request do
+    ActionController::TestRequest.new 'HTTP_HOST' => environment.default_hostname
+  end
 
   describe 'override user' do
     it 'preserve override_user if present' do
@@ -22,54 +28,80 @@ class UrlSupportTest < ActionDispatch::IntegrationTest
       @profile = create_user.person
     end
 
-    describe 'profile option is present' do
+    describe 'target is the origin profile' do
 
-      describe 'target controller needs profile' do
-        describe 'to profile with custom domain' do
-          before do
-            @profile.domains.create name: 'example.com'
-          end
+      describe 'profile option is present' do
 
-          it 'removes the :profile param when target' do
-            @profile.hostname.must_equal 'example.com'
-            options = url_for profile: @profile.identifier, controller: :profile
-            options[:profile].wont_equal @profile.identifier
-          end
+        describe 'target controller needs profile' do
 
-          it 'doesnt add :profile param if not present' do
-            options = url_for controller: :content_viewer
-            options[:profile].must_be_nil
+          describe 'to profile WITH custom domain' do
+            before do
+              @profile.domains.create name: 'example.com'
+              @profile.hostname.must_equal 'example.com'
+            end
+            let :options do
+              url_for profile: @profile.identifier, controller: :profile
+            end
+
+            it 'removes the :profile param for the same profile' do
+              options[:profile].must_be_nil
+            end
           end
         end
 
-        describe 'profile page without custom domain' do
-          it 'removes the :profile param when target' do
-            options = url_for profile: @profile.identifier, controller: :profile
-            options[:profile].must_equal @profile.identifier
+        describe 'target controller doesnt need profile' do
+
+          describe 'to profile WITH custom domain' do
+            before do
+              @profile.hostname.must_be_nil
+            end
+
+            it 'removes the :profile param when target' do
+              UrlSupport.omit_profile_if_unnecessary = true
+              options = url_for profile: @profile.identifier, controller: :account
+              options[:profile].wont_equal @profile.identifier
+            end
+          end
+        end
+
+      end
+
+      describe 'profile option isnt present' do
+
+        describe 'target controller needs profile' do
+
+          describe 'to profile WITHOUT custom domain' do
+            before do
+              @profile.hostname.must_be_nil
+            end
+
+            let :options do
+              url_for controller: :content_viewer
+            end
+
+            it 'add the :profile param' do
+              options[:profile].must_be_nil
+            end
           end
         end
       end
-
-      describe 'target controller doesnt need profile' do
-        it 'removes the :profile param when target' do
-          options = url_for profile: @profile.identifier, controller: :account
-          options[:profile].wont_equal @profile.identifier
-        end
-      end
-
     end
 
-    describe 'profile option isnt present' do
-      describe 'target controller needs profile' do
-        describe 'to profile without custom domain' do
-          it 'add the :profile param' do
-            @profile.hostname.must_be_nil
-            options = url_for controller: :content_viewer
-            options[:profile].must_equal @profile.identifier
-          end
-        end
+    describe 'target is another profile WITH custom domain' do
+      before do
+        @other = create_user.person
+        @other.domains.create! name: 'other.com'
+        @other.hostname.must_equal 'other.com'
+      end
+      let :options do
+        url_for profile: @other.identifier, controller: :profile
+      end
+
+      it 'removes the :profile param' do
+        options[:profile].must_be_nil
       end
     end
+
   end
 
   protected
