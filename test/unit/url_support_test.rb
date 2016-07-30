@@ -35,6 +35,11 @@ class UrlSupportTest < ActionDispatch::IntegrationTest
             options = url_for profile: @profile.identifier, controller: :profile
             options[:profile].wont_equal @profile.identifier
           end
+
+          it 'doesnt add :profile param if not present' do
+            options = url_for controller: :content_viewer
+            options[:profile].must_be_nil
+          end
         end
 
         describe 'profile page without custom domain' do

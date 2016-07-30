@@ -28,7 +28,7 @@ module UrlSupport
     path              = (options[:controller] || self.controller_path).to_sym
     controller        = UrlSupport.controller_path_class[path] ||= "#{path}_controller".camelize.constantize
     profile_needed    = controller.profile_needed if controller.respond_to? :profile_needed, true
-    use_custom_domain = @profile && @profile.identifier == options[:profile] && @profile.hostname
+    use_custom_domain = @profile && (@profile.identifier == options[:profile] || options[:profile].blank?) && @profile.hostname
     if use_custom_domain
       options.delete :profile
     elsif not profile_needed and options[:profile].present?
