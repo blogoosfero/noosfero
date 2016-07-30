@@ -69,18 +69,17 @@ class UrlSupportTest < ActionDispatch::IntegrationTest
       describe 'profile option isnt present' do
 
         describe 'target controller needs profile' do
+          let :options do
+            url_for controller: :content_viewer
+          end
 
           describe 'to profile WITHOUT custom domain' do
             before do
               @profile.hostname.must_be_nil
             end
 
-            let :options do
-              url_for controller: :content_viewer
-            end
-
             it 'add the :profile param' do
-              options[:profile].must_be_nil
+              options[:profile].must_equal @profile.identifier
             end
           end
         end
@@ -94,7 +93,7 @@ class UrlSupportTest < ActionDispatch::IntegrationTest
         @other.hostname.must_equal 'other.com'
       end
       let :options do
-        url_for profile: @other.identifier, controller: :profile
+        url_for profile: @other.identifier, controller: :profile, host: 'other.com'
       end
 
       it 'removes the :profile param' do

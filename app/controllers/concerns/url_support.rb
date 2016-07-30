@@ -30,12 +30,13 @@ module UrlSupport
     # PS: options[:profile] = nil assure :profile isn't reinserted
     # (this happens with options.delete :profile)
     #
-    path              = (options[:controller] || self.controller_path).to_sym
-    controller        = UrlSupport.controller_path_class[path] ||= "#{path}_controller".camelize.constantize
-    profile_needed    = controller.profile_needed if controller.respond_to? :profile_needed, true
+    path           = (options[:controller] || self.controller_path).to_sym
+    controller     = UrlSupport.controller_path_class[path] ||= "#{path}_controller".camelize.constantize
+    profile_needed = controller.profile_needed if controller.respond_to? :profile_needed, true
     if profile_needed
-      use_custom_domain = options[:host] != request.host || (@profile && @profile.hostname.present?)
-      if use_custom_domain
+      other_profile_domain = options[:host].present? && options[:host] != request.host
+      this_profile_domain  = @profile && @profile.hostname.present?
+      if other_profile_domain || this_profile_domain
         options[:profile] = nil
       elsif profile_needed and @profile
         options[:profile] ||= @profile.identifier
